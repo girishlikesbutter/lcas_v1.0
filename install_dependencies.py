@@ -378,7 +378,7 @@ def main():
 
     system = platform.system()
     if system == 'Windows':
-        activate_cmd = f"{venv_name}\\Scripts\\activate"
+        activate_cmd = f"{venv_name}\\Scripts\\activate.bat"
     else:
         activate_cmd = f"source {venv_name}/bin/activate"
 

@@ -28,9 +28,15 @@ Generate your first light curve in under 5 minutes using the torus_plate test mo
 
 1. Complete installation: `python install_dependencies.py`
 2. Activate virtual environment:
+
+   **Windows:**
+   ```cmd
+   .venv\Scripts\activate.bat
+   ```
+
+   **Linux/Mac:**
    ```bash
-   source .venv/bin/activate   # Linux/Mac
-   .venv\Scripts\activate      # Windows
+   source .venv/bin/activate
    ```
 
 ### Run the Example

@@ -4,14 +4,17 @@ Standalone example scripts demonstrating LCAS capabilities.
 
 ## Running Examples
 
-All examples should be run from the project root:
+All examples should be run from the project root. Activate the virtual environment first:
 
+**Windows:**
+```cmd
+.venv\Scripts\activate.bat
+python examples/01_simple_lightcurve.py
+```
+
+**Linux/Mac:**
 ```bash
-# Activate virtual environment first
-source .venv/bin/activate   # Linux/Mac
-.venv\Scripts\activate      # Windows
-
-# Run any example
+source .venv/bin/activate
 python examples/01_simple_lightcurve.py
 ```
 

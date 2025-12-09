@@ -37,14 +37,17 @@ The installer will:
 
 ### 2. Verify Installation
 
-```bash
-# Activate the virtual environment first
-# Linux/Mac:
-source .venv/bin/activate
-# Windows:
-.venv\Scripts\activate
+Activate the virtual environment first:
 
-# Run verification
+**Windows:**
+```cmd
+.venv\Scripts\activate.bat
+python quickstart.py
+```
+
+**Linux/Mac:**
+```bash
+source .venv/bin/activate
 python quickstart.py
 ```
 

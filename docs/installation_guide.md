@@ -112,14 +112,14 @@ python3 install_dependencies.py
 ### Step 3: Verify Installation
 
 ```bash
-source .venv/bin/activate
+source .venv/bin/activate   # Linux/Mac
 python quickstart.py
 ```
 
 ### Step 4: Start Using LCAS
 
 ```bash
-./start-jupyter.sh
+./start-jupyter.sh   # Linux/Mac
 ```
 
 ---
@@ -179,14 +179,28 @@ This usually indicates a network issue. Try:
 ### Import errors when running notebooks
 
 Make sure the virtual environment is activated:
+
+**Windows:**
+```cmd
+.venv\Scripts\activate.bat
+```
+
+**Linux/Mac:**
 ```bash
-source .venv/bin/activate   # Linux/Mac
-.venv\Scripts\activate      # Windows
+source .venv/bin/activate
 ```
 
 ### Jupyter not starting
 
 Install Jupyter manually:
+
+**Windows:**
+```cmd
+.venv\Scripts\activate.bat
+pip install jupyterlab
+```
+
+**Linux/Mac:**
 ```bash
 source .venv/bin/activate
 pip install jupyterlab
