@@ -15,9 +15,11 @@ Options:
 import subprocess
 import platform
 import shutil
+import ssl
 import sys
-import venv
+import urllib.error
 import urllib.request
+import venv
 import stat
 from pathlib import Path
 
@@ -93,6 +95,48 @@ def run_pip_install(python_exe, args, description):
 # SPICE Download Functions
 # =============================================================================
 
+# Track if we've already warned about SSL
+_ssl_warning_shown = False
+
+
+def get_ssl_context():
+    """
+    Get an SSL context for downloading files.
+
+    Tries to use certifi certificates if available, otherwise falls back
+    to an unverified context (with warning) for Windows SSL issues.
+
+    Returns:
+        ssl.SSLContext or None
+    """
+    # First try default context (works on most systems)
+    try:
+        return ssl.create_default_context()
+    except Exception:
+        pass
+
+    # Try with certifi if installed
+    try:
+        import certifi
+        ctx = ssl.create_default_context()
+        ctx.load_verify_locations(certifi.where())
+        return ctx
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+    # Fallback: unverified context (needed for some Windows installations)
+    global _ssl_warning_shown
+    if not _ssl_warning_shown:
+        print("  Note: Using fallback SSL mode (certificate verification disabled)")
+        _ssl_warning_shown = True
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
 def download_file_with_progress(url, dest_path, description=None):
     """
     Download a file with progress indicator.
@@ -121,9 +165,26 @@ def download_file_with_progress(url, dest_path, description=None):
 
     try:
         dest_path.parent.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(url, dest_path, reporthook=progress_hook)
-        print()  # New line after progress
-        return True
+
+        # Try normal download first
+        try:
+            urllib.request.urlretrieve(url, dest_path, reporthook=progress_hook)
+            print()  # New line after progress
+            return True
+        except urllib.error.URLError as e:
+            if 'CERTIFICATE_VERIFY_FAILED' in str(e):
+                # SSL certificate issue - try with custom context
+                print(f"\n  SSL certificate issue detected, retrying...")
+                ssl_context = get_ssl_context()
+                opener = urllib.request.build_opener(
+                    urllib.request.HTTPSHandler(context=ssl_context)
+                )
+                urllib.request.install_opener(opener)
+                urllib.request.urlretrieve(url, dest_path, reporthook=progress_hook)
+                print()  # New line after progress
+                return True
+            else:
+                raise
     except Exception as e:
         print(f"\n  Error downloading {desc}: {e}")
         return False
