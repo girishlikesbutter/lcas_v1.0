@@ -1,0 +1,37 @@
+# LCAS - Light Curve Analysis Suite
+#
+# Recommended install (creates venv + downloads SPICE):
+#   python install_dependencies.py
+#
+# Then activate:
+#   source .venv/bin/activate  (Linux/macOS)
+#   .venv\Scripts\activate     (Windows)
+
+# Core scientific computing
+numpy>=1.21.0
+numpy-quaternion>=2022.4.0
+scipy>=1.7.0
+
+# Mesh and 3D geometry
+trimesh>=3.9.0
+rtree>=1.0.0
+
+# NASA SPICE orbital mechanics
+spiceypy>=5.0.0
+
+# Configuration
+PyYAML>=6.0
+
+# Visualization
+matplotlib>=3.5.0
+plotly>=5.0.0
+
+# Data processing
+pandas>=1.4.0
+
+# Progress bars
+tqdm>=4.64.0
+
+# Notebook workflow
+jupytext>=1.14.0
+notebook>=6.0.0

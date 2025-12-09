@@ -1,0 +1,110 @@
+\begintext
+================================================================================
+PREDICKT Setup File Template - Create Orientation (CK) and Clock (SCLK) Kernels
+================================================================================
+
+This file tells prediCkt how to create orientation data for your satellite.
+The output includes:
+  - A CK file (.bc) containing attitude/orientation quaternions over time
+  - An SCLK file (.tsc) containing spacecraft clock correlation data
+
+prediCkt computes orientation based on geometric rules (e.g., "point X-axis
+toward Earth, align Z-axis with celestial north").
+
+HOW TO USE:
+1. Copy this file and rename it for your satellite (e.g., mysat_orientation.setup)
+2. Fill in the values below (see comments for guidance)
+3. Run: create_orientation_kernel("your_setup.setup", metakernel, output_dir)
+
+IMPORTANT: prediCkt needs a metakernel that loads:
+  - Your satellite's ephemeris (.bsp)
+  - Planetary ephemeris (de440.bsp)
+  - Leapseconds kernel
+
+================================================================================
+
+\begintext
+--------------------------------------------------------------------------------
+CLOCK AND SPACECRAFT IDS
+--------------------------------------------------------------------------------
+CK-SCLK: The spacecraft clock ID (positive number, e.g., 126824)
+CK-SPK:  The spacecraft SPICE ID (negative number, e.g., -126824)
+         This should match the ID used in your ephemeris file.
+--------------------------------------------------------------------------------
+\begindata
+
+CK-SCLK = 126824
+CK-SPK  = -126824
+
+\begintext
+--------------------------------------------------------------------------------
+DIRECTION DEFINITIONS
+--------------------------------------------------------------------------------
+Define directions that will be used to construct orientation.
+Common patterns:
+
+1. Vector from spacecraft to a body:
+   'Name = POSITION OF {BODY} FROM {SPACECRAFT_ID} CORRECTION NONE'
+
+2. Fixed direction in a reference frame:
+   'Name = FIXED {FRAME} XYZ x y z'
+
+Examples:
+  - SCToEarth: Points from spacecraft toward Earth center
+  - SCToSun: Points from spacecraft toward Sun
+  - CelestialNorth: Fixed direction to J2000 north pole (0, 0, 1)
+--------------------------------------------------------------------------------
+\begindata
+
+DIRECTION_SPECS += ( 'SCToEarth = POSITION OF EARTH -' )
+DIRECTION_SPECS += (              'FROM -126824     -' )
+DIRECTION_SPECS += (              'CORRECTION NONE'    )
+
+DIRECTION_SPECS += ( 'CelestialNorth = FIXED J2000 XYZ 0 0 1')
+
+\begintext
+--------------------------------------------------------------------------------
+ORIENTATION DEFINITIONS
+--------------------------------------------------------------------------------
+Define how to construct the satellite body frame from directions.
+
+ORIENTATION_NAME: A label for this orientation (any descriptive name)
+PRIMARY:          Which body axis points in which direction
+                  Format: '+X = DirectionName' or '-Y = DirectionName' etc.
+SECONDARY:        Second axis constraint (perpendicular to primary)
+BASE_FRAME:       Reference frame for output (usually 'J2000')
+
+Common orientation patterns:
+  - GEO nadir-pointing: +X toward Earth, +Z toward celestial north
+  - Sun-pointing: +X toward Sun, +Z toward celestial north
+  - Earth-observation: +Z toward Earth (nadir), +Y along velocity
+--------------------------------------------------------------------------------
+\begindata
+
+ORIENTATION_NAME += 'ClassicalGeo'
+PRIMARY          += '+X = SCToEarth'
+SECONDARY        += '+Z = CelestialNorth'
+BASE_FRAME       += 'J2000'
+
+\begintext
+--------------------------------------------------------------------------------
+FRAME ASSIGNMENT AND TIME WINDOW
+--------------------------------------------------------------------------------
+CK-FRAMES:            The frame ID for output CK (negative number, e.g., -999824)
+CK-{ID}ORIENTATION:   Which orientation to use for this frame
+                      Format: 'SOLUTION TO {FRAME_NAME} = {ORIENTATION_NAME}'
+CK-{ID}START/STOP:    Time window for the CK data
+                      Format: @YYYY-MON-DD-HH:MM:SS.mmm
+
+IMPORTANT: The frame ID here (-999824) should match your frame definition file
+(.tf file) if you have one. The FRAME_NAME should also match.
+--------------------------------------------------------------------------------
+\begindata
+
+CK-FRAMES += -999824
+
+CK-999824ORIENTATION += 'SOLUTION TO MYSAT_BUS_FRAME = ClassicalGeo'
+CK-999824START       += @2020-JAN-01-00:00:00.000
+CK-999824STOP        += @2025-JAN-01-00:00:00.000
+
+\begintext

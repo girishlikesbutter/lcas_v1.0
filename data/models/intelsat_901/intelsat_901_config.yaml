@@ -1,0 +1,94 @@
+# Satellite identification
+name: "Intelsat 901 "
+# Note: STL files are in the same directory as this config file
+
+# SPICE orbital mechanics configuration
+spice_config:
+  satellite_id: -126824
+  metakernel_path: "data/spice_kernels/missions/dst-is901/INTELSAT_901-metakernel.tm"
+  body_frame: "IS901_BUS_FRAME"
+
+# Simulation parameters
+simulation_defaults:
+  start_time: "2020-02-05T10:00:00"
+  end_time: "2020-02-05T16:00:00"
+  output_dir: "intelsat_901_results"  # Will be created under data/results/
+
+# Component definitions with STL files
+# STL files are relative to this config file's directory
+components:
+  Bus:
+    stl_file: "bus.stl"  # In same directory as config
+    position: [0.0, 0.0, 0.0]
+    orientation: [1.0, 0.0, 0.0, 0.0]  # Quaternion [w, x, y, z]
+
+  SP_North:
+    stl_file: "sp.stl"  # In same directory as config
+    position: [0.0, 0.0, 9.2]
+    orientation: [1.0, 0.0, 0.0, 0.0]  # Quaternion [w, x, y, z]
+
+  SP_South:
+    stl_file: "sp.stl"  # In same directory as config
+    position: [0.0, 0.0, -9.2]
+    orientation: [1.0, 0.0, 0.0, 0.0]  # Quaternion [w, x, y, z]
+  
+  AD_West:
+    stl_file: "ad.stl"  # In same directory as config
+    position: [-1.5, 4.0, 0.0]
+    orientation: [1.0, 0.0, 0.0, 0.0]  # Quaternion [w, x, y, z]
+  
+  AD_East:
+    stl_file: "ad.stl"  # In same directory as config
+    position: [-1.5, -4.0, 0.0]
+    orientation: [1.0, 0.0, 0.0, 0.0]  # Quaternion [w, x, y, z]
+
+# Component BRDF materials
+component_brdf:
+  Bus:
+    r_d: 0.02
+    r_s: 0.5
+    n_phong: 300.0
+  SP_North:
+    r_d: 0.026
+    r_s: 0.3
+    n_phong: 250.0
+  SP_South:
+    r_d: 0.026
+    r_s: 0.3
+    n_phong: 250.0
+  AD_West:
+    r_d: 0.01
+    r_s: 0.4
+    n_phong: 200.0
+  AD_East:
+    r_d: 0.01
+    r_s: 0.4
+    n_phong: 200.0
+
+
+# Component Articulation Capabilities 
+articulation_capabilities:
+  SP_North:
+    rotation_center: [0.0, 0.0, 0.0]
+    rotation_axis: [0.0, 0.0, 1.0]
+    limits:
+      min_angle: -180.0
+      max_angle: 180.0
+  SP_South:
+    rotation_center: [0.0, 0.0, 0.0]
+    rotation_axis: [0.0, 0.0, 1.0]
+    limits:
+      min_angle: -180.0
+      max_angle: 180.0
+  AD_West:
+    rotation_center: [0.0, -1.75, 0.0]
+    rotation_axis: [0.0, 0.0, -1.0]
+    limits:
+      min_angle: 0.0
+      max_angle: 90.0
+  AD_East:
+    rotation_center: [0.0, 1.75, 0.0]
+    rotation_axis: [0.0, 0.0, 1.0]
+    limits:
+      min_angle: 0.0
+      max_angle: 90.0

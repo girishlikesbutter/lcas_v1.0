@@ -1,0 +1,91 @@
+\begintext
+================================================================================
+MKSPK Setup File Template - Create Satellite Ephemeris from TLE
+================================================================================
+
+This file tells mkspk how to create an SPK (ephemeris) file from Two-Line
+Element (TLE) data. The SPK file contains satellite position over time.
+
+HOW TO USE:
+1. Copy this file and rename it for your satellite (e.g., mysat_ephemeris.setup)
+2. Fill in the values below (see comments for guidance)
+3. Run: create_ephemeris_from_tle("your_setup.setup", output_dir)
+
+REQUIRED FILES:
+- A TLE file containing orbital elements for your satellite
+- A leapseconds kernel (.tls file) - use the one in data/spice_kernels/generic/lsk/
+- A planetary constants kernel (.ker or .tpc) - use the one in data/spice_kernels/generic/pck/
+
+================================================================================
+\begindata
+
+INPUT_DATA_TYPE   = 'TL_ELEMENTS'
+OUTPUT_SPK_TYPE   = 10
+
+\begintext
+--------------------------------------------------------------------------------
+SATELLITE IDENTIFIERS
+--------------------------------------------------------------------------------
+TLE_INPUT_OBJ_ID: The NORAD catalog number from your TLE file (5-digit number)
+TLE_SPK_OBJ_ID:   The SPICE ID for your satellite (negative number, e.g., -126824)
+                  Convention: Use negative numbers for spacecraft
+--------------------------------------------------------------------------------
+\begindata
+
+TLE_INPUT_OBJ_ID  = 26824
+TLE_SPK_OBJ_ID    = -126824
+
+\begintext
+--------------------------------------------------------------------------------
+REFERENCE FRAME AND CENTER
+--------------------------------------------------------------------------------
+CENTER_ID:      399 = Earth (satellites orbit around Earth)
+REF_FRAME_NAME: J2000 is the standard inertial reference frame
+--------------------------------------------------------------------------------
+\begindata
+
+CENTER_ID         = 399
+REF_FRAME_NAME    = 'J2000'
+
+\begintext
+--------------------------------------------------------------------------------
+INPUT/OUTPUT FILES (paths relative to where you run the command)
+--------------------------------------------------------------------------------
+LEAPSECONDS_FILE: Path to leap seconds kernel
+INPUT_DATA_FILE:  Path to your TLE file
+OUTPUT_SPK_FILE:  Where to write the output ephemeris
+PCK_FILE:         Path to planetary constants kernel (for Earth parameters)
+--------------------------------------------------------------------------------
+\begindata
+
+LEAPSECONDS_FILE  = 'data/spice_kernels/generic/lsk/naif0012.tls.pc'
+INPUT_DATA_FILE   = 'data/tle/your_satellite.tle'
+OUTPUT_SPK_FILE   = 'output/your_satellite.bsp'
+PCK_FILE          = 'data/spice_kernels/generic/pck/geophysical.ker'
+
+\begintext
+--------------------------------------------------------------------------------
+TIME WINDOW
+--------------------------------------------------------------------------------
+START_TIME / STOP_TIME: The time range for which to generate ephemeris
+                        Format: 'YYYY MON DD' (e.g., '2020 JAN 01')
+                        Must be within the validity range of your TLE data
+--------------------------------------------------------------------------------
+\begindata
+
+START_TIME        = '2020 JAN 01'
+STOP_TIME         = '2025 JAN 01'
+
+\begintext
+--------------------------------------------------------------------------------
+OPTIONAL SETTINGS
+--------------------------------------------------------------------------------
+PRODUCER_ID:      Your name/organization (appears in kernel metadata)
+APPEND_TO_OUTPUT: 'YES' to append to existing file, 'NO' to overwrite
+--------------------------------------------------------------------------------
+\begindata
+
+PRODUCER_ID       = 'LCAS User'
+APPEND_TO_OUTPUT  = 'NO'
+
+\begintext

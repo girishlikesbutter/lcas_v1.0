@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and local config
+*.log
+.env
+*.local
+
+# Build
+build/
+dist/
+
+# Large SPICE kernels (download separately)
+data/spice_kernels/generic/spk/de440.bsp
+
+# Results (generated, not tracked)
+data/results/*/
+
+# Type checking cache
+.mypy_cache/

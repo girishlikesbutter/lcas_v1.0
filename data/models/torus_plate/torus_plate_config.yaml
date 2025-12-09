@@ -1,0 +1,48 @@
+# Satellite identification
+name: "Torus Plate"
+# Note: STL files are in the same directory as this config file
+
+# SPICE orbital mechanics configuration
+spice_config:
+  satellite_id: -126824
+  metakernel_path: "data/spice_kernels/missions/dst-is901/INTELSAT_901-metakernel.tm"
+  body_frame: "IS901_BUS_FRAME"
+
+# Simulation parameters
+simulation_defaults:
+  start_time: "2020-02-05T10:00:00"
+  end_time: "2020-02-05T16:00:00"
+  output_dir: "torus_plate_results"  # Will be created under data/results/
+
+# Component definitions with STL files
+# STL files are relative to this config file's directory
+components:
+  Plate:
+    stl_file: "plate.stl"  # In same directory as config
+    position: [-5.0, 0.0, 0.0]
+    orientation: [1.0, 0.0, 0.0, 0.0]  # Quaternion [w, x, y, z]
+
+  Torus:
+    stl_file: "torus.stl"  # In same directory as config
+    position: [0.0, 0.0, 0.0]
+    orientation: [1.0, 0.0, 0.0, 0.0]  # Quaternion [w, x, y, z]
+
+# Component BRDF materials
+component_brdf:
+  Torus:
+    r_d: 0.02
+    r_s: 0.5
+    n_phong: 300.0
+  Plate:
+    r_d: 0.026
+    r_s: 0.3
+    n_phong: 250.0
+
+# Component Articulation Capabilities 
+articulation_capabilities:
+  Torus:
+    rotation_center: [0.0, 0.0, 0.0]
+    rotation_axis: [0.0, 0.0, 1.0]
+    limits:
+      min_angle: -180.0
+      max_angle: 180.0
