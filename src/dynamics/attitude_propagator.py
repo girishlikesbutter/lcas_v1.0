@@ -61,7 +61,27 @@ def propagate_attitude(
         If mode is 'tumbling' and inertia_tensor is not provided.
         If mode is not recognized.
     """
-    raise NotImplementedError("propagate_attitude not yet implemented")
+    if mode == "principal_axis":
+        # Use closed-form solution for constant angular velocity
+        quaternions = propagate_principal_axis(q0, omega0, times)
+        # For principal axis mode, angular velocity is constant
+        n_times = len(times)
+        omega_history = np.tile(omega0.reshape(1, 3), (n_times, 1))
+        return quaternions, omega_history
+
+    elif mode == "tumbling":
+        # Check that inertia tensor is provided
+        if inertia_tensor is None:
+            raise ValueError(
+                "inertia_tensor is required for tumbling mode propagation"
+            )
+        # Use Euler dynamics integration
+        return propagate_euler(q0, omega0, inertia_tensor, times)
+
+    else:
+        raise ValueError(
+            f"Unrecognized mode '{mode}'. Must be 'principal_axis' or 'tumbling'."
+        )
 
 
 def propagate_principal_axis(
