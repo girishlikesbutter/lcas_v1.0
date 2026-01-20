@@ -24,6 +24,7 @@ from .inertia_calculator import (
     compute_mesh_volume,
     is_mesh_watertight,
     compute_component_inertia,
+    translate_inertia,
 )
 
 __all__ = [
@@ -47,4 +48,5 @@ __all__ = [
     'compute_mesh_volume',
     'is_mesh_watertight',
     'compute_component_inertia',
+    'translate_inertia',
 ]

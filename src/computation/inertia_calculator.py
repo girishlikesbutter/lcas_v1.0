@@ -242,3 +242,58 @@ def compute_component_inertia(
     inertia_cm = inertia_origin - parallel_axis_term
 
     return inertia_cm, center_of_mass.astype(np.float64)
+
+
+def translate_inertia(
+    I_cm: NDArray[np.float64],
+    mass: float,
+    displacement: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """
+    Translate an inertia tensor from center of mass to a new reference point.
+
+    Applies the parallel axis theorem to translate a component's inertia tensor
+    (given about its center of mass) to the body frame origin.
+
+    Parameters
+    ----------
+    I_cm : NDArray[np.float64]
+        The 3x3 inertia tensor about the component's center of mass.
+    mass : float
+        The mass of the component.
+    displacement : NDArray[np.float64]
+        Vector from body frame origin to component center of mass, shape (3,).
+        This is the translation vector d in the parallel axis theorem.
+
+    Returns
+    -------
+    NDArray[np.float64]
+        The 3x3 inertia tensor about the body frame origin.
+
+    Notes
+    -----
+    The parallel axis theorem states:
+        I_body = I_cm + m * (d² * I - outer(d, d))
+
+    where:
+    - I_body is the inertia tensor about the new reference point (body origin)
+    - I_cm is the inertia tensor about the center of mass
+    - m is the mass of the component
+    - d is the displacement vector from body origin to center of mass
+    - d² = dot(d, d) is the squared magnitude of d
+    - I is the 3x3 identity matrix
+    - outer(d, d) is the outer product of d with itself
+
+    This is the forward parallel axis theorem (moving away from CoM).
+    To go from a point to CoM, subtract the parallel axis term instead.
+    """
+    displacement = np.asarray(displacement, dtype=np.float64)
+    d_squared = np.dot(displacement, displacement)
+
+    # Parallel axis term: m * (d² * I - outer(d, d))
+    parallel_axis_term = mass * (d_squared * np.eye(3) - np.outer(displacement, displacement))
+
+    # I_body = I_cm + parallel_axis_term
+    I_body = np.asarray(I_cm, dtype=np.float64) + parallel_axis_term
+
+    return I_body
