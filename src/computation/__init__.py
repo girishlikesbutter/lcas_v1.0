@@ -25,6 +25,9 @@ from .inertia_calculator import (
     is_mesh_watertight,
     compute_component_inertia,
     translate_inertia,
+    InertiaResult,
+    STLComponent,
+    compute_inertia_from_stl,
 )
 
 __all__ = [
@@ -49,4 +52,7 @@ __all__ = [
     'is_mesh_watertight',
     'compute_component_inertia',
     'translate_inertia',
+    'InertiaResult',
+    'STLComponent',
+    'compute_inertia_from_stl',
 ]

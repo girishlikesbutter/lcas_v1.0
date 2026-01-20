@@ -11,7 +11,8 @@ All calculations assume the mesh is in a consistent coordinate frame.
 """
 
 import logging
-from typing import Tuple
+from dataclasses import dataclass
+from typing import List, Tuple, Union
 
 import numpy as np
 from numpy.typing import NDArray
@@ -297,3 +298,213 @@ def translate_inertia(
     I_body = np.asarray(I_cm, dtype=np.float64) + parallel_axis_term
 
     return I_body
+
+
+@dataclass
+class InertiaResult:
+    """
+    Result container for satellite inertia calculation.
+
+    Contains all computed inertia properties from a multi-component satellite
+    model, including the total mass, center of mass location, full inertia
+    tensor, and principal axis decomposition.
+
+    Attributes
+    ----------
+    total_mass : float
+        Total mass of the satellite (sum of all component masses).
+    center_of_mass : NDArray[np.float64]
+        Position of the satellite center of mass in body frame, shape (3,).
+    inertia_tensor : NDArray[np.float64]
+        3x3 inertia tensor about the satellite center of mass.
+    principal_moments : NDArray[np.float64]
+        Principal moments of inertia (eigenvalues), shape (3,), sorted ascending.
+    principal_axes : NDArray[np.float64]
+        Principal axes (eigenvectors) as columns of a 3x3 matrix.
+        principal_axes[:, i] corresponds to principal_moments[i].
+    """
+
+    total_mass: float
+    center_of_mass: NDArray[np.float64]
+    inertia_tensor: NDArray[np.float64]
+    principal_moments: NDArray[np.float64]
+    principal_axes: NDArray[np.float64]
+
+
+@dataclass
+class STLComponent:
+    """
+    An STL component with its mesh, position, and mass.
+
+    This is a convenience wrapper for passing STL data to the inertia
+    calculator. It allows the same mesh to be used multiple times at
+    different positions (e.g., symmetric components).
+
+    Attributes
+    ----------
+    mesh : trimesh.Trimesh
+        The triangular mesh geometry of the component.
+    position : NDArray[np.float64]
+        Position of the component origin in body frame, shape (3,).
+    mass : float
+        Mass of this component instance.
+    """
+
+    mesh: trimesh.Trimesh
+    position: NDArray[np.float64]
+    mass: float
+
+
+def compute_inertia_from_stl(
+    stl_components: List[Union[STLComponent, Tuple[trimesh.Trimesh, NDArray[np.float64], float]]],
+    masses: Union[List[float], None] = None,
+) -> InertiaResult:
+    """
+    Compute the total satellite inertia from multiple STL components with masses.
+
+    Computes the combined inertia tensor of a satellite composed of multiple
+    STL mesh components, each with its own position and mass. The same STL file
+    can be used multiple times at different positions (e.g., for symmetric parts).
+
+    Parameters
+    ----------
+    stl_components : List[Union[STLComponent, Tuple[trimesh.Trimesh, NDArray, float]]]
+        List of STL components. Each element can be either:
+        - An STLComponent dataclass instance
+        - A tuple of (mesh, position, mass) where:
+          - mesh: trimesh.Trimesh object
+          - position: component origin position in body frame, shape (3,)
+          - mass: component mass
+    masses : List[float] | None, optional
+        Alternative way to specify masses. If provided, must have same length
+        as stl_components and will override masses in the components.
+        Deprecated: prefer using STLComponent or tuples with mass included.
+
+    Returns
+    -------
+    InertiaResult
+        Dataclass containing:
+        - total_mass: Sum of all component masses
+        - center_of_mass: Satellite CoM in body frame
+        - inertia_tensor: 3x3 inertia tensor about satellite CoM
+        - principal_moments: Eigenvalues (principal moments)
+        - principal_axes: Eigenvectors (principal axes) as column vectors
+
+    Raises
+    ------
+    ValueError
+        If stl_components is empty or if masses length doesn't match components.
+
+    Notes
+    -----
+    The algorithm:
+    1. Compute each component's inertia tensor about its own center of mass
+    2. Translate each component's CoM to its position in body frame
+    3. Translate each component's inertia to body frame origin using parallel axis theorem
+    4. Sum all contributions to get total inertia about body origin
+    5. Compute total satellite CoM from mass-weighted component positions
+    6. Translate total inertia from body origin to satellite CoM
+    7. Compute principal axes via eigendecomposition
+
+    Examples
+    --------
+    Using STLComponent dataclass:
+
+    >>> mesh = trimesh.load("component.stl")
+    >>> components = [
+    ...     STLComponent(mesh=mesh, position=np.array([1, 0, 0]), mass=10.0),
+    ...     STLComponent(mesh=mesh, position=np.array([-1, 0, 0]), mass=10.0),
+    ... ]
+    >>> result = compute_inertia_from_stl(components)
+
+    Using tuples:
+
+    >>> components = [
+    ...     (mesh1, np.array([0, 0, 0]), 50.0),
+    ...     (mesh2, np.array([2, 0, 0]), 5.0),
+    ... ]
+    >>> result = compute_inertia_from_stl(components)
+    """
+    if not stl_components:
+        raise ValueError("stl_components list cannot be empty")
+
+    # Normalize input to list of (mesh, position, mass) tuples
+    normalized_components: List[Tuple[trimesh.Trimesh, NDArray[np.float64], float]] = []
+
+    for i, comp in enumerate(stl_components):
+        if isinstance(comp, STLComponent):
+            mesh = comp.mesh
+            position = np.asarray(comp.position, dtype=np.float64)
+            mass = comp.mass
+        elif isinstance(comp, tuple) and len(comp) == 3:
+            mesh, pos, m = comp
+            position = np.asarray(pos, dtype=np.float64)
+            mass = float(m)
+        else:
+            raise ValueError(
+                f"Component {i} must be STLComponent or (mesh, position, mass) tuple"
+            )
+
+        # Override mass if masses list is provided
+        if masses is not None:
+            if len(masses) != len(stl_components):
+                raise ValueError(
+                    f"masses list length ({len(masses)}) must match "
+                    f"stl_components length ({len(stl_components)})"
+                )
+            mass = float(masses[i])
+
+        normalized_components.append((mesh, position, mass))
+
+    # Compute total mass
+    total_mass = sum(m for _, _, m in normalized_components)
+
+    if total_mass < 1e-12:
+        raise ValueError("Total mass is zero or near-zero")
+
+    # Step 1-3: For each component, compute inertia and translate to body origin
+    # Also track component CoMs for total satellite CoM calculation
+    component_coms: List[NDArray[np.float64]] = []
+    component_masses: List[float] = []
+    total_inertia_origin = np.zeros((3, 3), dtype=np.float64)
+
+    for mesh, position, mass in normalized_components:
+        # Compute component inertia about its own center of mass
+        I_cm, com_local = compute_component_inertia(mesh, mass)
+
+        # Component CoM in body frame = local CoM + component position
+        com_body = com_local + position
+        component_coms.append(com_body)
+        component_masses.append(mass)
+
+        # Translate inertia from component CoM to body origin
+        I_at_origin = translate_inertia(I_cm, mass, com_body)
+        total_inertia_origin += I_at_origin
+
+    # Step 4-5: Compute total satellite center of mass
+    center_of_mass = np.zeros(3, dtype=np.float64)
+    for com, m in zip(component_coms, component_masses):
+        center_of_mass += m * com
+    center_of_mass /= total_mass
+
+    # Step 6: Translate total inertia from body origin to satellite CoM
+    # This is the inverse parallel axis theorem: I_cm = I_origin - m*(d²I - outer(d,d))
+    d = center_of_mass
+    d_squared = np.dot(d, d)
+    parallel_axis_term = total_mass * (d_squared * np.eye(3) - np.outer(d, d))
+    inertia_tensor = total_inertia_origin - parallel_axis_term
+
+    # Step 7: Compute principal axes via eigendecomposition
+    eigenvalues, eigenvectors = np.linalg.eigh(inertia_tensor)
+
+    # eigh returns eigenvalues in ascending order
+    principal_moments = eigenvalues.astype(np.float64)
+    principal_axes = eigenvectors.astype(np.float64)
+
+    return InertiaResult(
+        total_mass=total_mass,
+        center_of_mass=center_of_mass,
+        inertia_tensor=inertia_tensor,
+        principal_moments=principal_moments,
+        principal_axes=principal_axes,
+    )
