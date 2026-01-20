@@ -1,0 +1,42 @@
+# Ralph Progress Log
+Started: Wed Jan 21 12:33:02 PM NZDT 2026
+
+## Codebase Patterns
+- Project uses requirements.txt for dependencies (not pyproject.toml)
+- No mypy/pyright configured - use `python -m compileall src/ -q` for syntax validation
+- Python source files are in src/ directory with standard module structure
+- Jupytext notebooks use percent format (.py files paired with .ipynb)
+
+---
+
+## 2026-01-21 - US-026
+- What was implemented: Added emcee>=3.1.0 and corner>=2.2.0 to requirements.txt
+- Files changed: requirements.txt
+- **Learnings for future iterations:**
+  - Dependencies section grouped by purpose (Core, Mesh, SPICE, Visualization, etc.)
+  - Added new section "MCMC sampling and uncertainty quantification" for these deps
+  - Both packages installed successfully with no conflicts against existing numpy/matplotlib
+---
+
+## 2026-01-21 - US-001
+- What was implemented: Created src/dynamics/ module scaffolding with __init__.py and attitude_propagator.py
+- Files changed:
+  - src/dynamics/__init__.py (new) - module docstring and exports
+  - src/dynamics/attitude_propagator.py (new) - placeholder functions with type hints and docstrings
+- **Learnings for future iterations:**
+  - Placeholder functions use NotImplementedError to clearly indicate unimplemented state
+  - Type hints use numpy.typing.NDArray for array type annotations
+  - Module exports are defined in __init__.py via __all__ list
+  - Functions use scalar-first (w, x, y, z) quaternion convention per project standard
+---
+
+## 2026-01-21 - US-002
+- What was implemented: Implemented propagate_principal_axis() function for constant angular velocity attitude propagation
+- Files changed:
+  - src/dynamics/attitude_propagator.py - implemented propagate_principal_axis() and added _quaternion_multiply() helper
+- **Learnings for future iterations:**
+  - Quaternion exponential formula: exp(0.5 * omega * t) = [cos(theta/2), sin(theta/2) * axis]
+  - The _quaternion_multiply() helper uses scalar-first (w, x, y, z) convention
+  - Always handle the near-zero angular velocity case (omega_mag < 1e-12) to avoid division by zero
+  - Initial quaternion should be normalized at the start to ensure valid input
+---

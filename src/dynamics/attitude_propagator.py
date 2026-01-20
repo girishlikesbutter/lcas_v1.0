@@ -98,7 +98,80 @@ def propagate_principal_axis(
     The quaternion exponential for a rotation vector v = omega * dt is:
         quat_exp(v) = [cos(|v|/2), sin(|v|/2) * v/|v|]
     """
-    raise NotImplementedError("propagate_principal_axis not yet implemented")
+    q0 = np.asarray(q0, dtype=np.float64)
+    omega = np.asarray(omega, dtype=np.float64)
+    times = np.asarray(times, dtype=np.float64)
+
+    # Normalize initial quaternion
+    q0 = q0 / np.linalg.norm(q0)
+
+    n_times = len(times)
+    quaternions = np.zeros((n_times, 4), dtype=np.float64)
+
+    # Angular velocity magnitude
+    omega_mag = np.linalg.norm(omega)
+
+    for i, t in enumerate(times):
+        if omega_mag < 1e-12:
+            # No rotation - return initial quaternion
+            quaternions[i] = q0
+        else:
+            # Rotation angle: theta = |omega| * t
+            theta = omega_mag * t
+
+            # Half angle for quaternion
+            half_theta = 0.5 * theta
+
+            # Quaternion exponential: exp(0.5 * omega * t)
+            # For rotation vector v, quat_exp(v) = [cos(|v|/2), sin(|v|/2) * v/|v|]
+            # Here v = omega * t, |v| = omega_mag * t = theta
+            # So quat_exp(0.5 * omega * t) = [cos(theta/2), sin(theta/2) * omega/|omega|]
+            axis = omega / omega_mag
+            q_rot = np.array([
+                np.cos(half_theta),
+                np.sin(half_theta) * axis[0],
+                np.sin(half_theta) * axis[1],
+                np.sin(half_theta) * axis[2],
+            ])
+
+            # Quaternion multiplication: q(t) = q0 * q_rot
+            # Using scalar-first convention (w, x, y, z)
+            quaternions[i] = _quaternion_multiply(q0, q_rot)
+
+    # Normalize all quaternions
+    norms = np.linalg.norm(quaternions, axis=1, keepdims=True)
+    quaternions = quaternions / norms
+
+    return quaternions
+
+
+def _quaternion_multiply(
+    q1: NDArray[np.floating], q2: NDArray[np.floating]
+) -> NDArray[np.floating]:
+    """
+    Multiply two quaternions using scalar-first convention (w, x, y, z).
+
+    Parameters
+    ----------
+    q1 : ndarray, shape (4,)
+        First quaternion.
+    q2 : ndarray, shape (4,)
+        Second quaternion.
+
+    Returns
+    -------
+    ndarray, shape (4,)
+        Product quaternion q1 * q2.
+    """
+    w1, x1, y1, z1 = q1
+    w2, x2, y2, z2 = q2
+
+    return np.array([
+        w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+        w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+        w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+        w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+    ])
 
 
 def propagate_euler(

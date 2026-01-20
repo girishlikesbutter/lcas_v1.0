@@ -4,6 +4,20 @@
   "description": "Lightcurve Inversion Tool - Estimate initial attitude and angular velocity from observed lightcurves using optimization",
   "userStories": [
     {
+      "id": "US-026",
+      "title": "Add emcee and corner to project dependencies",
+      "description": "As a developer, I need the new dependencies added to the project.",
+      "acceptanceCriteria": [
+        "Add emcee to requirements.txt or pyproject.toml",
+        "Add corner to requirements.txt or pyproject.toml",
+        "Dependencies are installable without conflicts",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
       "id": "US-001",
       "title": "Create dynamics module structure",
       "description": "As a developer, I need the src/dynamics/ module scaffolding to organize attitude propagation code.",
@@ -13,8 +27,8 @@
         "Placeholder functions: propagate_attitude(), propagate_principal_axis(), propagate_euler()",
         "Typecheck passes"
       ],
-      "priority": 1,
-      "passes": false,
+      "priority": 2,
+      "passes": true,
       "notes": ""
     },
     {
@@ -28,8 +42,8 @@
         "Output quaternions are normalized",
         "Typecheck passes"
       ],
-      "priority": 2,
-      "passes": false,
+      "priority": 3,
+      "passes": true,
       "notes": ""
     },
     {
@@ -43,7 +57,7 @@
         "Quaternions renormalized during integration",
         "Typecheck passes"
       ],
-      "priority": 3,
+      "priority": 4,
       "passes": false,
       "notes": ""
     },
@@ -59,7 +73,7 @@
         "Returns (quaternions, omega_history) tuple",
         "Typecheck passes"
       ],
-      "priority": 4,
+      "priority": 5,
       "passes": false,
       "notes": ""
     },
@@ -73,7 +87,7 @@
         "Uses signed tetrahedra method summing contributions from each face",
         "Typecheck passes"
       ],
-      "priority": 5,
+      "priority": 6,
       "passes": false,
       "notes": ""
     },
@@ -87,7 +101,7 @@
         "compute_mesh_volume logs warning if mesh is not watertight",
         "Typecheck passes"
       ],
-      "priority": 6,
+      "priority": 7,
       "passes": false,
       "notes": ""
     },
@@ -102,7 +116,7 @@
         "Returns (inertia_tensor, center_of_mass) tuple",
         "Typecheck passes"
       ],
-      "priority": 7,
+      "priority": 8,
       "passes": false,
       "notes": ""
     },
@@ -117,7 +131,7 @@
         "Returns 3x3 inertia tensor about body origin",
         "Typecheck passes"
       ],
-      "priority": 8,
+      "priority": 9,
       "passes": false,
       "notes": ""
     },
@@ -132,7 +146,7 @@
         "Sums all component contributions using parallel axis theorem",
         "Typecheck passes"
       ],
-      "priority": 9,
+      "priority": 10,
       "passes": false,
       "notes": ""
     },
@@ -150,7 +164,7 @@
         "Create src/inversion/results.py with placeholder",
         "Typecheck passes"
       ],
-      "priority": 10,
+      "priority": 11,
       "passes": false,
       "notes": ""
     },
@@ -166,7 +180,7 @@
         "All functions use scalar-first (w,x,y,z) convention",
         "Typecheck passes"
       ],
-      "priority": 11,
+      "priority": 12,
       "passes": false,
       "notes": ""
     },
@@ -182,7 +196,7 @@
         "Internally propagates attitude and calls forward model",
         "Typecheck passes"
       ],
-      "priority": 12,
+      "priority": 13,
       "passes": false,
       "notes": ""
     },
@@ -197,7 +211,7 @@
         "Observations with infinite magnitude (not visible) are excluded",
         "Typecheck passes"
       ],
-      "priority": 13,
+      "priority": 14,
       "passes": false,
       "notes": ""
     },
@@ -212,7 +226,7 @@
         "Returns OptimizationResult with best params and cost",
         "Typecheck passes"
       ],
-      "priority": 14,
+      "priority": 15,
       "passes": false,
       "notes": ""
     },
@@ -227,7 +241,7 @@
         "Returns refined OptimizationResult",
         "Typecheck passes"
       ],
-      "priority": 15,
+      "priority": 16,
       "passes": false,
       "notes": ""
     },
@@ -242,7 +256,7 @@
         "Best result returned as primary output",
         "Typecheck passes"
       ],
-      "priority": 16,
+      "priority": 17,
       "passes": false,
       "notes": ""
     },
@@ -257,7 +271,7 @@
         "PHYSICS_INFORMED mode: adds principal axis rotation constraint",
         "Typecheck passes"
       ],
-      "priority": 17,
+      "priority": 18,
       "passes": false,
       "notes": ""
     },
@@ -272,7 +286,7 @@
         "Returns standard deviations for each parameter",
         "Typecheck passes"
       ],
-      "priority": 18,
+      "priority": 19,
       "passes": false,
       "notes": ""
     },
@@ -287,7 +301,7 @@
         "Includes convergence diagnostics",
         "Typecheck passes"
       ],
-      "priority": 19,
+      "priority": 20,
       "passes": false,
       "notes": ""
     },
@@ -301,7 +315,7 @@
         "Includes observed vs predicted data for plotting",
         "Typecheck passes"
       ],
-      "priority": 20,
+      "priority": 21,
       "passes": false,
       "notes": ""
     },
@@ -316,7 +330,7 @@
         "Uses matplotlib for all plots",
         "Typecheck passes"
       ],
-      "priority": 21,
+      "priority": 22,
       "passes": false,
       "notes": ""
     },
@@ -332,7 +346,7 @@
         "Returns InversionResult",
         "Typecheck passes"
       ],
-      "priority": 22,
+      "priority": 23,
       "passes": false,
       "notes": ""
     },
@@ -348,7 +362,7 @@
         "Includes comparison with analytical result for simple shape",
         "Typecheck passes"
       ],
-      "priority": 23,
+      "priority": 24,
       "passes": false,
       "notes": ""
     },
@@ -364,7 +378,7 @@
         "Visualizes quaternion and angular velocity evolution",
         "Typecheck passes"
       ],
-      "priority": 24,
+      "priority": 25,
       "passes": false,
       "notes": ""
     },
@@ -378,20 +392,6 @@
         "Demonstrates both quick (Fisher) and full (MCMC) uncertainty modes",
         "Includes visualization of results",
         "Documents all configuration options",
-        "Typecheck passes"
-      ],
-      "priority": 25,
-      "passes": false,
-      "notes": ""
-    },
-    {
-      "id": "US-026",
-      "title": "Add emcee and corner to project dependencies",
-      "description": "As a developer, I need the new dependencies added to the project.",
-      "acceptanceCriteria": [
-        "Add emcee to requirements.txt or pyproject.toml",
-        "Add corner to requirements.txt or pyproject.toml",
-        "Dependencies are installable without conflicts",
         "Typecheck passes"
       ],
       "priority": 26,
