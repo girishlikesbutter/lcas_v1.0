@@ -16,6 +16,7 @@ All functions use scalar-first quaternion convention (w, x, y, z).
 from typing import Literal, Tuple, Optional
 import numpy as np
 from numpy.typing import NDArray
+from scipy.integrate import solve_ivp
 
 
 def propagate_attitude(
@@ -218,4 +219,78 @@ def propagate_euler(
 
     Uses scipy.integrate.solve_ivp with RK45 or DOP853 solver.
     """
-    raise NotImplementedError("propagate_euler not yet implemented")
+    q0 = np.asarray(q0, dtype=np.float64)
+    omega0 = np.asarray(omega0, dtype=np.float64)
+    inertia_tensor = np.asarray(inertia_tensor, dtype=np.float64)
+    times = np.asarray(times, dtype=np.float64)
+
+    # Normalize initial quaternion
+    q0 = q0 / np.linalg.norm(q0)
+
+    # Precompute inverse inertia tensor for efficiency
+    I_inv = np.linalg.inv(inertia_tensor)
+
+    def dynamics(t: float, state: NDArray[np.floating]) -> NDArray[np.floating]:
+        """
+        Compute state derivatives for the coupled Euler + quaternion system.
+
+        State vector: [q_w, q_x, q_y, q_z, omega_x, omega_y, omega_z]
+        """
+        # Extract quaternion and angular velocity from state
+        q = state[0:4]
+        omega = state[4:7]
+
+        # Renormalize quaternion to prevent drift
+        q_norm = np.linalg.norm(q)
+        if q_norm > 1e-12:
+            q = q / q_norm
+
+        # Euler's equations (torque-free): I @ omega_dot = -omega x (I @ omega)
+        # omega_dot = I_inv @ (-omega x (I @ omega))
+        I_omega = inertia_tensor @ omega
+        omega_cross_I_omega = np.cross(omega, I_omega)
+        omega_dot = I_inv @ (-omega_cross_I_omega)
+
+        # Quaternion kinematics: q_dot = 0.5 * q * omega_quat
+        # where omega_quat = [0, omega_x, omega_y, omega_z]
+        # Using scalar-first convention (w, x, y, z)
+        omega_quat = np.array([0.0, omega[0], omega[1], omega[2]])
+        q_dot = 0.5 * _quaternion_multiply(q, omega_quat)
+
+        return np.concatenate([q_dot, omega_dot])
+
+    # Initial state vector: [q(4), omega(3)]
+    y0 = np.concatenate([q0, omega0])
+
+    # Determine time span
+    t_span = (times[0], times[-1])
+
+    # Solve the ODE using DOP853 (8th order Dormand-Prince, good for smooth problems)
+    solution = solve_ivp(
+        dynamics,
+        t_span,
+        y0,
+        method="DOP853",
+        t_eval=times,
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+    # Extract results
+    n_times = len(times)
+    quaternions = np.zeros((n_times, 4), dtype=np.float64)
+    omega_history = np.zeros((n_times, 3), dtype=np.float64)
+
+    for i in range(n_times):
+        q = solution.y[0:4, i]
+        omega = solution.y[4:7, i]
+
+        # Renormalize quaternion
+        q_norm = np.linalg.norm(q)
+        if q_norm > 1e-12:
+            q = q / q_norm
+
+        quaternions[i] = q
+        omega_history[i] = omega
+
+    return quaternions, omega_history
