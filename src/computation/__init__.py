@@ -20,6 +20,11 @@ from .facet_data_extractor import (
     flat_array_to_lit_status_dict,
 )
 
+from .inertia_calculator import (
+    compute_mesh_volume,
+    is_mesh_watertight,
+)
+
 __all__ = [
     # BRDF
     'BRDFCalculator',
@@ -37,4 +42,7 @@ __all__ = [
     'apply_articulation_to_vertices',
     'lit_status_to_flat_array',
     'flat_array_to_lit_status_dict',
+    # Inertia calculation
+    'compute_mesh_volume',
+    'is_mesh_watertight',
 ]
