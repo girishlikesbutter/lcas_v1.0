@@ -23,6 +23,7 @@ from .facet_data_extractor import (
 from .inertia_calculator import (
     compute_mesh_volume,
     is_mesh_watertight,
+    compute_component_inertia,
 )
 
 __all__ = [
@@ -45,4 +46,5 @@ __all__ = [
     # Inertia calculation
     'compute_mesh_volume',
     'is_mesh_watertight',
+    'compute_component_inertia',
 ]

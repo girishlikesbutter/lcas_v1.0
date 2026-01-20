@@ -90,3 +90,155 @@ def is_mesh_watertight(mesh: trimesh.Trimesh) -> bool:
     """
     # trimesh provides a built-in watertight check
     return bool(mesh.is_watertight)
+
+
+def compute_component_inertia(
+    mesh: trimesh.Trimesh, mass: float
+) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """
+    Compute the inertia tensor for a single STL component with given mass.
+
+    Assumes homogeneous mass distribution throughout the volume. The inertia
+    tensor is computed about the component's center of mass.
+
+    Parameters
+    ----------
+    mesh : trimesh.Trimesh
+        The mesh representing the component geometry.
+    mass : float
+        The total mass of the component in consistent units.
+
+    Returns
+    -------
+    Tuple[NDArray[np.float64], NDArray[np.float64]]
+        A tuple (inertia_tensor, center_of_mass) where:
+        - inertia_tensor is a 3x3 numpy array (moment of inertia tensor about CoM)
+        - center_of_mass is a (3,) numpy array with the CoM coordinates
+
+    Notes
+    -----
+    For a homogeneous solid, the inertia tensor is computed by:
+    1. Computing the volume using signed tetrahedra method
+    2. Deriving density as mass / volume
+    3. Computing volume integrals of position products over tetrahedra
+    4. Scaling by density to get mass-based inertia tensor
+
+    The inertia tensor elements are defined as:
+    - Diagonal: I_xx = integral(y^2 + z^2 dm), etc.
+    - Off-diagonal: I_xy = -integral(x*y dm), etc.
+
+    If the mesh is not watertight, a warning is logged.
+    """
+    if not is_mesh_watertight(mesh):
+        logger.warning(
+            "Mesh is not watertight. Inertia calculation may be inaccurate."
+        )
+
+    # Compute volume
+    volume = compute_mesh_volume(mesh)
+    if volume < 1e-12:
+        raise ValueError("Mesh has zero or near-zero volume, cannot compute inertia.")
+
+    # Compute density from mass and volume
+    density = mass / volume
+
+    # Get mesh data
+    vertices = mesh.vertices  # Shape (N_vertices, 3)
+    faces = mesh.faces  # Shape (N_faces, 3)
+
+    # Extract the three vertices for each face
+    v0 = vertices[faces[:, 0]]  # Shape (N_faces, 3)
+    v1 = vertices[faces[:, 1]]  # Shape (N_faces, 3)
+    v2 = vertices[faces[:, 2]]  # Shape (N_faces, 3)
+
+    # Compute center of mass using volume-weighted centroids of tetrahedra
+    # Each tetrahedron formed by origin and a face has centroid at (v0 + v1 + v2) / 4
+    # and signed volume (1/6) * v0 · (v1 × v2)
+    cross_product = np.cross(v1, v2)
+    signed_volumes = np.sum(v0 * cross_product, axis=1) / 6.0
+    centroids = (v0 + v1 + v2) / 4.0  # Shape (N_faces, 3)
+
+    # Volume-weighted center of mass
+    total_signed_volume = np.sum(signed_volumes)
+    center_of_mass = np.sum(
+        signed_volumes[:, np.newaxis] * centroids, axis=0
+    ) / total_signed_volume
+
+    # Now compute the inertia tensor about the origin using canonical formulas
+    # for tetrahedra, then translate to center of mass
+
+    # For each tetrahedron with vertices at origin (0), v0, v1, v2,
+    # we need to compute integrals of x^2, y^2, z^2, xy, xz, yz over the volume.
+    # Using the formula for volume integrals over tetrahedra with one vertex at origin:
+    #
+    # For a tetrahedron with vertices (0, a, b, c), the volume integrals are:
+    # integral(x^2) = V * (a_x^2 + b_x^2 + c_x^2 + a_x*b_x + a_x*c_x + b_x*c_x) / 10
+    # integral(xy)  = V * (2*a_x*a_y + 2*b_x*b_y + 2*c_x*c_y +
+    #                      a_x*b_y + a_y*b_x + a_x*c_y + a_y*c_x + b_x*c_y + b_y*c_x) / 20
+    # where V is the signed volume of the tetrahedron.
+
+    # Components of vertices
+    ax, ay, az = v0[:, 0], v0[:, 1], v0[:, 2]
+    bx, by, bz = v1[:, 0], v1[:, 1], v1[:, 2]
+    cx, cy, cz = v2[:, 0], v2[:, 1], v2[:, 2]
+
+    # Volume integrals for each tetrahedron (scaled by signed volume)
+    # integral(x^2) over all tetrahedra
+    int_x2 = signed_volumes * (ax**2 + bx**2 + cx**2 + ax*bx + ax*cx + bx*cx) / 10.0
+    int_y2 = signed_volumes * (ay**2 + by**2 + cy**2 + ay*by + ay*cy + by*cy) / 10.0
+    int_z2 = signed_volumes * (az**2 + bz**2 + cz**2 + az*bz + az*cz + bz*cz) / 10.0
+
+    # integral(xy) over all tetrahedra
+    int_xy = signed_volumes * (
+        2*ax*ay + 2*bx*by + 2*cx*cy +
+        ax*by + ay*bx + ax*cy + ay*cx + bx*cy + by*cx
+    ) / 20.0
+    int_xz = signed_volumes * (
+        2*ax*az + 2*bx*bz + 2*cx*cz +
+        ax*bz + az*bx + ax*cz + az*cx + bx*cz + bz*cx
+    ) / 20.0
+    int_yz = signed_volumes * (
+        2*ay*az + 2*by*bz + 2*cy*cz +
+        ay*bz + az*by + ay*cz + az*cy + by*cz + bz*cy
+    ) / 20.0
+
+    # Sum over all tetrahedra
+    total_x2 = np.sum(int_x2)
+    total_y2 = np.sum(int_y2)
+    total_z2 = np.sum(int_z2)
+    total_xy = np.sum(int_xy)
+    total_xz = np.sum(int_xz)
+    total_yz = np.sum(int_yz)
+
+    # Inertia tensor about origin (with unit density)
+    # I_xx = integral(y^2 + z^2 dV), I_xy = -integral(xy dV), etc.
+    I_xx_origin = total_y2 + total_z2
+    I_yy_origin = total_x2 + total_z2
+    I_zz_origin = total_x2 + total_y2
+    I_xy_origin = -total_xy
+    I_xz_origin = -total_xz
+    I_yz_origin = -total_yz
+
+    # Scale by density to get mass-based inertia
+    I_xx_origin *= density
+    I_yy_origin *= density
+    I_xz_origin *= density
+    I_zz_origin *= density
+    I_xy_origin *= density
+    I_yz_origin *= density
+
+    inertia_origin = np.array([
+        [I_xx_origin, I_xy_origin, I_xz_origin],
+        [I_xy_origin, I_yy_origin, I_yz_origin],
+        [I_xz_origin, I_yz_origin, I_zz_origin]
+    ], dtype=np.float64)
+
+    # Translate from origin to center of mass using parallel axis theorem (inverse)
+    # I_cm = I_origin - m * (d^2 * I - outer(d, d))
+    # where d is the displacement from origin to CoM
+    d = center_of_mass
+    d_squared = np.dot(d, d)
+    parallel_axis_term = mass * (d_squared * np.eye(3) - np.outer(d, d))
+    inertia_cm = inertia_origin - parallel_axis_term
+
+    return inertia_cm, center_of_mass.astype(np.float64)
