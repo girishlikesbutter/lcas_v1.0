@@ -35,3 +35,7 @@ tqdm>=4.64.0
 # Notebook workflow
 jupytext>=1.14.0
 notebook>=6.0.0
+
+# MCMC sampling and uncertainty quantification
+emcee>=3.1.0
+corner>=2.2.0
