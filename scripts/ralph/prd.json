@@ -1,0 +1,402 @@
+{
+  "project": "LCAS",
+  "branchName": "ralph/lightcurve-inversion",
+  "description": "Lightcurve Inversion Tool - Estimate initial attitude and angular velocity from observed lightcurves using optimization",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create dynamics module structure",
+      "description": "As a developer, I need the src/dynamics/ module scaffolding to organize attitude propagation code.",
+      "acceptanceCriteria": [
+        "Create src/dynamics/__init__.py with module docstring",
+        "Create src/dynamics/attitude_propagator.py with placeholder functions",
+        "Placeholder functions: propagate_attitude(), propagate_principal_axis(), propagate_euler()",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Implement principal axis rotation propagation",
+      "description": "As a researcher, I want to propagate attitude assuming constant angular velocity in body frame.",
+      "acceptanceCriteria": [
+        "propagate_principal_axis(q0, omega, times) returns quaternion array shape (N, 4)",
+        "Uses closed-form solution: q(t) = q0 * quaternion_exp(0.5 * omega * dt)",
+        "Quaternions use scalar-first convention (w, x, y, z)",
+        "Output quaternions are normalized",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Implement tumbling Euler dynamics propagation",
+      "description": "As a debris analyst, I want to propagate attitude with evolving angular velocity using Euler equations.",
+      "acceptanceCriteria": [
+        "propagate_euler(q0, omega0, inertia_tensor, times) returns (quaternions, omega_history)",
+        "Integrates coupled ODE: Euler equations + quaternion kinematics",
+        "Uses scipy.integrate.solve_ivp with RK45 or DOP853",
+        "Quaternions renormalized during integration",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Create unified propagate_attitude interface",
+      "description": "As a user, I want a single function to choose between propagation modes.",
+      "acceptanceCriteria": [
+        "propagate_attitude(q0, omega0, times, mode, inertia_tensor=None) dispatches to correct propagator",
+        "mode='principal_axis' calls propagate_principal_axis",
+        "mode='tumbling' calls propagate_euler and requires inertia_tensor",
+        "Raises ValueError if tumbling mode without inertia_tensor",
+        "Returns (quaternions, omega_history) tuple",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add STL volume calculation utility",
+      "description": "As an engineer, I need to compute mesh volume using the signed tetrahedra method.",
+      "acceptanceCriteria": [
+        "Create src/computation/inertia_calculator.py",
+        "compute_mesh_volume(mesh) returns float volume using divergence theorem",
+        "Uses signed tetrahedra method summing contributions from each face",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Add mesh watertight validation",
+      "description": "As a user, I want warnings if my STL mesh is not closed.",
+      "acceptanceCriteria": [
+        "is_mesh_watertight(mesh) returns bool",
+        "Checks that mesh is closed (each edge shared by exactly 2 faces)",
+        "compute_mesh_volume logs warning if mesh is not watertight",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Implement component inertia tensor calculation",
+      "description": "As an engineer, I want to compute inertia tensor for a single STL component with given mass.",
+      "acceptanceCriteria": [
+        "compute_component_inertia(mesh, mass) returns 3x3 inertia tensor about component center of mass",
+        "Assumes homogeneous mass distribution",
+        "Computes density from mass/volume",
+        "Returns (inertia_tensor, center_of_mass) tuple",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Implement parallel axis theorem for inertia translation",
+      "description": "As an engineer, I need to translate component inertia tensors to body frame origin.",
+      "acceptanceCriteria": [
+        "translate_inertia(I_cm, mass, displacement) applies parallel axis theorem",
+        "Formula: I_body = I_cm + m * (d^2 * I - outer(d, d))",
+        "displacement is vector from body origin to component center of mass",
+        "Returns 3x3 inertia tensor about body origin",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Implement full satellite inertia computation from STL components",
+      "description": "As an engineer, I want to compute total satellite inertia from multiple STL components with masses.",
+      "acceptanceCriteria": [
+        "compute_inertia_from_stl(stl_components, masses) returns InertiaResult dataclass",
+        "InertiaResult contains: total_mass, center_of_mass, inertia_tensor, principal_moments, principal_axes",
+        "Handles same STL file used multiple times at different positions",
+        "Sums all component contributions using parallel axis theorem",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Create inversion module structure",
+      "description": "As a developer, I need the src/inversion/ module scaffolding for the inversion engine.",
+      "acceptanceCriteria": [
+        "Create src/inversion/__init__.py",
+        "Create src/inversion/quaternion_utils.py with placeholder functions",
+        "Create src/inversion/objective_function.py with placeholder",
+        "Create src/inversion/optimizers.py with placeholder",
+        "Create src/inversion/constraints.py with placeholder",
+        "Create src/inversion/uncertainty.py with placeholder",
+        "Create src/inversion/results.py with placeholder",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Implement quaternion utilities for optimization",
+      "description": "As a developer, I need quaternion helper functions for the optimization loop.",
+      "acceptanceCriteria": [
+        "normalize_quaternion(q) returns unit quaternion",
+        "axis_angle_to_quaternion(axis_angle) converts 3-param representation to quaternion",
+        "quaternion_to_axis_angle(q) converts quaternion to 3-param representation",
+        "quaternion_multiply(q1, q2) returns product quaternion",
+        "All functions use scalar-first (w,x,y,z) convention",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Implement objective function wrapper",
+      "description": "As a developer, I need an objective function that wraps the forward model for optimization.",
+      "acceptanceCriteria": [
+        "ObjectiveFunction class wraps LCAS generate_lightcurves forward model",
+        "Constructor accepts: satellite_config, observer_config, observation_times",
+        "evaluate(params) returns chi-squared residual between predicted and observed lightcurve",
+        "params is array: [axis_angle(3), omega(3)] = 6 parameters",
+        "Internally propagates attitude and calls forward model",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Implement weighted residual calculation",
+      "description": "As a user, I want to weight observations by their uncertainties.",
+      "acceptanceCriteria": [
+        "ObjectiveFunction accepts optional uncertainty array",
+        "If uncertainties provided: chi_sq = sum((obs - pred)^2 / sigma^2)",
+        "If no uncertainties: use uniform weights (MSE)",
+        "Observations with infinite magnitude (not visible) are excluded",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Implement Differential Evolution global optimizer",
+      "description": "As a user, I want global optimization to avoid local minima.",
+      "acceptanceCriteria": [
+        "global_optimize(objective, bounds) uses scipy.optimize.differential_evolution",
+        "bounds specify ranges for axis_angle and omega parameters",
+        "Default omega bounds: 0 to 30 deg/s magnitude",
+        "Returns OptimizationResult with best params and cost",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Implement local refinement optimizer",
+      "description": "As a user, I want local refinement to converge to precise optimum.",
+      "acceptanceCriteria": [
+        "local_refine(objective, x0, bounds) uses scipy.optimize.minimize with L-BFGS-B",
+        "x0 is initial guess from global optimization",
+        "Quaternion constraint enforced via normalization after each iteration",
+        "Returns refined OptimizationResult",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Implement multi-start optimization wrapper",
+      "description": "As a user, I want multiple random starts to improve robustness.",
+      "acceptanceCriteria": [
+        "multi_start_optimize(objective, bounds, n_starts) runs optimization n_starts times",
+        "Each start uses different random initialization",
+        "Returns list of results sorted by cost",
+        "Best result returned as primary output",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Implement constraint modes",
+      "description": "As a user, I want to choose between free exploration and physics-informed constraints.",
+      "acceptanceCriteria": [
+        "ConstraintMode enum: FREE, PHYSICS_INFORMED",
+        "get_bounds(mode, omega_max) returns appropriate parameter bounds",
+        "FREE mode: minimal constraints (only omega magnitude bound)",
+        "PHYSICS_INFORMED mode: adds principal axis rotation constraint",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Implement Fisher Information Matrix uncertainty estimation",
+      "description": "As a user, I want quick uncertainty estimates using Fisher Information.",
+      "acceptanceCriteria": [
+        "compute_fisher_uncertainty(objective, optimal_params) returns covariance matrix",
+        "Uses numerical approximation of Hessian at optimum",
+        "Covariance = inverse of Fisher Information Matrix",
+        "Returns standard deviations for each parameter",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Implement MCMC uncertainty estimation with emcee",
+      "description": "As a researcher, I want full posterior characterization using MCMC sampling.",
+      "acceptanceCriteria": [
+        "compute_mcmc_uncertainty(objective, optimal_params, n_samples) uses emcee",
+        "Returns posterior samples array",
+        "Returns parameter correlations (covariance matrix)",
+        "Includes convergence diagnostics",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Implement InversionResult container class",
+      "description": "As a user, I want a structured container for all inversion outputs.",
+      "acceptanceCriteria": [
+        "InversionResult dataclass with fields: q0, omega0, chi_squared, rms_residual, uncertainties, predicted_lightcurve",
+        "For tumbling mode: includes omega_history over observation window",
+        "Includes observed vs predicted data for plotting",
+        "Typecheck passes"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Implement result visualization methods",
+      "description": "As a user, I want to visualize inversion results.",
+      "acceptanceCriteria": [
+        "InversionResult.plot_lightcurve_comparison() shows observed vs predicted",
+        "InversionResult.plot_residuals() shows residual plot",
+        "InversionResult.plot_corner() shows parameter posterior (requires MCMC samples)",
+        "Uses matplotlib for all plots",
+        "Typecheck passes"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Create main inversion API function",
+      "description": "As a user, I want a single function to run the full inversion pipeline.",
+      "acceptanceCriteria": [
+        "invert_lightcurve(observed_lc, satellite_config, observer_config, ...) runs full pipeline",
+        "Accepts mode parameter: 'principal_axis' or 'tumbling'",
+        "Accepts uncertainty_mode parameter: 'quick' (Fisher) or 'full' (MCMC)",
+        "Runs global optimization, local refinement, uncertainty estimation",
+        "Returns InversionResult",
+        "Typecheck passes"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Create inertia calculation notebook",
+      "description": "As an engineer, I want a notebook demonstrating inertia calculation from STL files.",
+      "acceptanceCriteria": [
+        "Create notebooks/inversion/01_inertia_calculation.py as Jupytext percent format",
+        "Demonstrates loading STL components and assigning masses",
+        "Shows validation of mesh watertightness",
+        "Displays computed inertia tensor, principal moments, and principal axes",
+        "Includes comparison with analytical result for simple shape",
+        "Typecheck passes"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Create attitude propagation demo notebook",
+      "description": "As a researcher, I want a notebook demonstrating the attitude propagator.",
+      "acceptanceCriteria": [
+        "Create notebooks/inversion/02_attitude_propagation.py as Jupytext percent format",
+        "Demonstrates principal axis mode propagation",
+        "Demonstrates tumbling mode with Euler dynamics",
+        "Shows how to use propagator output with existing LCAS forward model",
+        "Visualizes quaternion and angular velocity evolution",
+        "Typecheck passes"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Create lightcurve inversion workflow notebook",
+      "description": "As an analyst, I want a notebook demonstrating the full inversion workflow.",
+      "acceptanceCriteria": [
+        "Create notebooks/inversion/03_lightcurve_inversion.py as Jupytext percent format",
+        "Shows round-trip validation: forward model -> inversion -> compare",
+        "Demonstrates both quick (Fisher) and full (MCMC) uncertainty modes",
+        "Includes visualization of results",
+        "Documents all configuration options",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Add emcee and corner to project dependencies",
+      "description": "As a developer, I need the new dependencies added to the project.",
+      "acceptanceCriteria": [
+        "Add emcee to requirements.txt or pyproject.toml",
+        "Add corner to requirements.txt or pyproject.toml",
+        "Dependencies are installable without conflicts",
+        "Typecheck passes"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
