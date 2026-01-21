@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.18.1
+#       jupytext_version: 1.19.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -19,11 +19,10 @@
 # This notebook demonstrates how to compute the inertia tensor of a satellite
 # from its STL mesh components. We cover:
 #
-# 1. Loading STL meshes using trimesh
-# 2. Validating mesh watertightness
-# 3. Computing component inertia tensors
-# 4. Combining multiple components into a full satellite inertia
-# 5. Validating results against analytical solutions
+# 1. **Config-based workflow**: Loading component positions from config files
+# 2. **Articulation support**: Computing inertia at different articulation angles
+# 3. **Low-level API**: Direct mesh loading and inertia calculation
+# 4. **Validation**: Comparing against analytical solutions
 #
 # **Prerequisites:** Ensure you have trimesh installed (`pip install trimesh`).
 
@@ -51,19 +50,205 @@ from src.computation import (
     compute_component_inertia,
     translate_inertia,
     compute_inertia_from_stl,
+    compute_inertia_from_config,
+    load_components_from_config,
     InertiaResult,
     STLComponent,
 )
+from src.config.rso_config_manager import RSO_ConfigManager
 
 print(f"Project root: {PROJECT_ROOT}")
 print("Imports successful!")
 
 # %% [markdown]
 # ---
-# ## 1. Loading STL Meshes
+# ## 1. Config-Based Workflow (Recommended)
 #
-# We'll demonstrate loading STL files from the `data/models/` directory.
-# This project includes several satellite models, including the Intelsat 901.
+# The simplest way to compute satellite inertia is using the config-based workflow.
+# This approach:
+# - Loads component positions directly from the satellite config file
+# - Handles articulation capabilities automatically
+# - Applies default articulation angles when not specified
+#
+# ### 1.1 Load the Satellite Configuration
+
+# %%
+# Initialize config manager with project root
+config_manager = RSO_ConfigManager(PROJECT_ROOT)
+
+# Load Intelsat 901 configuration
+config = config_manager.load_config("intelsat_901/intelsat_901_config.yaml")
+
+print(f"Loaded configuration for: {config.name}")
+print(f"\nComponents defined in config:")
+for comp_name, comp_def in config.components.items():
+    print(f"  {comp_name}:")
+    print(f"    STL file: {comp_def.stl_file}")
+    print(f"    Position: {comp_def.position}")
+
+# %%
+# Show articulation capabilities from config
+print("Articulation capabilities:")
+for comp_name, art_cap in config.articulation_capabilities.items():
+    print(f"  {comp_name}:")
+    print(f"    Rotation center: {art_cap.rotation_center}")
+    print(f"    Rotation axis: {art_cap.rotation_axis}")
+    print(f"    Limits: {art_cap.limits['min_angle']}° to {art_cap.limits['max_angle']}°")
+
+# %% [markdown]
+# ### 1.2 Define Component Masses
+#
+# Masses are defined in the notebook, not in the config file. This allows flexibility
+# to adjust masses without modifying the satellite configuration.
+
+# %%
+# Define component masses (kg)
+# These are example values for demonstration purposes
+masses = {
+    "Bus": 1500.0,       # Main spacecraft bus
+    "SP_North": 50.0,    # North solar panel
+    "SP_South": 50.0,    # South solar panel
+    "AD_West": 25.0,     # West antenna dish
+    "AD_East": 25.0,     # East antenna dish
+}
+
+total_mass = sum(masses.values())
+print(f"Component masses (kg):")
+for name, mass in masses.items():
+    print(f"  {name}: {mass:.1f} kg")
+print(f"\nTotal mass: {total_mass:.1f} kg")
+
+# %% [markdown]
+# ### 1.3 Compute Inertia with Default Articulation Angles
+#
+# When calling `compute_inertia_from_config()` without specifying articulation angles,
+# default values are applied:
+# - **Antenna dishes** (components with 'AD' prefix): 15 degrees
+# - **Other articulable components** (e.g., solar panels): 0 degrees
+#
+# A warning is logged when default angles are used.
+
+# %%
+# Compute inertia with default articulation angles
+# Note: Warnings will be logged for components using default angles
+import logging
+logging.basicConfig(level=logging.WARNING)
+
+result_default = compute_inertia_from_config(config, config_manager, masses)
+
+print("Inertia with DEFAULT articulation angles:")
+print("=" * 55)
+print(f"Total mass: {result_default.total_mass:.2f} kg")
+print(f"\nCenter of mass (body frame):")
+print(f"  [{result_default.center_of_mass[0]:.4f}, {result_default.center_of_mass[1]:.4f}, {result_default.center_of_mass[2]:.4f}] m")
+
+# %%
+# Display the inertia tensor
+print("Inertia tensor about satellite CoM (kg*m^2):")
+I = result_default.inertia_tensor
+print(f"  [{I[0,0]:12.2f}  {I[0,1]:12.2f}  {I[0,2]:12.2f}]")
+print(f"  [{I[1,0]:12.2f}  {I[1,1]:12.2f}  {I[1,2]:12.2f}]")
+print(f"  [{I[2,0]:12.2f}  {I[2,1]:12.2f}  {I[2,2]:12.2f}]")
+
+print("\nPrincipal moments of inertia:")
+print(f"  I_1 = {result_default.principal_moments[0]:.2f} kg*m^2")
+print(f"  I_2 = {result_default.principal_moments[1]:.2f} kg*m^2")
+print(f"  I_3 = {result_default.principal_moments[2]:.2f} kg*m^2")
+
+# %% [markdown]
+# ### 1.4 Compute Inertia with Custom Articulation Angles
+#
+# You can specify explicit articulation angles for any articulable component.
+# Angles are validated against the limits defined in the config.
+
+# %%
+# Define custom articulation angles (degrees)
+# Solar panels rotated, antenna dishes at their limits
+custom_angles = {
+    "SP_North": 45.0,   # Solar panel rotated 45 degrees
+    "SP_South": -30.0,  # Solar panel rotated -30 degrees
+    "AD_West": 45.0,    # Antenna dish at 45 degrees
+    "AD_East": 90.0,    # Antenna dish at maximum angle
+}
+
+result_custom = compute_inertia_from_config(
+    config, config_manager, masses,
+    articulation_angles=custom_angles
+)
+
+print("Inertia with CUSTOM articulation angles:")
+print("=" * 55)
+print(f"Articulation angles used:")
+for name, angle in custom_angles.items():
+    print(f"  {name}: {angle}°")
+
+print(f"\nCenter of mass (body frame):")
+print(f"  [{result_custom.center_of_mass[0]:.4f}, {result_custom.center_of_mass[1]:.4f}, {result_custom.center_of_mass[2]:.4f}] m")
+
+# %%
+# Display the inertia tensor with custom angles
+print("Inertia tensor about satellite CoM (kg*m^2):")
+I = result_custom.inertia_tensor
+print(f"  [{I[0,0]:12.2f}  {I[0,1]:12.2f}  {I[0,2]:12.2f}]")
+print(f"  [{I[1,0]:12.2f}  {I[1,1]:12.2f}  {I[1,2]:12.2f}]")
+print(f"  [{I[2,0]:12.2f}  {I[2,1]:12.2f}  {I[2,2]:12.2f}]")
+
+print("\nPrincipal moments of inertia:")
+print(f"  I_1 = {result_custom.principal_moments[0]:.2f} kg*m^2")
+print(f"  I_2 = {result_custom.principal_moments[1]:.2f} kg*m^2")
+print(f"  I_3 = {result_custom.principal_moments[2]:.2f} kg*m^2")
+
+# %% [markdown]
+# ### 1.5 Compare Inertia at Different Articulation States
+#
+# The articulation state can significantly affect the satellite's inertia tensor,
+# especially for large articulating components like solar panels.
+
+# %%
+# Compute inertia at several articulation states
+articulation_states = {
+    "Stowed (0°)": {"SP_North": 0.0, "SP_South": 0.0, "AD_West": 0.0, "AD_East": 0.0},
+    "Panels +45°": {"SP_North": 45.0, "SP_South": 45.0, "AD_West": 15.0, "AD_East": 15.0},
+    "Panels +90°": {"SP_North": 90.0, "SP_South": 90.0, "AD_West": 15.0, "AD_East": 15.0},
+    "Panels -45°": {"SP_North": -45.0, "SP_South": -45.0, "AD_West": 15.0, "AD_East": 15.0},
+}
+
+results_by_state = {}
+print("Inertia Comparison at Different Articulation States")
+print("=" * 70)
+print(f"{'State':<15} {'I_1 (kg*m^2)':<15} {'I_2 (kg*m^2)':<15} {'I_3 (kg*m^2)':<15}")
+print("-" * 70)
+
+for state_name, angles in articulation_states.items():
+    result = compute_inertia_from_config(
+        config, config_manager, masses,
+        articulation_angles=angles
+    )
+    results_by_state[state_name] = result
+
+    pm = result.principal_moments
+    print(f"{state_name:<15} {pm[0]:>14.2f} {pm[1]:>14.2f} {pm[2]:>14.2f}")
+
+# %%
+# Show how center of mass shifts with articulation
+print("\nCenter of Mass at Different Articulation States")
+print("=" * 70)
+print(f"{'State':<15} {'X (m)':<15} {'Y (m)':<15} {'Z (m)':<15}")
+print("-" * 70)
+
+for state_name, result in results_by_state.items():
+    com = result.center_of_mass
+    print(f"{state_name:<15} {com[0]:>14.4f} {com[1]:>14.4f} {com[2]:>14.4f}")
+
+# %% [markdown]
+# ---
+# ## 2. Low-Level API: Direct Mesh Loading
+#
+# For more control, you can load meshes directly and use the lower-level functions.
+# This approach is useful when you need to:
+# - Work with meshes not defined in a config file
+# - Customize the loading process
+# - Validate individual mesh properties
 
 # %%
 # Path to available STL files
@@ -74,10 +259,11 @@ print("Available satellite models:")
 for model_folder in models_dir.iterdir():
     if model_folder.is_dir():
         stl_files = list(model_folder.glob("*.stl"))
-        print(f"  {model_folder.name}/: {[f.name for f in stl_files]}")
+        if stl_files:
+            print(f"  {model_folder.name}/: {[f.name for f in stl_files]}")
 
 # %%
-# Load Intelsat 901 components
+# Load Intelsat 901 components manually
 intelsat_dir = models_dir / "intelsat_901"
 
 bus_mesh = trimesh.load(str(intelsat_dir / "bus.stl"))
@@ -90,13 +276,10 @@ print(f"  Solar Panel: {len(sp_mesh.vertices)} vertices, {len(sp_mesh.faces)} fa
 print(f"  Antenna Dish: {len(ad_mesh.vertices)} vertices, {len(ad_mesh.faces)} faces")
 
 # %% [markdown]
-# ---
-# ## 2. Mesh Watertightness Validation
+# ### 2.1 Mesh Watertightness Validation
 #
 # For accurate volume and inertia calculations, meshes should be "watertight"
-# (closed, with no holes). This means each edge is shared by exactly two faces.
-#
-# The `is_mesh_watertight()` function checks this property.
+# (closed, with no holes). The `is_mesh_watertight()` function checks this property.
 
 # %%
 # Check watertightness of each mesh
@@ -113,13 +296,10 @@ print(f"  Solar Panel volume: {compute_mesh_volume(sp_mesh):.6f} units^3")
 print(f"  Antenna Dish volume: {compute_mesh_volume(ad_mesh):.6f} units^3")
 
 # %% [markdown]
-# ---
-# ## 3. Single Component Inertia Calculation
+# ### 2.2 Single Component Inertia Calculation
 #
-# For a single component, we can compute its inertia tensor about its center of mass
-# using `compute_component_inertia()`. This assumes homogeneous mass distribution.
-#
-# The function returns both the inertia tensor and the center of mass location.
+# For a single component, `compute_component_inertia()` computes the inertia tensor
+# about its center of mass, assuming homogeneous mass distribution.
 
 # %%
 # Assign a mass to the bus component (in kg)
@@ -137,105 +317,44 @@ print(f"    [{I_bus[1,0]:12.4f}  {I_bus[1,1]:12.4f}  {I_bus[1,2]:12.4f}]")
 print(f"    [{I_bus[2,0]:12.4f}  {I_bus[2,1]:12.4f}  {I_bus[2,2]:12.4f}]")
 
 # %% [markdown]
-# ---
-# ## 4. Parallel Axis Theorem
+# ### 2.3 Combining Components with STLComponent
 #
-# When combining multiple components, we need to translate each component's inertia
-# tensor from its center of mass to a common reference point (usually the body frame origin).
-#
-# The `translate_inertia()` function applies the parallel axis theorem:
-#
-# $$I_{body} = I_{cm} + m \cdot (d^2 \cdot \mathbf{I} - \mathbf{d} \otimes \mathbf{d})$$
-#
-# where $\mathbf{d}$ is the displacement from the body origin to the component CoM.
-
-# %%
-# Example: translate bus inertia to body origin (assuming bus is at origin)
-# If the bus center of mass is offset from body origin, we translate:
-I_bus_at_origin = translate_inertia(I_bus, bus_mass, com_bus)
-
-print("Bus inertia translated to body origin:")
-print(f"  [{I_bus_at_origin[0,0]:12.4f}  {I_bus_at_origin[0,1]:12.4f}  {I_bus_at_origin[0,2]:12.4f}]")
-print(f"  [{I_bus_at_origin[1,0]:12.4f}  {I_bus_at_origin[1,1]:12.4f}  {I_bus_at_origin[1,2]:12.4f}]")
-print(f"  [{I_bus_at_origin[2,0]:12.4f}  {I_bus_at_origin[2,1]:12.4f}  {I_bus_at_origin[2,2]:12.4f}]")
-
-# %% [markdown]
-# ---
-# ## 5. Full Satellite Inertia from Multiple Components
-#
-# The `compute_inertia_from_stl()` function combines multiple STL components
-# (each with its own position and mass) into a total satellite inertia.
-#
-# We can define components using either:
-# - `STLComponent` dataclass: `STLComponent(mesh, position, mass)`
-# - Tuple format: `(mesh, position, mass)`
+# The `compute_inertia_from_stl()` function combines multiple components using
+# either `STLComponent` dataclass or tuples.
 
 # %%
 # Define satellite components with positions and masses
-# Positions are in the body frame (meters)
-
+# Positions match those in the Intelsat 901 config
 components = [
-    # Main bus at origin
-    STLComponent(
-        mesh=bus_mesh,
-        position=np.array([0.0, 0.0, 0.0]),
-        mass=1500.0  # kg
-    ),
-    # North solar panel (offset in +Y direction)
-    STLComponent(
-        mesh=sp_mesh,
-        position=np.array([0.0, 5.0, 0.0]),
-        mass=50.0  # kg
-    ),
-    # South solar panel (offset in -Y direction)
-    STLComponent(
-        mesh=sp_mesh,
-        position=np.array([0.0, -5.0, 0.0]),
-        mass=50.0  # kg
-    ),
-    # Antenna dish (offset in +X direction)
-    STLComponent(
-        mesh=ad_mesh,
-        position=np.array([3.0, 0.0, 0.0]),
-        mass=100.0  # kg
-    ),
+    STLComponent(mesh=bus_mesh, position=np.array([0.0, 0.0, 0.0]), mass=1500.0),
+    STLComponent(mesh=sp_mesh, position=np.array([0.0, 0.0, 9.2]), mass=50.0),
+    STLComponent(mesh=sp_mesh, position=np.array([0.0, 0.0, -9.2]), mass=50.0),
+    STLComponent(mesh=ad_mesh, position=np.array([-1.5, 4.0, 0.0]), mass=25.0),
+    STLComponent(mesh=ad_mesh, position=np.array([-1.5, -4.0, 0.0]), mass=25.0),
 ]
 
 # Compute total satellite inertia
-result = compute_inertia_from_stl(components)
+result_manual = compute_inertia_from_stl(components)
 
-print("Full Satellite Inertia Results:")
+print("Full Satellite Inertia (manually assembled):")
 print("=" * 50)
-print(f"Total mass: {result.total_mass:.2f} kg")
+print(f"Total mass: {result_manual.total_mass:.2f} kg")
 print(f"\nCenter of mass (body frame):")
-print(f"  [{result.center_of_mass[0]:.4f}, {result.center_of_mass[1]:.4f}, {result.center_of_mass[2]:.4f}]")
+print(f"  [{result_manual.center_of_mass[0]:.4f}, {result_manual.center_of_mass[1]:.4f}, {result_manual.center_of_mass[2]:.4f}]")
 
 # %%
-# Display the full inertia tensor
-print("Inertia tensor about satellite CoM (kg*m^2):")
-I = result.inertia_tensor
-print(f"  [{I[0,0]:12.4f}  {I[0,1]:12.4f}  {I[0,2]:12.4f}]")
-print(f"  [{I[1,0]:12.4f}  {I[1,1]:12.4f}  {I[1,2]:12.4f}]")
-print(f"  [{I[2,0]:12.4f}  {I[2,1]:12.4f}  {I[2,2]:12.4f}]")
-
-# %%
-# Display principal moments and axes
-print("\nPrincipal moments of inertia (ascending order):")
-print(f"  I_1 = {result.principal_moments[0]:.4f} kg*m^2")
-print(f"  I_2 = {result.principal_moments[1]:.4f} kg*m^2")
-print(f"  I_3 = {result.principal_moments[2]:.4f} kg*m^2")
-
-print("\nPrincipal axes (as column vectors):")
-axes = result.principal_axes
-for i in range(3):
-    print(f"  Axis {i+1}: [{axes[0,i]:.4f}, {axes[1,i]:.4f}, {axes[2,i]:.4f}]")
+# Display principal moments
+print("Principal moments of inertia:")
+print(f"  I_1 = {result_manual.principal_moments[0]:.2f} kg*m^2")
+print(f"  I_2 = {result_manual.principal_moments[1]:.2f} kg*m^2")
+print(f"  I_3 = {result_manual.principal_moments[2]:.2f} kg*m^2")
 
 # %% [markdown]
 # ---
-# ## 6. Validation with Analytical Solution
+# ## 3. Validation with Analytical Solutions
 #
 # To verify the inertia calculation is correct, we compare against the
-# analytical solution for a simple shape: a **solid rectangular box**.
+# analytical solution for simple shapes: unit cube and rectangular box.
 #
 # For a solid box with dimensions $a \times b \times c$ and mass $m$,
 # the principal moments of inertia about the center of mass are:
@@ -311,8 +430,7 @@ print(f"  I_yy: {I_box[1,1]:10.4f} vs {I_yy_analytical:10.4f} (error: {abs(I_box
 print(f"  I_zz: {I_box[2,2]:10.4f} vs {I_zz_analytical:10.4f} (error: {abs(I_box[2,2]-I_zz_analytical)/I_zz_analytical*100:.4f}%)")
 
 # %% [markdown]
-# ---
-# ## 7. Symmetric Two-Component Validation
+# ### 3.1 Symmetric Two-Component Validation
 #
 # Validate the multi-component calculation using two identical cubes placed
 # symmetrically about the origin. The parallel axis theorem should give
@@ -371,12 +489,21 @@ print(f"  I_zz error: {abs(I[2,2] - I_zz_expected):.6e}")
 # This notebook demonstrated the complete workflow for computing satellite inertia
 # from STL mesh files:
 #
-# 1. **Loading meshes** using trimesh
-# 2. **Validating watertightness** to ensure accurate volume calculations
+# ### Config-Based Workflow (Recommended)
+# 1. **Load configuration** using `RSO_ConfigManager`
+# 2. **Define masses** in the notebook (not in config)
+# 3. **Compute inertia** with `compute_inertia_from_config()`
+# 4. **Articulation support** - default and custom angles
+#
+# ### Low-Level API
+# 1. **Loading meshes** directly using trimesh
+# 2. **Validating watertightness** with `is_mesh_watertight()`
 # 3. **Computing single component inertia** with `compute_component_inertia()`
-# 4. **Translating inertia tensors** using the parallel axis theorem
-# 5. **Combining multiple components** with `compute_inertia_from_stl()`
-# 6. **Validating against analytical solutions** for simple shapes
+# 4. **Combining multiple components** with `compute_inertia_from_stl()`
+#
+# ### Validation
+# - Unit cube and asymmetric box match analytical formulas
+# - Symmetric two-cube test validates parallel axis theorem
 #
 # The computed inertia tensor can be used for:
 # - Attitude dynamics simulation (Euler equations)
