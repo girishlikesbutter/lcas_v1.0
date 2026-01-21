@@ -515,6 +515,101 @@ def compute_inertia_from_stl(
     )
 
 
+def apply_articulation_to_mesh(
+    mesh: trimesh.Trimesh,
+    position: NDArray[np.float64],
+    angle: float,
+    rotation_center: NDArray[np.float64],
+    rotation_axis: NDArray[np.float64],
+) -> Tuple[trimesh.Trimesh, NDArray[np.float64]]:
+    """
+    Apply articulation rotation to a mesh and update its position.
+
+    Rotates the mesh about a specified rotation center and axis by the given
+    angle. This is used to compute inertia at different articulation states
+    (e.g., solar panels deployed at various angles).
+
+    Parameters
+    ----------
+    mesh : trimesh.Trimesh
+        The mesh to rotate. A copy is made; the original is not modified.
+    position : NDArray[np.float64]
+        Original position of the component origin in body frame, shape (3,).
+    angle : float
+        Rotation angle in degrees.
+    rotation_center : NDArray[np.float64]
+        Point about which to rotate, in body frame coordinates, shape (3,).
+    rotation_axis : NDArray[np.float64]
+        Axis of rotation (will be normalized), shape (3,).
+
+    Returns
+    -------
+    Tuple[trimesh.Trimesh, NDArray[np.float64]]
+        A tuple (rotated_mesh, updated_position) where:
+        - rotated_mesh: The mesh after rotation
+        - updated_position: The new component origin position after rotation
+
+    Notes
+    -----
+    The rotation is applied in the body frame:
+    1. Translate so rotation_center is at origin
+    2. Rotate by angle about rotation_axis
+    3. Translate back
+
+    The updated_position is computed by applying the same transformation
+    to the original position, so that the component's placement in the
+    body frame is correctly updated.
+
+    The rotation matrix is computed using Rodrigues' formula:
+        R = I + sin(θ)K + (1 - cos(θ))K²
+    where K is the skew-symmetric matrix of the rotation axis.
+    """
+    # Convert inputs to numpy arrays
+    position = np.asarray(position, dtype=np.float64)
+    rotation_center = np.asarray(rotation_center, dtype=np.float64)
+    rotation_axis = np.asarray(rotation_axis, dtype=np.float64)
+
+    # Normalize rotation axis
+    axis_norm = np.linalg.norm(rotation_axis)
+    if axis_norm < 1e-12:
+        raise ValueError("rotation_axis has zero or near-zero magnitude")
+    k = rotation_axis / axis_norm
+
+    # Convert angle to radians
+    theta = np.radians(angle)
+
+    # Compute rotation matrix using Rodrigues' formula
+    # K is the skew-symmetric cross-product matrix of k
+    K = np.array([
+        [0, -k[2], k[1]],
+        [k[2], 0, -k[0]],
+        [-k[1], k[0], 0]
+    ], dtype=np.float64)
+
+    # R = I + sin(θ)K + (1 - cos(θ))K²
+    R = np.eye(3) + np.sin(theta) * K + (1 - np.cos(theta)) * (K @ K)
+
+    # Create a copy of the mesh to avoid modifying the original
+    rotated_mesh = mesh.copy()
+
+    # Get vertices and apply the rotation about rotation_center
+    # 1. Translate to put rotation_center at origin
+    # 2. Rotate
+    # 3. Translate back
+    vertices = rotated_mesh.vertices.copy()
+    vertices_translated = vertices - rotation_center
+    vertices_rotated = (R @ vertices_translated.T).T
+    rotated_mesh.vertices = vertices_rotated + rotation_center
+
+    # Apply the same transformation to the component position
+    # The position is the component origin in the body frame
+    position_translated = position - rotation_center
+    position_rotated = R @ position_translated
+    updated_position = position_rotated + rotation_center
+
+    return rotated_mesh, updated_position.astype(np.float64)
+
+
 def load_components_from_config(
     config: "RSO_Config",
     config_manager: "RSO_ConfigManager",
