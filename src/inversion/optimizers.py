@@ -257,24 +257,91 @@ def local_refine(
 
 def multi_start_optimize(
     objective: ObjectiveFunction,
-    bounds: List[Tuple[float, float]],
+    bounds: Optional[List[Tuple[float, float]]] = None,
     n_starts: int = 5,
+    seed: Optional[int] = None,
+    global_maxiter: int = 500,
+    local_maxiter: int = 500,
+    use_local_refinement: bool = True,
 ) -> List[OptimizationResult]:
     """
     Run optimization with multiple random starting points.
+
+    This function runs global optimization (Differential Evolution) from
+    multiple random initial populations to improve robustness against
+    local minima. Optionally refines each result with local optimization.
 
     Parameters
     ----------
     objective : ObjectiveFunction
         The objective function to minimize.
-    bounds : list of (min, max) tuples
-        Parameter bounds.
+    bounds : list of (min, max) tuples, optional
+        Parameter bounds. If None, uses default bounds with omega max of 30 deg/s.
     n_starts : int, optional
         Number of random starting points. Default is 5.
+    seed : int, optional
+        Base random seed for reproducibility. Each start uses seed+i.
+    global_maxiter : int, optional
+        Maximum iterations for global optimizer. Default is 500.
+    local_maxiter : int, optional
+        Maximum iterations for local refinement. Default is 500.
+    use_local_refinement : bool, optional
+        Whether to refine global result with L-BFGS-B. Default is True.
 
     Returns
     -------
     list of OptimizationResult
-        Results sorted by cost (best first).
+        Results sorted by cost (best first). The first element is the
+        best result found across all starts.
+
+    Notes
+    -----
+    Each start uses a different random seed (seed + start_index) to ensure
+    diverse initial populations. The results are sorted by final cost so
+    the best solution is always first in the returned list.
     """
-    raise NotImplementedError("multi_start_optimize not yet implemented")
+    if bounds is None:
+        bounds = get_default_bounds()
+
+    results: List[OptimizationResult] = []
+
+    for i in range(n_starts):
+        # Use different seed for each start
+        start_seed = None if seed is None else seed + i
+
+        # Run global optimization
+        global_result = global_optimize(
+            objective=objective,
+            bounds=bounds,
+            seed=start_seed,
+            maxiter=global_maxiter,
+            polish=False,  # We'll do local refinement separately
+        )
+
+        if use_local_refinement:
+            # Refine with local optimizer
+            refined_result = local_refine(
+                objective=objective,
+                x0=global_result.params,
+                bounds=bounds,
+                maxiter=local_maxiter,
+            )
+
+            # Combine evaluation counts
+            total_evals = global_result.n_evaluations + refined_result.n_evaluations
+            final_result = OptimizationResult(
+                params=refined_result.params,
+                cost=refined_result.cost,
+                n_evaluations=total_evals,
+                success=refined_result.success,
+                message=f"Global + local: {refined_result.message}",
+            )
+        else:
+            final_result = global_result
+
+        results.append(final_result)
+
+    # Sort by cost (best first)
+    results.sort(key=lambda r: r.cost)
+
+    return results
