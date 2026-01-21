@@ -15,9 +15,10 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional
 import numpy as np
 from numpy.typing import NDArray
-from scipy.optimize import differential_evolution
+from scipy.optimize import differential_evolution, minimize
 
 from .objective_function import ObjectiveFunction
+from .quaternion_utils import axis_angle_to_quaternion, quaternion_to_axis_angle, normalize_quaternion
 
 
 @dataclass
@@ -148,7 +149,10 @@ def global_optimize(
 def local_refine(
     objective: ObjectiveFunction,
     x0: NDArray[np.floating],
-    bounds: List[Tuple[float, float]],
+    bounds: Optional[List[Tuple[float, float]]] = None,
+    maxiter: int = 1000,
+    ftol: float = 1e-8,
+    gtol: float = 1e-5,
 ) -> OptimizationResult:
     """
     Refine solution using local optimization (L-BFGS-B).
@@ -159,15 +163,96 @@ def local_refine(
         The objective function to minimize.
     x0 : ndarray, shape (6,)
         Initial guess from global optimization.
-    bounds : list of (min, max) tuples
-        Parameter bounds.
+    bounds : list of (min, max) tuples, optional
+        Parameter bounds. If None, uses default bounds.
+    maxiter : int, optional
+        Maximum number of iterations. Default is 1000.
+    ftol : float, optional
+        Function tolerance for convergence. Default is 1e-8.
+    gtol : float, optional
+        Gradient tolerance for convergence. Default is 1e-5.
 
     Returns
     -------
     OptimizationResult
         Refined optimization result.
+
+    Notes
+    -----
+    The quaternion normalization constraint is enforced by converting the
+    axis-angle representation back to a normalized quaternion and then
+    back to axis-angle after each iteration. This ensures the optimization
+    stays on the unit quaternion manifold without adding explicit constraints.
     """
-    raise NotImplementedError("local_refine not yet implemented")
+    if bounds is None:
+        bounds = get_default_bounds()
+
+    x0 = np.asarray(x0, dtype=np.float64)
+
+    # Normalize the initial axis-angle to ensure valid starting point
+    axis_angle = x0[:3]
+    omega = x0[3:]
+
+    # Convert to quaternion, normalize, convert back to axis-angle
+    q = axis_angle_to_quaternion(axis_angle)
+    q = normalize_quaternion(q)
+    axis_angle_normalized = quaternion_to_axis_angle(q)
+
+    x0_normalized = np.concatenate([axis_angle_normalized, omega])
+
+    # Wrap the objective function to:
+    # 1. Track evaluations
+    # 2. Normalize the axis-angle representation at each evaluation
+    n_evals = [0]  # Use list for mutable closure
+
+    def wrapped_objective(params: NDArray[np.floating]) -> float:
+        n_evals[0] += 1
+
+        # Extract axis-angle and omega
+        axis_angle_current = params[:3]
+        omega_current = params[3:]
+
+        # Normalize via quaternion round-trip (enforces unit quaternion constraint)
+        q_current = axis_angle_to_quaternion(axis_angle_current)
+        q_normalized = normalize_quaternion(q_current)
+        axis_angle_norm = quaternion_to_axis_angle(q_normalized)
+
+        # Create normalized parameter vector
+        params_normalized = np.concatenate([axis_angle_norm, omega_current])
+
+        return objective.evaluate(params_normalized)
+
+    # Run L-BFGS-B optimization
+    result = minimize(
+        wrapped_objective,
+        x0_normalized,
+        method="L-BFGS-B",
+        bounds=bounds,
+        options={
+            "maxiter": maxiter,
+            "ftol": ftol,
+            "gtol": gtol,
+            "disp": False,
+        },
+    )
+
+    # Normalize final result
+    final_axis_angle = result.x[:3]
+    final_omega = result.x[3:]
+
+    q_final = axis_angle_to_quaternion(final_axis_angle)
+    q_final_normalized = normalize_quaternion(q_final)
+    final_axis_angle_normalized = quaternion_to_axis_angle(q_final_normalized)
+
+    final_params = np.concatenate([final_axis_angle_normalized, final_omega])
+
+    return OptimizationResult(
+        params=final_params,
+        cost=result.fun,
+        n_evaluations=n_evals[0],
+        success=result.success,
+        message=result.message,
+    )
 
 
 def multi_start_optimize(
