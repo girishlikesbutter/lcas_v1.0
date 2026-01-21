@@ -188,3 +188,70 @@ Started: Wed Jan 21 12:33:02 PM NZDT 2026
   - Valid mask filters out infinite magnitude observations from both predicted and observed
   - Check if acceptance criteria are already met before implementing new code
 ---
+
+## 2026-01-21 - US-014
+- What was implemented: Implemented global_optimize() function using scipy.optimize.differential_evolution
+- Files changed:
+  - src/inversion/optimizers.py - added differential_evolution import, get_default_bounds() helper, implemented global_optimize()
+  - src/inversion/__init__.py - added get_default_bounds export
+- **Learnings for future iterations:**
+  - Default bounds: axis_angle [-π, π] for all rotations, omega ±30 deg/s converted to rad/s
+  - differential_evolution key params: strategy="best1bin", mutation=(0.5,1.0), recombination=0.7
+  - Use updating="deferred" for compatibility with parallel workers
+  - Wrap objective function to track evaluation count using mutable list closure
+  - polish=False by default - use separate local_refine() for more control
+  - Use Optional[] typing for parameters that can be None
+---
+
+## 2026-01-21 - US-015
+- What was implemented: Implemented local_refine() function using scipy.optimize.minimize with L-BFGS-B
+- Files changed:
+  - src/inversion/optimizers.py - added minimize import, added quaternion_utils imports, implemented local_refine()
+- **Learnings for future iterations:**
+  - L-BFGS-B is a good choice for local refinement - bounded, quasi-Newton method
+  - Quaternion constraint enforced via round-trip: axis_angle → quaternion → normalize → axis_angle
+  - This normalization happens at each objective evaluation to keep on unit quaternion manifold
+  - Final parameters also normalized before returning result
+  - Use ftol and gtol for convergence tolerances (default 1e-8 and 1e-5 respectively)
+  - Same evaluation counter pattern (mutable list closure) as global_optimize
+---
+
+## 2026-01-21 - US-016
+- What was implemented: Implemented multi_start_optimize() function for running optimization with multiple random starts
+- Files changed:
+  - src/inversion/optimizers.py - implemented multi_start_optimize() function
+- **Learnings for future iterations:**
+  - Multi-start uses different seeds (base_seed + i) for each start to ensure diverse populations
+  - Each start runs global_optimize followed by optional local_refine
+  - Results are sorted by cost so best result is always first in the list
+  - Combined evaluation count from global + local phases in the final result
+  - use_local_refinement parameter allows skipping local refinement for faster exploratory runs
+  - Reuse existing global_optimize and local_refine functions rather than duplicating logic
+---
+
+## 2026-01-21 - US-017
+- What was implemented: Implemented get_bounds() function with ConstraintMode enum for FREE and PHYSICS_INFORMED modes
+- Files changed:
+  - src/inversion/constraints.py - implemented get_bounds() function with both constraint modes
+- **Learnings for future iterations:**
+  - FREE mode: allows full omega range [-omega_max, omega_max] per component
+  - PHYSICS_INFORMED mode: uses tighter bounds (omega_max/sqrt(3) per component) to bias toward principal axis rotation
+  - Principal axis rotation constraint is a "soft" constraint via bounds rather than strict enforcement
+  - The sqrt(3) factor ensures maximum magnitude can still reach omega_max when all components are at limits
+  - Add type validation (isinstance check) early in function to give clear error messages
+  - ConstraintMode enum already existed from US-010 scaffolding - implementation was in get_bounds()
+---
+
+## 2026-01-21 - US-018
+- What was implemented: Implemented compute_fisher_uncertainty() function for quick uncertainty estimation using Fisher Information Matrix
+- Files changed:
+  - src/inversion/uncertainty.py - added _compute_hessian() helper and implemented compute_fisher_uncertainty()
+- **Learnings for future iterations:**
+  - Fisher Information Matrix uses Hessian of chi-squared at the optimum
+  - For chi-squared objectives: covariance = 2 * Hessian^{-1} (factor of 2 from chi-squared formula)
+  - Central finite differences for Hessian: diagonal uses (f(x+h) - 2*f(x) + f(x-h)) / h^2
+  - Off-diagonal uses 4-point formula: (f_pp - f_pm - f_mp + f_mm) / (4*h^2)
+  - Handle non-positive-definite Hessian by regularization: add |min_eigenvalue| + epsilon to diagonal
+  - Check eigenvalues with np.linalg.eigvalsh() for symmetric matrices (faster than eig)
+  - Return infinite uncertainties if Hessian inversion completely fails
+---

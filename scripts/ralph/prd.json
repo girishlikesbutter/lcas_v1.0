@@ -227,8 +227,8 @@
         "Typecheck passes"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Also added get_default_bounds() helper function"
     },
     {
       "id": "US-015",
@@ -242,8 +242,8 @@
         "Typecheck passes"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses quaternion round-trip normalization at each objective evaluation to enforce unit quaternion constraint"
     },
     {
       "id": "US-016",
@@ -257,8 +257,8 @@
         "Typecheck passes"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses base seed + index for reproducible different initializations"
     },
     {
       "id": "US-017",
@@ -272,8 +272,8 @@
         "Typecheck passes"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PHYSICS_INFORMED uses tighter omega bounds (omega_max/sqrt(3) per component) to bias toward principal axis solutions"
     },
     {
       "id": "US-018",
@@ -287,8 +287,8 @@
         "Typecheck passes"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented with central finite differences for Hessian computation and regularization for non-positive-definite cases"
     },
     {
       "id": "US-019",
