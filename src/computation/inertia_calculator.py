@@ -722,6 +722,125 @@ def apply_articulation_to_mesh(
     return rotated_mesh, updated_position.astype(np.float64)
 
 
+def compute_inertia_from_config(
+    config: "RSO_Config",
+    config_manager: "RSO_ConfigManager",
+    masses: Dict[str, float],
+    articulation_angles: Union[Dict[str, float], None] = None,
+) -> InertiaResult:
+    """
+    Compute satellite inertia from a config file and component masses.
+
+    This is a high-level convenience function that combines config loading
+    with inertia calculation. It handles:
+    - Loading STL meshes and positions from the config
+    - Extracting articulation capabilities from the config
+    - Applying default articulation angles for articulable components
+    - Computing the full satellite inertia tensor
+
+    Parameters
+    ----------
+    config : RSO_Config
+        The RSO configuration object containing component definitions.
+    config_manager : RSO_ConfigManager
+        The configuration manager for resolving STL file paths.
+    masses : Dict[str, float]
+        Dictionary mapping component names to their masses in kg.
+        Each key must match a component name in the config.
+    articulation_angles : Dict[str, float] | None, optional
+        Dictionary mapping component names to articulation angles in degrees.
+        If not provided for an articulable component, defaults are applied:
+        - Antenna dishes (prefix 'AD'): 15 degrees
+        - All other articulable components (e.g., solar panels): 0 degrees
+        A warning is logged when a default angle is used.
+
+    Returns
+    -------
+    InertiaResult
+        Dataclass containing:
+        - total_mass: Sum of all component masses
+        - center_of_mass: Satellite CoM in body frame
+        - inertia_tensor: 3x3 inertia tensor about satellite CoM
+        - principal_moments: Eigenvalues (principal moments)
+        - principal_axes: Eigenvectors (principal axes) as column vectors
+
+    Raises
+    ------
+    ValueError
+        If a component name in the masses dict is not found in the config,
+        or if an articulation angle is outside the config-specified limits.
+
+    Examples
+    --------
+    Basic usage with default articulation angles:
+
+    >>> from src.config.rso_config_manager import RSO_ConfigManager
+    >>> config_manager = RSO_ConfigManager(project_root)
+    >>> config = config_manager.load_config("intelsat_901/intelsat_901_config.yaml")
+    >>> masses = {"Bus": 1200.0, "SP_North": 50.0, "SP_South": 50.0}
+    >>> result = compute_inertia_from_config(config, config_manager, masses)
+
+    With explicit articulation angles:
+
+    >>> result = compute_inertia_from_config(
+    ...     config, config_manager, masses,
+    ...     articulation_angles={'SP_North': 45.0, 'SP_South': -30.0}
+    ... )
+    """
+    # Load components from config
+    components = load_components_from_config(config, config_manager, masses)
+
+    # Extract component names in the same order as components
+    component_names = list(masses.keys())
+
+    # Build articulation capabilities from config
+    articulation_capabilities: Dict[str, ArticulationCapabilitySpec] = {}
+    for comp_name in component_names:
+        if comp_name in config.articulation_capabilities:
+            art_cap = config.articulation_capabilities[comp_name]
+            articulation_capabilities[comp_name] = ArticulationCapabilitySpec(
+                rotation_center=np.array(art_cap.rotation_center, dtype=np.float64),
+                rotation_axis=np.array(art_cap.rotation_axis, dtype=np.float64),
+                limits=art_cap.limits,
+            )
+
+    # Build effective articulation angles with defaults for articulable components
+    effective_angles: Dict[str, float] = {}
+
+    for comp_name in component_names:
+        # Only consider components that have articulation capability
+        if comp_name not in articulation_capabilities:
+            continue
+
+        # Check if user provided an explicit angle
+        if articulation_angles is not None and comp_name in articulation_angles:
+            effective_angles[comp_name] = articulation_angles[comp_name]
+        else:
+            # Apply default angle based on component type
+            if comp_name.startswith('AD'):
+                # Antenna dish: default 15 degrees
+                default_angle = 15.0
+            else:
+                # Solar panels and other articulable components: default 0 degrees
+                default_angle = 0.0
+
+            effective_angles[comp_name] = default_angle
+            logger.warning(
+                f"Using default articulation angle {default_angle}° for "
+                f"component '{comp_name}' (has articulation capability but no angle specified)"
+            )
+
+    # Compute inertia with articulation
+    result = compute_inertia_from_stl(
+        stl_components=components,
+        articulation_angles=effective_angles if effective_angles else None,
+        articulation_capabilities=articulation_capabilities if articulation_capabilities else None,
+        component_names=component_names,
+    )
+
+    return result
+
+
 def load_components_from_config(
     config: "RSO_Config",
     config_manager: "RSO_ConfigManager",
