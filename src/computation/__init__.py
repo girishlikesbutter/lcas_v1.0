@@ -29,6 +29,8 @@ from .inertia_calculator import (
     STLComponent,
     compute_inertia_from_stl,
     load_components_from_config,
+    compute_inertia_from_config,
+    apply_articulation_to_mesh,
 )
 
 __all__ = [
@@ -57,4 +59,6 @@ __all__ = [
     'STLComponent',
     'compute_inertia_from_stl',
     'load_components_from_config',
+    'compute_inertia_from_config',
+    'apply_articulation_to_mesh',
 ]
