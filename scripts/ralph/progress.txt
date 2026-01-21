@@ -177,3 +177,14 @@ Started: Wed Jan 21 12:33:02 PM NZDT 2026
   - Shadow computation can be toggled via compute_shadows_flag for faster testing
   - Chi-squared excludes observations with infinite magnitude (satellite not visible)
 ---
+
+## 2026-01-21 - US-013
+- What was implemented: Verified all acceptance criteria were already implemented in US-012
+- Files changed: None (prd.json updated to mark US-013 as passes: true)
+- **Learnings for future iterations:**
+  - US-012 implemented weighted chi-squared calculation together with ObjectiveFunction
+  - _compute_chi_squared method handles: weighted chi_sq = sum((obs - pred)^2 / sigma^2)
+  - Unweighted case uses MSE: chi_sq = sum(residuals^2) / n_valid
+  - Valid mask filters out infinite magnitude observations from both predicted and observed
+  - Check if acceptance criteria are already met before implementing new code
+---
