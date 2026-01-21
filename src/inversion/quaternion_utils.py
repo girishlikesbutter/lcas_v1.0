@@ -27,7 +27,12 @@ def normalize_quaternion(
     ndarray, shape (4,)
         Unit quaternion.
     """
-    raise NotImplementedError("normalize_quaternion not yet implemented")
+    q = np.asarray(q, dtype=np.float64)
+    norm = np.linalg.norm(q)
+    if norm < 1e-12:
+        # Return identity quaternion for near-zero input
+        return np.array([1.0, 0.0, 0.0, 0.0])
+    return q / norm
 
 
 def axis_angle_to_quaternion(
@@ -58,7 +63,25 @@ def axis_angle_to_quaternion(
         axis = axis_angle / angle (if angle > 0)
         q = [cos(angle/2), sin(angle/2) * axis]
     """
-    raise NotImplementedError("axis_angle_to_quaternion not yet implemented")
+    axis_angle = np.asarray(axis_angle, dtype=np.float64)
+    angle = np.linalg.norm(axis_angle)
+
+    if angle < 1e-12:
+        # No rotation - return identity quaternion
+        return np.array([1.0, 0.0, 0.0, 0.0])
+
+    # Normalize axis
+    axis = axis_angle / angle
+    half_angle = 0.5 * angle
+
+    # Build quaternion: [cos(θ/2), sin(θ/2) * axis]
+    sin_half = np.sin(half_angle)
+    return np.array([
+        np.cos(half_angle),
+        sin_half * axis[0],
+        sin_half * axis[1],
+        sin_half * axis[2],
+    ])
 
 
 def quaternion_to_axis_angle(
@@ -85,7 +108,33 @@ def quaternion_to_axis_angle(
         axis = [x, y, z] / sin(angle/2) (if sin(angle/2) > 0)
         axis_angle = angle * axis
     """
-    raise NotImplementedError("quaternion_to_axis_angle not yet implemented")
+    q = np.asarray(q, dtype=np.float64)
+
+    # Normalize the quaternion first
+    q = q / np.linalg.norm(q)
+
+    # Ensure w is positive (use the shorter rotation path)
+    if q[0] < 0:
+        q = -q
+
+    w, x, y, z = q
+
+    # Clamp w to [-1, 1] to handle numerical errors
+    w = np.clip(w, -1.0, 1.0)
+
+    # Compute the half-angle
+    half_angle = np.arccos(w)
+    angle = 2.0 * half_angle
+    sin_half = np.sin(half_angle)
+
+    if sin_half < 1e-12:
+        # No rotation - return zero vector
+        return np.array([0.0, 0.0, 0.0])
+
+    # Compute axis from vector part
+    axis = np.array([x, y, z]) / sin_half
+
+    return angle * axis
 
 
 def quaternion_multiply(
@@ -115,4 +164,15 @@ def quaternion_multiply(
         y = w1*y2 - x1*z2 + y1*w2 + z1*x2
         z = w1*z2 + x1*y2 - y1*x2 + z1*w2
     """
-    raise NotImplementedError("quaternion_multiply not yet implemented")
+    q1 = np.asarray(q1, dtype=np.float64)
+    q2 = np.asarray(q2, dtype=np.float64)
+
+    w1, x1, y1, z1 = q1
+    w2, x2, y2, z2 = q2
+
+    return np.array([
+        w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+        w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+        w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+        w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+    ])
