@@ -40,3 +40,112 @@ Started: Wed Jan 21 12:33:02 PM NZDT 2026
   - Always handle the near-zero angular velocity case (omega_mag < 1e-12) to avoid division by zero
   - Initial quaternion should be normalized at the start to ensure valid input
 ---
+
+## 2026-01-21 - US-003
+- What was implemented: Implemented propagate_euler() for tumbling attitude dynamics using coupled Euler equations + quaternion kinematics
+- Files changed:
+  - src/dynamics/attitude_propagator.py - added scipy.integrate import, implemented propagate_euler() function
+- **Learnings for future iterations:**
+  - Euler's equations (torque-free): I @ omega_dot = -omega x (I @ omega), so omega_dot = I_inv @ (-omega x (I @ omega))
+  - Quaternion kinematics: q_dot = 0.5 * q * [0, omega_x, omega_y, omega_z]
+  - Use DOP853 solver (8th order) with tight tolerances (rtol=1e-10, atol=1e-12) for good conservation
+  - Renormalize quaternion both inside dynamics() and after solution extraction to prevent drift
+  - Precompute I_inv outside the dynamics function for efficiency
+  - Verify conservation laws: angular momentum magnitude and kinetic energy should stay constant
+  - Reuse existing _quaternion_multiply() helper for q_dot calculation
+---
+
+## 2026-01-21 - US-004
+- What was implemented: Implemented unified propagate_attitude() interface that dispatches to correct propagator based on mode
+- Files changed:
+  - src/dynamics/attitude_propagator.py - implemented propagate_attitude() body replacing NotImplementedError
+- **Learnings for future iterations:**
+  - For principal_axis mode, use np.tile() to replicate constant omega as (N, 3) array
+  - The unified interface returns (quaternions, omega_history) tuple for both modes
+  - propagate_principal_axis() only returns quaternions, so unified interface constructs omega_history
+  - propagate_euler() already returns the tuple format
+  - Use explicit ValueError messages describing both the error and valid options
+---
+
+## 2026-01-21 - US-005
+- What was implemented: Created src/computation/inertia_calculator.py with compute_mesh_volume() and is_mesh_watertight() functions
+- Files changed:
+  - src/computation/inertia_calculator.py (new) - mesh volume and watertight check functions
+  - src/computation/__init__.py - added exports for new functions
+- **Learnings for future iterations:**
+  - Signed tetrahedra method: signed_volume = (1/6) * v0 · (v1 × v2) for each face
+  - Use np.cross() and vectorized dot product for efficient computation over all faces
+  - trimesh provides mesh.is_watertight property for watertightness check
+  - Always log a warning when computing volume on non-watertight meshes
+  - Total volume is abs(sum(signed_volumes)) - absolute value handles orientation
+---
+
+## 2026-01-21 - US-006
+- What was implemented: Verified that all acceptance criteria were already implemented in US-005
+- Files changed: None (prd.json updated to mark US-006 as passes: true)
+- **Learnings for future iterations:**
+  - US-005 implemented both volume calculation AND watertight validation together
+  - is_mesh_watertight() is already exported in src/computation/__init__.py
+  - compute_mesh_volume() already logs warning for non-watertight meshes
+  - Check if acceptance criteria are already met before implementing new code
+---
+
+## 2026-01-21 - US-007
+- What was implemented: Added compute_component_inertia(mesh, mass) function to compute inertia tensor for a single STL component
+- Files changed:
+  - src/computation/inertia_calculator.py - added compute_component_inertia() function
+  - src/computation/__init__.py - added export for compute_component_inertia
+- **Learnings for future iterations:**
+  - Inertia tensor calculation uses volume integrals over tetrahedra formed by each face and origin
+  - Formula for integral(x^2) over tetrahedron: V * (a_x^2 + b_x^2 + c_x^2 + a_x*b_x + a_x*c_x + b_x*c_x) / 10
+  - Center of mass is computed as volume-weighted centroid, where each tetrahedron centroid is (v0 + v1 + v2) / 4
+  - Use inverse parallel axis theorem to translate inertia from origin to CoM: I_cm = I_origin - m*(d²I - outer(d,d))
+  - Inertia tensor sign convention: diagonal positive, off-diagonal negative (I_xy = -integral(xy dm))
+---
+
+## 2026-01-21 - US-008
+- What was implemented: Added translate_inertia(I_cm, mass, displacement) function to apply parallel axis theorem
+- Files changed:
+  - src/computation/inertia_calculator.py - added translate_inertia() function
+  - src/computation/__init__.py - added export for translate_inertia
+- **Learnings for future iterations:**
+  - Forward parallel axis theorem: I_body = I_cm + m * (d² * I - outer(d, d))
+  - displacement is vector from body origin to component center of mass
+  - The function is the forward direction (away from CoM); compute_component_inertia uses inverse
+  - Verified with both simple (point mass) and complex test cases
+  - Always use np.asarray() to ensure input arrays are proper numpy arrays
+---
+
+## 2026-01-21 - US-009
+- What was implemented: Added compute_inertia_from_stl() function and InertiaResult/STLComponent dataclasses
+- Files changed:
+  - src/computation/inertia_calculator.py - added InertiaResult dataclass, STLComponent dataclass, compute_inertia_from_stl()
+  - src/computation/__init__.py - added exports for InertiaResult, STLComponent, compute_inertia_from_stl
+- **Learnings for future iterations:**
+  - InertiaResult dataclass holds: total_mass, center_of_mass, inertia_tensor, principal_moments, principal_axes
+  - STLComponent dataclass provides a clean interface: mesh, position, mass
+  - Function also accepts tuple format (mesh, position, mass) for flexibility
+  - Algorithm: compute each component's inertia → translate to body origin → sum all → translate sum to satellite CoM
+  - Use np.linalg.eigh() for eigendecomposition (symmetric matrices), returns sorted ascending eigenvalues
+  - Inverse parallel axis theorem to go from body origin to satellite CoM: I_cm = I_origin - m*(d²I - outer(d,d))
+  - Validated with unit cube and symmetric two-cube configurations
+---
+
+## 2026-01-21 - US-010
+- What was implemented: Created src/inversion/ module scaffolding with all placeholder files
+- Files changed:
+  - src/inversion/__init__.py (new) - module docstring, imports, and __all__ exports
+  - src/inversion/quaternion_utils.py (new) - placeholder functions for quaternion operations
+  - src/inversion/objective_function.py (new) - ObjectiveFunction class placeholder
+  - src/inversion/optimizers.py (new) - OptimizationResult dataclass and optimizer function placeholders
+  - src/inversion/constraints.py (new) - ConstraintMode enum and get_bounds placeholder
+  - src/inversion/results.py (new) - InversionResult dataclass and invert_lightcurve placeholder
+  - src/inversion/uncertainty.py (new) - Fisher and MCMC uncertainty function placeholders
+- **Learnings for future iterations:**
+  - Follow existing module patterns: __init__.py imports from submodules and defines __all__
+  - Placeholder functions use NotImplementedError with descriptive messages
+  - Use dataclasses for structured result containers (OptimizationResult, InversionResult)
+  - Use Literal type hints for mode parameters (e.g., Literal["quick", "full"])
+  - Use enum.Enum for discrete mode options (ConstraintMode)
+  - All quaternion utilities should use scalar-first (w, x, y, z) convention
+---
