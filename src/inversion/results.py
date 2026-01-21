@@ -14,6 +14,16 @@ from typing import Any, Dict, Literal, Optional
 import numpy as np
 from numpy.typing import NDArray
 
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+
+try:
+    import corner
+    CORNER_AVAILABLE = True
+except ImportError:
+    CORNER_AVAILABLE = False
+
 
 @dataclass
 class InversionResult:
@@ -55,7 +65,7 @@ class InversionResult:
     omega_history: Optional[NDArray[np.floating]] = None
     mcmc_samples: Optional[NDArray[np.floating]] = None
 
-    def plot_lightcurve_comparison(self, ax: Optional[Any] = None) -> Any:
+    def plot_lightcurve_comparison(self, ax: Optional[Axes] = None) -> Axes:
         """
         Plot observed vs predicted lightcurve.
 
@@ -69,9 +79,37 @@ class InversionResult:
         matplotlib.axes.Axes
             The axes with the plot.
         """
-        raise NotImplementedError("plot_lightcurve_comparison not yet implemented")
+        if ax is None:
+            _, ax = plt.subplots(figsize=(10, 6))
 
-    def plot_residuals(self, ax: Optional[Any] = None) -> Any:
+        # Create mask for valid observations (finite magnitude)
+        valid_obs = np.isfinite(self.observed_lightcurve)
+        valid_pred = np.isfinite(self.predicted_lightcurve)
+        valid_mask = valid_obs & valid_pred
+
+        times = self.observation_times[valid_mask]
+        obs = self.observed_lightcurve[valid_mask]
+        pred = self.predicted_lightcurve[valid_mask]
+
+        # Plot observed data with markers
+        ax.scatter(times, obs, c='blue', s=20, alpha=0.7, label='Observed', zorder=2)
+
+        # Plot predicted lightcurve as line
+        ax.plot(times, pred, 'r-', linewidth=1.5, label='Predicted', zorder=1)
+
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Magnitude')
+        ax.set_title('Observed vs Predicted Lightcurve')
+        ax.legend()
+
+        # Invert y-axis (magnitudes are brighter when smaller)
+        ax.invert_yaxis()
+
+        ax.grid(True, alpha=0.3)
+
+        return ax
+
+    def plot_residuals(self, ax: Optional[Axes] = None) -> Axes:
         """
         Plot residuals (observed - predicted).
 
@@ -85,9 +123,38 @@ class InversionResult:
         matplotlib.axes.Axes
             The axes with the plot.
         """
-        raise NotImplementedError("plot_residuals not yet implemented")
+        if ax is None:
+            _, ax = plt.subplots(figsize=(10, 4))
 
-    def plot_corner(self) -> Any:
+        # Create mask for valid observations (finite magnitude)
+        valid_obs = np.isfinite(self.observed_lightcurve)
+        valid_pred = np.isfinite(self.predicted_lightcurve)
+        valid_mask = valid_obs & valid_pred
+
+        times = self.observation_times[valid_mask]
+        residuals = self.observed_lightcurve[valid_mask] - self.predicted_lightcurve[valid_mask]
+
+        # Plot residuals
+        ax.scatter(times, residuals, c='blue', s=20, alpha=0.7)
+
+        # Add zero line
+        ax.axhline(y=0, color='red', linestyle='--', linewidth=1)
+
+        # Add +/- RMS lines if we have valid residuals
+        if len(residuals) > 0:
+            rms = self.rms_residual
+            ax.axhline(y=rms, color='orange', linestyle=':', linewidth=1, label=f'+RMS ({rms:.3f})')
+            ax.axhline(y=-rms, color='orange', linestyle=':', linewidth=1, label=f'-RMS ({rms:.3f})')
+
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Residual (mag)')
+        ax.set_title(f'Residuals (Observed - Predicted), RMS = {self.rms_residual:.4f}')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        return ax
+
+    def plot_corner(self) -> Figure:
         """
         Plot corner plot of posterior samples.
 
@@ -102,8 +169,40 @@ class InversionResult:
         ------
         ValueError
             If MCMC samples are not available.
+        ImportError
+            If the corner package is not installed.
         """
-        raise NotImplementedError("plot_corner not yet implemented")
+        if self.mcmc_samples is None:
+            raise ValueError(
+                "MCMC samples not available. Run inversion with uncertainty_mode='full' "
+                "to generate posterior samples for corner plot."
+            )
+
+        if not CORNER_AVAILABLE:
+            raise ImportError(
+                "The 'corner' package is required for corner plots. "
+                "Install it with: pip install corner"
+            )
+
+        # Parameter labels for the 6-parameter model
+        labels = [
+            r"$\phi_1$", r"$\phi_2$", r"$\phi_3$",  # axis-angle components
+            r"$\omega_1$", r"$\omega_2$", r"$\omega_3$"  # angular velocity components
+        ]
+
+        # Create corner plot
+        fig = corner.corner(
+            self.mcmc_samples,
+            labels=labels,
+            quantiles=[0.16, 0.5, 0.84],  # 1-sigma intervals
+            show_titles=True,
+            title_kwargs={"fontsize": 10},
+            label_kwargs={"fontsize": 12},
+        )
+
+        fig.suptitle("Posterior Distribution of Inversion Parameters", y=1.02, fontsize=14)
+
+        return fig
 
 
 def invert_lightcurve(
