@@ -9,9 +9,14 @@ after optimization:
 """
 
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import numpy as np
 from numpy.typing import NDArray
+
+try:
+    import emcee
+except ImportError:
+    emcee = None  # type: ignore
 
 from .objective_function import ObjectiveFunction
 
@@ -184,6 +189,8 @@ def compute_mcmc_uncertainty(
     n_samples: int = 1000,
     n_walkers: Optional[int] = None,
     burn_in: int = 100,
+    bounds: Optional[List[Tuple[float, float]]] = None,
+    initial_scatter: float = 0.01,
 ) -> Dict[str, NDArray[np.floating]]:
     """
     Estimate parameter uncertainties using MCMC sampling with emcee.
@@ -203,6 +210,12 @@ def compute_mcmc_uncertainty(
         Number of walkers. Default is 2 * n_params = 12.
     burn_in : int, optional
         Number of burn-in steps. Default is 100.
+    bounds : list of (min, max) tuples, optional
+        Parameter bounds for prior. If None, uses defaults:
+        axis_angle: [-pi, pi], omega: [-0.5236, 0.5236] (~30 deg/s).
+    initial_scatter : float, optional
+        Fractional scatter for initializing walkers around optimal_params.
+        Default is 0.01 (1% scatter).
 
     Returns
     -------
@@ -218,5 +231,136 @@ def compute_mcmc_uncertainty(
             Mean acceptance fraction across walkers.
         - 'autocorr_time': ndarray, shape (6,)
             Integrated autocorrelation time for each parameter.
+            Returns NaN if autocorrelation estimation fails.
+        - 'converged': bool
+            True if chain appears converged (n_samples > 50 * autocorr_time).
+
+    Notes
+    -----
+    Uses a log-posterior formulation with flat priors within bounds.
+    The log-likelihood is -0.5 * chi_squared from the objective function.
+
+    Convergence is assessed using the integrated autocorrelation time.
+    A chain is considered converged if it has at least 50 times the
+    autocorrelation time of samples.
     """
-    raise NotImplementedError("compute_mcmc_uncertainty not yet implemented")
+    if emcee is None:
+        raise ImportError(
+            "emcee is required for MCMC uncertainty estimation. "
+            "Install it with: pip install emcee"
+        )
+
+    optimal_params = np.asarray(optimal_params, dtype=np.float64)
+    n_params = len(optimal_params)
+
+    # Default number of walkers (emcee requires at least 2 * n_params)
+    if n_walkers is None:
+        n_walkers = 2 * n_params
+
+    if n_walkers < 2 * n_params:
+        logger.warning(
+            f"n_walkers ({n_walkers}) should be >= 2 * n_params ({2 * n_params}). "
+            "Increasing to minimum required."
+        )
+        n_walkers = 2 * n_params
+
+    # Default bounds
+    if bounds is None:
+        # axis_angle: [-pi, pi], omega: [-30 deg/s, 30 deg/s] in rad/s
+        omega_max = 0.5236  # ~30 deg/s
+        bounds = [(-np.pi, np.pi)] * 3 + [(-omega_max, omega_max)] * 3
+
+    bounds_array = np.array(bounds)
+    lower_bounds = bounds_array[:, 0]
+    upper_bounds = bounds_array[:, 1]
+
+    # Log-prior: flat within bounds, -inf outside
+    def log_prior(params: NDArray[np.floating]) -> float:
+        if np.any(params < lower_bounds) or np.any(params > upper_bounds):
+            return -np.inf
+        return 0.0
+
+    # Log-likelihood: -0.5 * chi_squared
+    def log_likelihood(params: NDArray[np.floating]) -> float:
+        chi_sq = objective.evaluate(params)
+        if not np.isfinite(chi_sq):
+            return -np.inf
+        return -0.5 * chi_sq
+
+    # Log-posterior: prior + likelihood
+    def log_posterior(params: NDArray[np.floating]) -> float:
+        lp = log_prior(params)
+        if not np.isfinite(lp):
+            return -np.inf
+        return lp + log_likelihood(params)
+
+    # Initialize walkers around optimal parameters with small scatter
+    # Ensure initial positions are within bounds
+    rng = np.random.default_rng(seed=42)
+    initial_positions = np.empty((n_walkers, n_params))
+
+    for i in range(n_walkers):
+        for j in range(n_params):
+            # Scale scatter based on parameter range
+            param_range = upper_bounds[j] - lower_bounds[j]
+            scatter = initial_scatter * param_range
+
+            # Generate position with scatter, clip to bounds
+            pos = optimal_params[j] + rng.uniform(-scatter, scatter)
+            pos = np.clip(pos, lower_bounds[j], upper_bounds[j])
+            initial_positions[i, j] = pos
+
+    logger.info(
+        f"Starting MCMC with {n_walkers} walkers, "
+        f"{burn_in} burn-in steps, {n_samples} samples"
+    )
+
+    # Create sampler and run MCMC
+    sampler = emcee.EnsembleSampler(n_walkers, n_params, log_posterior)
+
+    # Run burn-in
+    logger.debug("Running burn-in...")
+    state = sampler.run_mcmc(initial_positions, burn_in, progress=False)
+    sampler.reset()
+
+    # Run production chain
+    logger.debug("Running production chain...")
+    sampler.run_mcmc(state, n_samples, progress=False)
+
+    # Get flattened samples
+    samples = sampler.get_chain(flat=True)
+
+    # Compute statistics from samples
+    covariance = np.cov(samples, rowvar=False)
+    std_devs = np.std(samples, axis=0)
+
+    # Mean acceptance fraction
+    acceptance_fraction = float(np.mean(sampler.acceptance_fraction))
+
+    # Compute autocorrelation time for convergence diagnostic
+    try:
+        autocorr_time = sampler.get_autocorr_time(quiet=True)
+        # Check convergence: need at least 50 * tau samples
+        max_tau = np.max(autocorr_time)
+        converged = n_samples > 50 * max_tau
+    except emcee.autocorr.AutocorrError:
+        logger.warning(
+            "Could not estimate autocorrelation time. "
+            "Chain may not be converged. Consider increasing n_samples."
+        )
+        autocorr_time = np.full(n_params, np.nan)
+        converged = False
+
+    logger.info(
+        f"MCMC complete. Acceptance fraction: {acceptance_fraction:.3f}, "
+        f"Converged: {converged}"
+    )
+
+    return {
+        "samples": samples,
+        "covariance": covariance,
+        "std_devs": std_devs,
+        "acceptance_fraction": np.array(acceptance_fraction),
+        "autocorr_time": autocorr_time,
+        "converged": np.array(converged),
+    }
