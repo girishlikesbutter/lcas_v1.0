@@ -360,9 +360,36 @@ class STLComponent:
     mass: float
 
 
+@dataclass
+class ArticulationCapabilitySpec:
+    """
+    Specification for a component's articulation capability.
+
+    This is a lightweight specification used to describe how a component
+    can articulate for inertia calculations. It mirrors the essential
+    fields from the RSO config's ArticulationCapability.
+
+    Attributes
+    ----------
+    rotation_center : NDArray[np.float64]
+        Point about which the component rotates, in body frame, shape (3,).
+    rotation_axis : NDArray[np.float64]
+        Axis of rotation (normalized), shape (3,).
+    limits : Dict[str, float]
+        Dictionary with 'min_angle' and 'max_angle' keys (in degrees).
+    """
+
+    rotation_center: NDArray[np.float64]
+    rotation_axis: NDArray[np.float64]
+    limits: Dict[str, float]
+
+
 def compute_inertia_from_stl(
     stl_components: List[Union[STLComponent, Tuple[trimesh.Trimesh, NDArray[np.float64], float]]],
     masses: Union[List[float], None] = None,
+    articulation_angles: Union[Dict[str, float], None] = None,
+    articulation_capabilities: Union[Dict[str, ArticulationCapabilitySpec], None] = None,
+    component_names: Union[List[str], None] = None,
 ) -> InertiaResult:
     """
     Compute the total satellite inertia from multiple STL components with masses.
@@ -384,6 +411,22 @@ def compute_inertia_from_stl(
         Alternative way to specify masses. If provided, must have same length
         as stl_components and will override masses in the components.
         Deprecated: prefer using STLComponent or tuples with mass included.
+    articulation_angles : Dict[str, float] | None, optional
+        Dictionary mapping component names to articulation angles in degrees.
+        For example: {'SP_North': 45.0, 'SP_South': -30.0}.
+        Components not in this dict are treated as having zero articulation angle.
+        Requires component_names to be provided to identify which component gets
+        which angle.
+    articulation_capabilities : Dict[str, ArticulationCapabilitySpec] | None, optional
+        Dictionary mapping component names to their articulation capabilities.
+        Each capability specifies rotation_center, rotation_axis, and limits.
+        If provided along with articulation_angles, angles are validated against
+        the limits (raises ValueError if out of range).
+        Components without articulation capability are unaffected by angles.
+    component_names : List[str] | None, optional
+        List of component names corresponding to each element in stl_components.
+        Required when using articulation_angles to identify which angles apply
+        to which components.
 
     Returns
     -------
@@ -398,18 +441,21 @@ def compute_inertia_from_stl(
     Raises
     ------
     ValueError
-        If stl_components is empty or if masses length doesn't match components.
+        If stl_components is empty, if masses length doesn't match components,
+        if articulation_angles provided without component_names, or if an
+        articulation angle is outside the specified limits.
 
     Notes
     -----
     The algorithm:
-    1. Compute each component's inertia tensor about its own center of mass
-    2. Translate each component's CoM to its position in body frame
-    3. Translate each component's inertia to body frame origin using parallel axis theorem
-    4. Sum all contributions to get total inertia about body origin
-    5. Compute total satellite CoM from mass-weighted component positions
-    6. Translate total inertia from body origin to satellite CoM
-    7. Compute principal axes via eigendecomposition
+    1. Apply articulation to components if articulation_angles provided
+    2. Compute each component's inertia tensor about its own center of mass
+    3. Translate each component's CoM to its position in body frame
+    4. Translate each component's inertia to body frame origin using parallel axis theorem
+    5. Sum all contributions to get total inertia about body origin
+    6. Compute total satellite CoM from mass-weighted component positions
+    7. Translate total inertia from body origin to satellite CoM
+    8. Compute principal axes via eigendecomposition
 
     Examples
     --------
@@ -422,16 +468,53 @@ def compute_inertia_from_stl(
     ... ]
     >>> result = compute_inertia_from_stl(components)
 
-    Using tuples:
+    Using tuples with articulation:
 
     >>> components = [
     ...     (mesh1, np.array([0, 0, 0]), 50.0),
     ...     (mesh2, np.array([2, 0, 0]), 5.0),
     ... ]
-    >>> result = compute_inertia_from_stl(components)
+    >>> caps = {
+    ...     'SP_North': ArticulationCapabilitySpec(
+    ...         rotation_center=np.array([0, 0, 0]),
+    ...         rotation_axis=np.array([0, 0, 1]),
+    ...         limits={'min_angle': -180, 'max_angle': 180}
+    ...     )
+    ... }
+    >>> result = compute_inertia_from_stl(
+    ...     components,
+    ...     articulation_angles={'SP_North': 45.0},
+    ...     articulation_capabilities=caps,
+    ...     component_names=['Bus', 'SP_North'],
+    ... )
     """
     if not stl_components:
         raise ValueError("stl_components list cannot be empty")
+
+    # Validate articulation_angles requirements
+    if articulation_angles is not None and component_names is None:
+        raise ValueError(
+            "component_names must be provided when using articulation_angles"
+        )
+
+    if component_names is not None and len(component_names) != len(stl_components):
+        raise ValueError(
+            f"component_names length ({len(component_names)}) must match "
+            f"stl_components length ({len(stl_components)})"
+        )
+
+    # Validate articulation angles against limits if capabilities are provided
+    if articulation_angles is not None and articulation_capabilities is not None:
+        for comp_name, angle in articulation_angles.items():
+            if comp_name in articulation_capabilities:
+                capability = articulation_capabilities[comp_name]
+                min_angle = capability.limits.get('min_angle', -180.0)
+                max_angle = capability.limits.get('max_angle', 180.0)
+                if angle < min_angle or angle > max_angle:
+                    raise ValueError(
+                        f"Articulation angle {angle}° for component '{comp_name}' "
+                        f"is outside limits [{min_angle}°, {max_angle}°]"
+                    )
 
     # Normalize input to list of (mesh, position, mass) tuples
     normalized_components: List[Tuple[trimesh.Trimesh, NDArray[np.float64], float]] = []
@@ -458,6 +541,35 @@ def compute_inertia_from_stl(
                     f"stl_components length ({len(stl_components)})"
                 )
             mass = float(masses[i])
+
+        # Apply articulation if specified for this component
+        if articulation_angles is not None and component_names is not None:
+            comp_name = component_names[i]
+            if comp_name in articulation_angles:
+                angle = articulation_angles[comp_name]
+                # Component must have articulation capability to be articulated
+                if articulation_capabilities is not None and comp_name in articulation_capabilities:
+                    capability = articulation_capabilities[comp_name]
+                    rotation_center = np.asarray(capability.rotation_center, dtype=np.float64)
+                    rotation_axis = np.asarray(capability.rotation_axis, dtype=np.float64)
+                    mesh, position = apply_articulation_to_mesh(
+                        mesh, position, angle, rotation_center, rotation_axis
+                    )
+                    logger.debug(
+                        f"Applied {angle}° articulation to component '{comp_name}'"
+                    )
+                # If no capability defined but angle is specified, log a warning
+                elif articulation_capabilities is None:
+                    logger.warning(
+                        f"Articulation angle specified for '{comp_name}' but no "
+                        f"articulation_capabilities provided. Component unchanged."
+                    )
+                # If capability dict provided but component not in it, component is not articulable
+                else:
+                    logger.debug(
+                        f"Component '{comp_name}' has no articulation capability. "
+                        f"Ignoring specified angle."
+                    )
 
         normalized_components.append((mesh, position, mass))
 
