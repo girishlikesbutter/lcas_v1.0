@@ -1,7 +1,7 @@
 {
   "project": "LCAS",
   "branchName": "ralph/lightcurve-inversion",
-  "description": "Lightcurve Inversion Tool - Estimate initial attitude and angular velocity from observed lightcurves using optimization",
+  "description": "Lightcurve Inversion Tool - Estimate initial attitude and angular velocity from observed lightcurves using optimization, plus config-based inertia calculation",
   "userStories": [
     {
       "id": "US-026",
@@ -302,8 +302,8 @@
         "Typecheck passes"
       ],
       "priority": 20,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Returns dict with samples, covariance, std_devs, acceptance_fraction, autocorr_time, and converged flag"
     },
     {
       "id": "US-020",
@@ -316,8 +316,8 @@
         "Typecheck passes"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Dataclass structure already implemented in US-010 scaffolding with all required fields"
     },
     {
       "id": "US-021",
@@ -331,8 +331,8 @@
         "Typecheck passes"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "All three visualization methods implemented. plot_corner uses corner package with lazy import."
     },
     {
       "id": "US-022",
@@ -347,8 +347,8 @@
         "Typecheck passes"
       ],
       "priority": 23,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Interface uses Satellite model and J2000 positions (like ObjectiveFunction) instead of abstract config objects"
     },
     {
       "id": "US-023",
@@ -363,8 +363,8 @@
         "Typecheck passes"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Notebook demonstrates unit cube and asymmetric box validation against analytical formulas, plus symmetric two-cube parallel axis theorem verification"
     },
     {
       "id": "US-024",
@@ -379,8 +379,8 @@
         "Typecheck passes"
       ],
       "priority": 25,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Notebook includes principal axis and tumbling mode demos, conservation law verification, polhode visualization, body-frame vector transformation, and mode comparison"
     },
     {
       "id": "US-025",
@@ -395,6 +395,100 @@
         "Typecheck passes"
       ],
       "priority": 26,
+      "passes": true,
+      "notes": "Notebook includes simple satellite creation, forward model generation, both uncertainty modes, comparison analysis, configuration reference, and API documentation"
+    },
+    {
+      "id": "US-027",
+      "title": "Create config-to-components loader function",
+      "description": "As a developer, I want a helper function that loads STL meshes and their positions from a satellite config file so that I don't have to manually specify component positions.",
+      "acceptanceCriteria": [
+        "Create load_components_from_config(config, config_manager, masses) function in src/computation/inertia_calculator.py",
+        "Function accepts RSO_Config, RSO_ConfigManager, and a masses dict mapping component names to masses (kg)",
+        "Returns list of STLComponent objects with mesh, position from config, and mass from dict",
+        "Raises ValueError if a component in masses dict is not found in config",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": true,
+      "notes": "Uses TYPE_CHECKING to avoid circular imports, follows STLLoader pattern for mesh loading"
+    },
+    {
+      "id": "US-028",
+      "title": "Create articulation rotation helper function",
+      "description": "As a developer, I need the articulation rotation applied to component meshes before computing their inertia contribution.",
+      "acceptanceCriteria": [
+        "Create helper function apply_articulation_to_mesh(mesh, position, angle, rotation_center, rotation_axis) in src/computation/inertia_calculator.py",
+        "Returns tuple of (rotated_mesh, updated_position) where position is the component CoM after rotation",
+        "Rotation is applied about the component's rotation_center along its rotation_axis",
+        "Uses axis-angle rotation matrix computation",
+        "Typecheck passes"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-029",
+      "title": "Add articulation angle support to compute_inertia_from_stl",
+      "description": "As an engineer, I want to compute the inertia tensor at specific articulation angles so that I can account for movable components in different orientations.",
+      "acceptanceCriteria": [
+        "Add articulation_angles optional parameter to compute_inertia_from_stl() function",
+        "Parameter is a dict mapping component names to angles in degrees (e.g., {'SP_North': 45.0})",
+        "Add articulation_capabilities optional parameter (dict with rotation_center, rotation_axis, limits per component)",
+        "If articulation_capabilities provided, validate angles are within config-specified limits (raise ValueError if out of range)",
+        "Components without articulation capability are unaffected by angles",
+        "Typecheck passes"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-030",
+      "title": "Create config-aware inertia function",
+      "description": "As a user, I want a single function that takes a config and masses and returns the satellite inertia tensor.",
+      "acceptanceCriteria": [
+        "Create compute_inertia_from_config(config, config_manager, masses, articulation_angles=None) function",
+        "Internally calls load_components_from_config() then compute_inertia_from_stl()",
+        "Passes articulation capabilities from config to enable angle-based computation",
+        "Default articulation angles: 0 degrees for solar panels, 15 degrees for antenna dishes (components with 'AD' prefix)",
+        "Log warning when using default angle for a component with articulation capability",
+        "Returns InertiaResult dataclass",
+        "Typecheck passes"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-031",
+      "title": "Export new functions from computation module",
+      "description": "As a developer, I need the new functions exported from the computation module's __init__.py.",
+      "acceptanceCriteria": [
+        "Add load_components_from_config to src/computation/__init__.py exports",
+        "Add compute_inertia_from_config to src/computation/__init__.py exports",
+        "Add apply_articulation_to_mesh to src/computation/__init__.py exports",
+        "Typecheck passes"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-032",
+      "title": "Update inertia notebook to use config-based workflow",
+      "description": "As an engineer, I want the inertia calculation notebook to demonstrate loading component positions from config files.",
+      "acceptanceCriteria": [
+        "Update notebooks/inversion/01_inertia_calculation.py to use config-based workflow",
+        "Load Intelsat 901 config using RSO_ConfigManager",
+        "Define masses dict in notebook (not in config file)",
+        "Demonstrate default articulation angles and custom angles",
+        "Show comparison of inertia at different articulation states",
+        "Keep analytical validation section (unit cube, asymmetric box)",
+        "Typecheck passes"
+      ],
+      "priority": 32,
       "passes": false,
       "notes": ""
     }

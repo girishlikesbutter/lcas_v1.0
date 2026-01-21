@@ -28,6 +28,7 @@ from .inertia_calculator import (
     InertiaResult,
     STLComponent,
     compute_inertia_from_stl,
+    load_components_from_config,
 )
 
 __all__ = [
@@ -55,4 +56,5 @@ __all__ = [
     'InertiaResult',
     'STLComponent',
     'compute_inertia_from_stl',
+    'load_components_from_config',
 ]

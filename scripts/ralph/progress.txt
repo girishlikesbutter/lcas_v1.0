@@ -255,3 +255,117 @@ Started: Wed Jan 21 12:33:02 PM NZDT 2026
   - Check eigenvalues with np.linalg.eigvalsh() for symmetric matrices (faster than eig)
   - Return infinite uncertainties if Hessian inversion completely fails
 ---
+
+## 2026-01-21 - US-019
+- What was implemented: Implemented compute_mcmc_uncertainty() function using emcee for full posterior characterization
+- Files changed:
+  - src/inversion/uncertainty.py - added emcee import with fallback, implemented compute_mcmc_uncertainty()
+- **Learnings for future iterations:**
+  - emcee uses affine-invariant ensemble sampler; requires n_walkers >= 2 * n_params
+  - Log-posterior formulation: log_prior (flat within bounds) + log_likelihood (-0.5 * chi_squared)
+  - Initialize walkers with small scatter (1% of parameter range) around optimal point, clip to bounds
+  - Run burn-in phase first, then sampler.reset() before production chain
+  - Use sampler.get_chain(flat=True) to get flattened samples for statistics
+  - Convergence diagnostic: autocorrelation time via sampler.get_autocorr_time(quiet=True)
+  - Convergence criterion: n_samples > 50 * max(autocorr_time)
+  - Handle AutocorrError exception when chain too short to estimate autocorrelation
+  - Return dict with samples, covariance, std_devs, acceptance_fraction, autocorr_time, converged
+---
+
+## 2026-01-21 - US-020
+- What was implemented: Verified InversionResult dataclass already has all required fields from US-010 scaffolding
+- Files changed: None (prd.json updated to mark US-020 as passes: true)
+- **Learnings for future iterations:**
+  - InversionResult dataclass was fully defined in US-010 scaffolding with all required fields
+  - Fields: q0, omega0, chi_squared, rms_residual, predicted_lightcurve, observed_lightcurve, observation_times
+  - Optional fields: uncertainties, omega_history (for tumbling mode), mcmc_samples
+  - Plotting methods (plot_lightcurve_comparison, plot_residuals, plot_corner) are placeholders for US-021
+  - Check if acceptance criteria are already met from prior scaffolding before implementing new code
+---
+
+## 2026-01-21 - US-021
+- What was implemented: Implemented three visualization methods for InversionResult dataclass
+- Files changed:
+  - src/inversion/results.py - added matplotlib imports, corner import with fallback, implemented plot_lightcurve_comparison(), plot_residuals(), plot_corner()
+- **Learnings for future iterations:**
+  - Use try/except import pattern with CORNER_AVAILABLE flag for optional dependencies
+  - plot_lightcurve_comparison: scatter for observed, line for predicted, invert y-axis for magnitudes
+  - plot_residuals: shows observed-predicted with horizontal RMS reference lines
+  - plot_corner: uses corner.corner() with quantiles=[0.16, 0.5, 0.84] for 1-sigma intervals
+  - Filter out infinite magnitude observations with np.isfinite() mask before plotting
+  - Use Optional[Axes] pattern for optional axes parameter, creates new figure if None
+  - Return type hints should use matplotlib.axes.Axes and matplotlib.figure.Figure
+---
+
+## 2026-01-21 - US-022
+- What was implemented: Created invert_lightcurve() main API function that runs the full inversion pipeline
+- Files changed:
+  - src/inversion/results.py - implemented invert_lightcurve() function with full pipeline
+- **Learnings for future iterations:**
+  - invert_lightcurve takes concrete data (Satellite, J2000 positions) not abstract config objects
+  - Pipeline: create ObjectiveFunction → multi_start_optimize → propagate_attitude → compute uncertainties → return InversionResult
+  - Re-use objective._compute_body_frame_vectors() and objective._generate_predicted_lightcurve() for final prediction
+  - RMS residual computed from valid (finite) observations only using np.isfinite() mask
+  - omega_history only included in result for tumbling mode (constant for principal_axis)
+  - mcmc_samples only included when uncertainty_mode='full'
+  - Use local imports inside function to avoid circular imports
+  - Default n_starts=3 for multi-start optimization provides good robustness
+---
+
+## 2026-01-21 - US-023
+- What was implemented: Created notebooks/inversion/01_inertia_calculation.py demonstrating inertia calculation from STL files
+- Files changed:
+  - notebooks/inversion/01_inertia_calculation.py (new) - Jupytext percent format notebook
+- **Learnings for future iterations:**
+  - Jupytext percent format: use `# %%` for code cells, `# %% [markdown]` for markdown cells
+  - Header format requires jupytext metadata block with formats, text_representation, and kernelspec
+  - Use trimesh.creation.box() to create test meshes for validation against analytical solutions
+  - Unit cube inertia: I_xx = I_yy = I_zz = m*s^2/6 for side length s
+  - Rectangular box: I_xx = m/12 * (b^2 + c^2) for dimensions a x b x c
+  - Symmetric two-cube test validates parallel axis theorem application
+  - STLComponent dataclass or (mesh, position, mass) tuples both work for compute_inertia_from_stl
+---
+
+## 2026-01-21 - US-024
+- What was implemented: Created notebooks/inversion/02_attitude_propagation.py demonstrating attitude propagation
+- Files changed:
+  - notebooks/inversion/02_attitude_propagation.py (new) - Jupytext percent format notebook
+- **Learnings for future iterations:**
+  - propagate_attitude() returns (quaternions, omega_history) tuple for both modes
+  - Principal axis mode: omega is constant (replicated using np.tile for output)
+  - Tumbling mode: omega evolves via Euler dynamics, verify conservation laws (|L|, T)
+  - Polhode plot shows angular velocity trajectory in body frame (3D plot)
+  - quaternion_to_rotation_matrix() transforms vectors FROM J2000 TO body frame
+  - k1_vectors (sun) and k2_vectors (observer) computed as: R @ (target - satellite), then normalize
+  - ObjectiveFunction class in src/inversion/objective_function.py implements the full pipeline
+  - Visualization tips: invert y-axis for magnitude plots, use matplotlib 3D projection for polhode
+---
+
+## 2026-01-21 - US-025
+- What was implemented: Created notebooks/inversion/03_lightcurve_inversion.py demonstrating full inversion workflow
+- Files changed:
+  - notebooks/inversion/03_lightcurve_inversion.py (new) - Jupytext percent format notebook with complete inversion workflow
+- **Learnings for future iterations:**
+  - Round-trip validation workflow: create simple satellite -> forward model -> add noise -> invert -> compare
+  - Simple satellite creation: use trimesh.creation.box() and _mesh_to_facets() helper
+  - Observation geometry setup: define constant sun/observer/satellite positions in J2000, tile to create (N, 3) arrays
+  - Forward model: create ObjectiveFunction with placeholder observed_lightcurve, use _compute_body_frame_vectors() and _generate_predicted_lightcurve()
+  - Quick (Fisher) mode: fast but approximate, use for rapid iteration
+  - Full (MCMC) mode: thorough but slow, use for final analysis with n_samples >= 1000
+  - Visualization: result.plot_lightcurve_comparison(), result.plot_residuals(), result.plot_corner()
+  - Configuration options table format is useful for documentation (mode, uncertainty_mode, n_starts, etc.)
+  - API reference appendix provides quick reference for function signatures
+---
+
+## 2026-01-21 - US-027
+- What was implemented: Created load_components_from_config() helper function that loads STL meshes and positions from satellite config files
+- Files changed:
+  - src/computation/inertia_calculator.py - added load_components_from_config() function with TYPE_CHECKING imports
+  - src/computation/__init__.py - added load_components_from_config to exports
+- **Learnings for future iterations:**
+  - Use TYPE_CHECKING for type hints to avoid circular imports (RSO_Config and RSO_ConfigManager are in config module)
+  - Follow STLLoader pattern for mesh loading: use trimesh.load() with force='mesh', handle Scene vs Trimesh cases
+  - Validate component names from masses dict against config.components before loading meshes
+  - Return STLComponent objects (mesh, position, mass) for use with compute_inertia_from_stl()
+  - Component positions come from config.components[name].position (List[float])
+---

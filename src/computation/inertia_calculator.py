@@ -6,17 +6,22 @@ This module provides functions to compute:
 - Mesh watertightness validation
 - Component inertia tensors assuming homogeneous mass distribution
 - Full satellite inertia from multiple STL components
+- Config-based component loading for inertia calculation
 
 All calculations assume the mesh is in a consistent coordinate frame.
 """
 
 import logging
 from dataclasses import dataclass
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union, TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 import trimesh
+
+if TYPE_CHECKING:
+    from src.config.rso_config_schemas import RSO_Config
+    from src.config.rso_config_manager import RSO_ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -508,3 +513,103 @@ def compute_inertia_from_stl(
         principal_moments=principal_moments,
         principal_axes=principal_axes,
     )
+
+
+def load_components_from_config(
+    config: "RSO_Config",
+    config_manager: "RSO_ConfigManager",
+    masses: Dict[str, float],
+) -> List[STLComponent]:
+    """
+    Load STL meshes and positions from a satellite config, assigning masses.
+
+    This helper function bridges the gap between the configuration-based
+    satellite definition and the inertia calculation functions that need
+    meshes with positions and masses.
+
+    Parameters
+    ----------
+    config : RSO_Config
+        The RSO configuration object containing component definitions.
+    config_manager : RSO_ConfigManager
+        The configuration manager for resolving STL file paths.
+    masses : Dict[str, float]
+        Dictionary mapping component names to their masses in kg.
+        Each key must match a component name in the config.
+
+    Returns
+    -------
+    List[STLComponent]
+        List of STLComponent objects with mesh, position, and mass.
+        The position is taken from the component definition in the config.
+
+    Raises
+    ------
+    ValueError
+        If a component name in the masses dict is not found in the config.
+    FileNotFoundError
+        If an STL file referenced in the config cannot be found.
+
+    Examples
+    --------
+    >>> from src.config.rso_config_manager import RSO_ConfigManager
+    >>> config_manager = RSO_ConfigManager(project_root)
+    >>> config = config_manager.load_config("intelsat_901/intelsat_901_config.yaml")
+    >>> masses = {"Bus": 1200.0, "SP_North": 50.0, "SP_South": 50.0}
+    >>> components = load_components_from_config(config, config_manager, masses)
+    >>> result = compute_inertia_from_stl(components)
+    """
+    # Validate that all component names in masses exist in config
+    for comp_name in masses.keys():
+        if comp_name not in config.components:
+            raise ValueError(
+                f"Component '{comp_name}' from masses dict not found in config. "
+                f"Available components: {list(config.components.keys())}"
+            )
+
+    components: List[STLComponent] = []
+
+    for comp_name, mass in masses.items():
+        # Get component definition from config
+        comp_def = config.components[comp_name]
+
+        # Get full path to STL file
+        stl_path = config_manager.get_component_path(comp_name, config)
+
+        # Load the mesh
+        mesh = trimesh.load(stl_path, force='mesh')
+
+        # Ensure it's a Trimesh object (not a Scene)
+        if not isinstance(mesh, trimesh.Trimesh):
+            if hasattr(mesh, 'dump'):
+                meshes = mesh.dump()
+                if meshes:
+                    mesh = meshes[0]
+                else:
+                    raise ValueError(f"No valid mesh found in {stl_path}")
+            else:
+                raise ValueError(f"Could not extract mesh from {stl_path}")
+
+        # Get position from config
+        position = np.array(comp_def.position, dtype=np.float64)
+
+        # Create STLComponent
+        component = STLComponent(
+            mesh=mesh,
+            position=position,
+            mass=mass,
+        )
+        components.append(component)
+
+        logger.debug(
+            f"Loaded component '{comp_name}': "
+            f"position={position}, mass={mass} kg, "
+            f"{len(mesh.faces)} triangles"
+        )
+
+    logger.info(
+        f"Loaded {len(components)} components from config with total mass "
+        f"{sum(c.mass for c in components):.2f} kg"
+    )
+
+    return components
