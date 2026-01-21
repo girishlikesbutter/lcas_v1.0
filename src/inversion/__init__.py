@@ -28,6 +28,7 @@ from .objective_function import ObjectiveFunction
 
 from .optimizers import (
     OptimizationResult,
+    get_default_bounds,
     global_optimize,
     local_refine,
     multi_start_optimize,
@@ -58,6 +59,7 @@ __all__ = [
     "ObjectiveFunction",
     # Optimizers
     "OptimizationResult",
+    "get_default_bounds",
     "global_optimize",
     "local_refine",
     "multi_start_optimize",
