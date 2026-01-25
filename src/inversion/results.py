@@ -11,6 +11,7 @@ outputs from the inversion pipeline, including:
 
 from dataclasses import dataclass
 from typing import Any, Dict, Literal, Optional, TYPE_CHECKING
+import time
 import numpy as np
 from numpy.typing import NDArray
 
@@ -329,6 +330,19 @@ def invert_lightcurve(
     from .quaternion_utils import axis_angle_to_quaternion, normalize_quaternion
     from ..dynamics.attitude_propagator import propagate_attitude
 
+    # Start timing
+    start_time = time.time()
+
+    # Print header
+    print("=" * 80, flush=True)
+    print("LIGHTCURVE INVERSION", flush=True)
+    print("=" * 80, flush=True)
+    n_obs = len(observation_times)
+    shadows_str = "enabled" if compute_shadows else "disabled"
+    print(f"Mode: {mode} | Uncertainty: {uncertainty_mode} | Shadows: {shadows_str}", flush=True)
+    print(f"Observations: {n_obs} | Parameters: 6 | Multi-starts: {n_starts}", flush=True)
+    print("-" * 80, flush=True)
+
     # Validate inputs
     if mode == "tumbling" and inertia_tensor is None:
         raise ValueError(
@@ -452,6 +466,19 @@ def invert_lightcurve(
     omega_history_output: Optional[NDArray[np.floating]] = None
     if mode == "tumbling":
         omega_history_output = omega_history
+
+    # Compute total time and print summary
+    total_time = time.time() - start_time
+    total_evaluations = objective.n_evaluations
+
+    print("\n" + "=" * 80, flush=True)
+    print("INVERSION COMPLETE", flush=True)
+    print("=" * 80, flush=True)
+    print(f"  Chi-squared: {chi_squared:.6f}", flush=True)
+    print(f"  RMS residual: {rms_residual:.4f} mag", flush=True)
+    print(f"  Total time: {total_time:.1f} seconds", flush=True)
+    print(f"  Total evaluations: {total_evaluations:,}", flush=True)
+    print("=" * 80, flush=True)
 
     return InversionResult(
         q0=q0,

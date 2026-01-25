@@ -27,6 +27,7 @@ def _compute_hessian(
     func: ObjectiveFunction,
     x: NDArray[np.floating],
     step_size: float = 1e-5,
+    show_progress: bool = True,
 ) -> NDArray[np.floating]:
     """
     Compute the Hessian matrix using central finite differences.
@@ -39,6 +40,8 @@ def _compute_hessian(
         Point at which to compute the Hessian.
     step_size : float, optional
         Step size for finite differences. Default is 1e-5.
+    show_progress : bool, optional
+        Whether to print progress during computation. Default is True.
 
     Returns
     -------
@@ -48,6 +51,11 @@ def _compute_hessian(
     n = len(x)
     hessian = np.zeros((n, n), dtype=np.float64)
     x = np.asarray(x, dtype=np.float64)
+
+    # Total number of Hessian elements to compute
+    # n diagonal + n*(n-1)/2 off-diagonal = n*(n+1)/2
+    total_elements = n * (n + 1) // 2
+    computed_elements = 0
 
     # Compute diagonal elements using central difference formula:
     # d^2f/dx_i^2 = (f(x+h_i) - 2*f(x) + f(x-h_i)) / h^2
@@ -61,6 +69,10 @@ def _compute_hessian(
         f_minus = func.evaluate(x - h_i)
 
         hessian[i, i] = (f_plus - 2 * f_x + f_minus) / (step_size**2)
+
+        computed_elements += 1
+        if show_progress:
+            print(f"    Computing Hessian elements: {computed_elements}/{total_elements}", end='\r', flush=True)
 
     # Compute off-diagonal elements using central difference:
     # d^2f/dx_i*dx_j = (f(x+h_i+h_j) - f(x+h_i-h_j) - f(x-h_i+h_j) + f(x-h_i-h_j)) / (4*h^2)
@@ -79,6 +91,13 @@ def _compute_hessian(
             hessian[i, j] = (f_pp - f_pm - f_mp + f_mm) / (4 * step_size**2)
             hessian[j, i] = hessian[i, j]  # Symmetric
 
+            computed_elements += 1
+            if show_progress:
+                print(f"    Computing Hessian elements: {computed_elements}/{total_elements}", end='\r', flush=True)
+
+    if show_progress:
+        print(f"    Computing Hessian elements: {total_elements}/{total_elements}", flush=True)
+
     return hessian
 
 
@@ -86,6 +105,7 @@ def compute_fisher_uncertainty(
     objective: ObjectiveFunction,
     optimal_params: NDArray[np.floating],
     step_size: float = 1e-5,
+    show_progress: bool = True,
 ) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
     Estimate parameter uncertainties using Fisher Information Matrix.
@@ -103,6 +123,8 @@ def compute_fisher_uncertainty(
         Optimal parameters from optimization.
     step_size : float, optional
         Step size for numerical Hessian computation. Default is 1e-5.
+    show_progress : bool, optional
+        Whether to print progress during computation. Default is True.
 
     Returns
     -------
@@ -126,10 +148,13 @@ def compute_fisher_uncertainty(
     optimal_params = np.asarray(optimal_params, dtype=np.float64)
     n_params = len(optimal_params)
 
+    if show_progress:
+        print(f"\nComputing Fisher uncertainty (Hessian)...", flush=True)
+
     logger.debug(f"Computing Hessian at optimum with step_size={step_size}")
 
     # Compute Hessian at optimum
-    hessian = _compute_hessian(objective, optimal_params, step_size)
+    hessian = _compute_hessian(objective, optimal_params, step_size, show_progress=show_progress)
 
     # Fisher Information Matrix is 0.5 * Hessian for chi-squared
     # So covariance = 2 * Hessian^{-1}
@@ -172,6 +197,9 @@ def compute_fisher_uncertainty(
             f"Fisher uncertainty estimation complete. "
             f"Parameter std_devs: {std_devs}"
         )
+
+        if show_progress:
+            print(f"Fisher uncertainty complete.", flush=True)
 
         return covariance, std_devs
 

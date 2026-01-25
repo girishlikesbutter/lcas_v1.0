@@ -84,7 +84,12 @@ class ObjectiveFunction:
     ----------
     n_evaluations : int
         Number of times evaluate() has been called.
+    _last_progress_print : int
+        Last evaluation count when progress was printed.
     """
+
+    # Class-level constant for progress printing interval
+    PROGRESS_PRINT_INTERVAL = 100
 
     def __init__(
         self,
@@ -164,6 +169,7 @@ class ObjectiveFunction:
 
         # Statistics
         self.n_evaluations = 0
+        self._last_progress_print = 0
 
         logger.debug(
             f"ObjectiveFunction initialized: {n_obs} observations, "
@@ -290,6 +296,12 @@ class ObjectiveFunction:
             Lower values indicate better fit.
         """
         self.n_evaluations += 1
+
+        # Print progress every PROGRESS_PRINT_INTERVAL evaluations
+        if self.n_evaluations - self._last_progress_print >= self.PROGRESS_PRINT_INTERVAL:
+            print(f"      [Evaluations: {self.n_evaluations}]", flush=True)
+            self._last_progress_print = self.n_evaluations
+
         params = np.asarray(params, dtype=np.float64)
 
         if len(params) != 6:

@@ -84,6 +84,8 @@ def global_optimize(
     tol: float = 0.01,
     workers: int = 1,
     polish: bool = False,
+    show_progress: bool = True,
+    progress_interval: int = 10,
 ) -> OptimizationResult:
     """
     Run global optimization using Differential Evolution.
@@ -106,6 +108,10 @@ def global_optimize(
     polish : bool, optional
         Whether to polish the result with L-BFGS-B. Default is False
         (use local_refine separately for more control).
+    show_progress : bool, optional
+        Whether to print progress during optimization. Default is True.
+    progress_interval : int, optional
+        Print progress every N generations. Default is 10.
 
     Returns
     -------
@@ -122,6 +128,16 @@ def global_optimize(
         n_evals[0] += 1
         return objective.evaluate(params)
 
+    # Progress callback for differential evolution
+    generation_count = [0]
+
+    def progress_callback(xk, convergence):
+        generation_count[0] += 1
+        if show_progress and generation_count[0] % progress_interval == 0:
+            current_cost = wrapped_objective(xk)
+            print(f"      Generation {generation_count[0]}: best cost = {current_cost:.6f}", flush=True)
+        return False  # Return False to continue optimization
+
     # Run differential evolution
     result = differential_evolution(
         wrapped_objective,
@@ -131,11 +147,15 @@ def global_optimize(
         tol=tol,
         workers=workers,
         polish=polish,
+        callback=progress_callback if show_progress else None,
         strategy="best1bin",  # Good balance of exploration and exploitation
         mutation=(0.5, 1.0),  # Dithered mutation for robustness
         recombination=0.7,    # Standard crossover probability
         updating="deferred",  # Required for parallel execution
     )
+
+    if show_progress:
+        print(f"      Converged at generation {generation_count[0]}, cost = {result.fun:.6f}", flush=True)
 
     return OptimizationResult(
         params=result.x,
@@ -153,6 +173,8 @@ def local_refine(
     maxiter: int = 1000,
     ftol: float = 1e-8,
     gtol: float = 1e-5,
+    show_progress: bool = True,
+    initial_cost: Optional[float] = None,
 ) -> OptimizationResult:
     """
     Refine solution using local optimization (L-BFGS-B).
@@ -171,6 +193,10 @@ def local_refine(
         Function tolerance for convergence. Default is 1e-8.
     gtol : float, optional
         Gradient tolerance for convergence. Default is 1e-5.
+    show_progress : bool, optional
+        Whether to print progress during optimization. Default is True.
+    initial_cost : float, optional
+        Initial cost before refinement (for computing improvement).
 
     Returns
     -------
@@ -246,6 +272,14 @@ def local_refine(
 
     final_params = np.concatenate([final_axis_angle_normalized, final_omega])
 
+    # Print progress if enabled
+    if show_progress:
+        if initial_cost is not None and initial_cost > 0:
+            improvement = 100.0 * (initial_cost - result.fun) / initial_cost
+            print(f"      Refined cost: {result.fun:.6f} (improvement: {improvement:.1f}%)", flush=True)
+        else:
+            print(f"      Refined cost: {result.fun:.6f}", flush=True)
+
     return OptimizationResult(
         params=final_params,
         cost=result.fun,
@@ -263,6 +297,7 @@ def multi_start_optimize(
     global_maxiter: int = 500,
     local_maxiter: int = 500,
     use_local_refinement: bool = True,
+    show_progress: bool = True,
 ) -> List[OptimizationResult]:
     """
     Run optimization with multiple random starting points.
@@ -287,6 +322,8 @@ def multi_start_optimize(
         Maximum iterations for local refinement. Default is 500.
     use_local_refinement : bool, optional
         Whether to refine global result with L-BFGS-B. Default is True.
+    show_progress : bool, optional
+        Whether to print progress during optimization. Default is True.
 
     Returns
     -------
@@ -305,9 +342,16 @@ def multi_start_optimize(
 
     results: List[OptimizationResult] = []
 
+    if show_progress:
+        print(f"\nStarting multi-start optimization ({n_starts} starts)...", flush=True)
+
     for i in range(n_starts):
         # Use different seed for each start
         start_seed = None if seed is None else seed + i
+
+        if show_progress:
+            print(f"\n  Start {i+1}/{n_starts}:", flush=True)
+            print(f"    Global optimization (Differential Evolution)...", flush=True)
 
         # Run global optimization
         global_result = global_optimize(
@@ -316,15 +360,21 @@ def multi_start_optimize(
             seed=start_seed,
             maxiter=global_maxiter,
             polish=False,  # We'll do local refinement separately
+            show_progress=show_progress,
         )
 
         if use_local_refinement:
+            if show_progress:
+                print(f"    Local refinement (L-BFGS-B)...", flush=True)
+
             # Refine with local optimizer
             refined_result = local_refine(
                 objective=objective,
                 x0=global_result.params,
                 bounds=bounds,
                 maxiter=local_maxiter,
+                show_progress=show_progress,
+                initial_cost=global_result.cost,
             )
 
             # Combine evaluation counts
@@ -337,11 +387,21 @@ def multi_start_optimize(
                 message=f"Global + local: {refined_result.message}",
             )
         else:
+            total_evals = global_result.n_evaluations
             final_result = global_result
+
+        if show_progress:
+            print(f"    Start {i+1} complete: cost = {final_result.cost:.6f}, evaluations = {total_evals:,}", flush=True)
 
         results.append(final_result)
 
     # Sort by cost (best first)
     results.sort(key=lambda r: r.cost)
+
+    if show_progress:
+        total_all_evals = sum(r.n_evaluations for r in results)
+        print(f"\nMulti-start optimization complete.", flush=True)
+        print(f"  Best result: cost = {results[0].cost:.6f}", flush=True)
+        print(f"  Total evaluations: {total_all_evals:,}", flush=True)
 
     return results
