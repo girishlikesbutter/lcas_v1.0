@@ -177,7 +177,7 @@ def global_optimize(
         _parallel_state['objective'] = objective
         _parallel_state['counter'] = shared_counter
         _parallel_state['lock'] = shared_lock
-        _parallel_state['interval'] = 500 if show_progress else 999999999
+        _parallel_state['interval'] = 100 if show_progress else 999999999
 
         if show_progress:
             actual_workers = workers if workers > 0 else multiprocessing.cpu_count()
