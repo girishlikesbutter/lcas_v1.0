@@ -121,46 +121,69 @@ def global_optimize(
     if bounds is None:
         bounds = get_default_bounds()
 
-    # Wrap the objective function to track evaluations
-    n_evals = [0]  # Use list for mutable closure
+    # For parallel workers, we can't use closures (not picklable)
+    # Pass objective.evaluate directly and disable callback
+    if workers != 1:
+        if show_progress:
+            print(f"      (Parallel mode: progress updates disabled)", flush=True)
 
-    def wrapped_objective(params: NDArray[np.floating]) -> float:
-        n_evals[0] += 1
-        return objective.evaluate(params)
+        # Run differential evolution with direct method reference
+        result = differential_evolution(
+            objective.evaluate,
+            bounds=bounds,
+            seed=seed,
+            maxiter=maxiter,
+            tol=tol,
+            workers=workers,
+            polish=polish,
+            callback=None,  # Callbacks can't be used with parallel workers
+            strategy="best1bin",
+            mutation=(0.5, 1.0),
+            recombination=0.7,
+            updating="deferred",
+        )
 
-    # Progress callback for differential evolution
-    generation_count = [0]
+        if show_progress:
+            print(f"      Converged, cost = {result.fun:.6f}", flush=True)
 
-    def progress_callback(xk, convergence):
-        generation_count[0] += 1
-        if show_progress and generation_count[0] % progress_interval == 0:
-            current_cost = wrapped_objective(xk)
-            print(f"      Generation {generation_count[0]}: best cost = {current_cost:.6f}", flush=True)
-        return False  # Return False to continue optimization
+    else:
+        # Serial mode: can use closures for progress tracking
+        generation_count = [0]
 
-    # Run differential evolution
-    result = differential_evolution(
-        wrapped_objective,
-        bounds=bounds,
-        seed=seed,
-        maxiter=maxiter,
-        tol=tol,
-        workers=workers,
-        polish=polish,
-        callback=progress_callback if show_progress else None,
-        strategy="best1bin",  # Good balance of exploration and exploitation
-        mutation=(0.5, 1.0),  # Dithered mutation for robustness
-        recombination=0.7,    # Standard crossover probability
-        updating="deferred",  # Required for parallel execution
-    )
+        def progress_callback(xk, convergence):
+            generation_count[0] += 1
+            if show_progress and generation_count[0] % progress_interval == 0:
+                current_cost = objective.evaluate(xk)
+                print(f"      Generation {generation_count[0]}: best cost = {current_cost:.6f}", flush=True)
+            return False  # Return False to continue optimization
 
-    if show_progress:
-        print(f"      Converged at generation {generation_count[0]}, cost = {result.fun:.6f}", flush=True)
+        # Run differential evolution
+        result = differential_evolution(
+            objective.evaluate,
+            bounds=bounds,
+            seed=seed,
+            maxiter=maxiter,
+            tol=tol,
+            workers=workers,
+            polish=polish,
+            callback=progress_callback if show_progress else None,
+            strategy="best1bin",
+            mutation=(0.5, 1.0),
+            recombination=0.7,
+            updating="deferred",
+        )
+
+        if show_progress:
+            print(f"      Converged at generation {generation_count[0]}, cost = {result.fun:.6f}", flush=True)
+
+    # Use scipy's nfev (number of function evaluations) for accurate count
+    # This works correctly for both serial and parallel modes
+    n_evals = result.nfev
 
     return OptimizationResult(
         params=result.x,
         cost=result.fun,
-        n_evaluations=n_evals[0],
+        n_evaluations=n_evals,
         success=result.success,
         message=result.message,
     )
