@@ -229,6 +229,7 @@ def invert_lightcurve(
     mcmc_n_samples: int = 1000,
     mcmc_burn_in: int = 100,
     articulation_matrices: Optional[Dict[str, NDArray[np.floating]]] = None,
+    workers: int = 1,
 ) -> InversionResult:
     """
     Run the full lightcurve inversion pipeline.
@@ -285,6 +286,10 @@ def invert_lightcurve(
         Use this for fixed articulation angles (e.g., solar panels at 0°,
         antenna dishes at 15°). Generate with:
         ``compute_rotation_matrices_from_angles(angles_dict, satellite)``
+    workers : int, optional
+        Number of parallel workers for optimization. Default is 1 (serial).
+        Set to -1 to use all available CPU cores. Can significantly speed
+        up optimization on multi-core systems.
 
     Returns
     -------
@@ -339,8 +344,9 @@ def invert_lightcurve(
     print("=" * 80, flush=True)
     n_obs = len(observation_times)
     shadows_str = "enabled" if compute_shadows else "disabled"
+    workers_str = "all cores" if workers == -1 else str(workers)
     print(f"Mode: {mode} | Uncertainty: {uncertainty_mode} | Shadows: {shadows_str}", flush=True)
-    print(f"Observations: {n_obs} | Parameters: 6 | Multi-starts: {n_starts}", flush=True)
+    print(f"Observations: {n_obs} | Parameters: 6 | Multi-starts: {n_starts} | Workers: {workers_str}", flush=True)
     print("-" * 80, flush=True)
 
     # Validate inputs
@@ -388,6 +394,7 @@ def invert_lightcurve(
         n_starts=n_starts,
         seed=seed,
         use_local_refinement=True,
+        workers=workers,
     )
 
     # Best result is first (sorted by cost)

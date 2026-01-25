@@ -298,6 +298,7 @@ def multi_start_optimize(
     local_maxiter: int = 500,
     use_local_refinement: bool = True,
     show_progress: bool = True,
+    workers: int = 1,
 ) -> List[OptimizationResult]:
     """
     Run optimization with multiple random starting points.
@@ -324,6 +325,10 @@ def multi_start_optimize(
         Whether to refine global result with L-BFGS-B. Default is True.
     show_progress : bool, optional
         Whether to print progress during optimization. Default is True.
+    workers : int, optional
+        Number of parallel workers for function evaluations. Default is 1
+        (serial). Set to -1 to use all available CPU cores. Higher values
+        can significantly speed up optimization on multi-core systems.
 
     Returns
     -------
@@ -343,7 +348,8 @@ def multi_start_optimize(
     results: List[OptimizationResult] = []
 
     if show_progress:
-        print(f"\nStarting multi-start optimization ({n_starts} starts)...", flush=True)
+        workers_str = "all cores" if workers == -1 else f"{workers} worker(s)"
+        print(f"\nStarting multi-start optimization ({n_starts} starts, {workers_str})...", flush=True)
 
     for i in range(n_starts):
         # Use different seed for each start
@@ -361,6 +367,7 @@ def multi_start_optimize(
             maxiter=global_maxiter,
             polish=False,  # We'll do local refinement separately
             show_progress=show_progress,
+            workers=workers,
         )
 
         if use_local_refinement:
