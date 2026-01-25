@@ -12,6 +12,8 @@ Includes:
 """
 
 from dataclasses import dataclass
+import multiprocessing
+from multiprocessing import Manager
 from typing import List, Tuple, Optional
 import numpy as np
 from numpy.typing import NDArray
@@ -19,6 +21,44 @@ from scipy.optimize import differential_evolution, minimize
 
 from .objective_function import ObjectiveFunction
 from .quaternion_utils import axis_angle_to_quaternion, quaternion_to_axis_angle, normalize_quaternion
+
+
+# Module-level shared state for parallel progress tracking
+# Using Manager creates proxy objects that work across processes
+_parallel_state = {
+    'counter': None,
+    'lock': None,
+    'interval': 500,
+    'objective': None,
+}
+
+
+def _parallel_evaluate_wrapper(params):
+    """
+    Wrapper function for parallel evaluation with shared progress counter.
+
+    This is a module-level function that can be pickled and sent to workers.
+    It accesses the shared state set up before optimization starts.
+    """
+    objective = _parallel_state['objective']
+    counter = _parallel_state['counter']
+    lock = _parallel_state['lock']
+    interval = _parallel_state['interval']
+
+    # Evaluate the objective
+    result = objective.evaluate(params)
+
+    # Update shared counter and print progress
+    if counter is not None:
+        with lock:
+            counter.value += 1
+            current = counter.value
+
+        if current % interval == 0:
+            with lock:
+                print(f"      [Evaluations: {current}]", flush=True)
+
+    return result
 
 
 @dataclass
@@ -122,26 +162,50 @@ def global_optimize(
         bounds = get_default_bounds()
 
     # For parallel workers, we can't use closures (not picklable)
-    # Pass objective.evaluate directly and disable callback
+    # Use module-level wrapper with Manager for shared progress counter
     if workers != 1:
-        if show_progress:
-            print(f"      (Parallel mode: progress updates disabled)", flush=True)
+        # Create shared counter using Manager (works across processes)
+        manager = Manager()
+        shared_counter = manager.Value('i', 0)
+        shared_lock = manager.Lock()
 
-        # Run differential evolution with direct method reference
-        result = differential_evolution(
-            objective.evaluate,
-            bounds=bounds,
-            seed=seed,
-            maxiter=maxiter,
-            tol=tol,
-            workers=workers,
-            polish=polish,
-            callback=None,  # Callbacks can't be used with parallel workers
-            strategy="best1bin",
-            mutation=(0.5, 1.0),
-            recombination=0.7,
-            updating="deferred",
-        )
+        # Set up module-level state for the wrapper function
+        # Disable progress in the objective itself (wrapper handles it)
+        old_show_progress = objective.show_progress
+        objective.show_progress = False
+
+        _parallel_state['objective'] = objective
+        _parallel_state['counter'] = shared_counter
+        _parallel_state['lock'] = shared_lock
+        _parallel_state['interval'] = 500 if show_progress else 999999999
+
+        if show_progress:
+            actual_workers = workers if workers > 0 else multiprocessing.cpu_count()
+            print(f"      (Parallel mode: {actual_workers} workers)", flush=True)
+
+        try:
+            # Run differential evolution with the wrapper function
+            result = differential_evolution(
+                _parallel_evaluate_wrapper,
+                bounds=bounds,
+                seed=seed,
+                maxiter=maxiter,
+                tol=tol,
+                workers=workers,
+                polish=polish,
+                callback=None,  # Callbacks can't be used with parallel workers
+                strategy="best1bin",
+                mutation=(0.5, 1.0),
+                recombination=0.7,
+                updating="deferred",
+            )
+        finally:
+            # Clean up module-level state
+            _parallel_state['objective'] = None
+            _parallel_state['counter'] = None
+            _parallel_state['lock'] = None
+            objective.show_progress = old_show_progress
+            manager.shutdown()
 
         if show_progress:
             print(f"      Converged, cost = {result.fun:.6f}", flush=True)

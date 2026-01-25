@@ -86,6 +86,8 @@ class ObjectiveFunction:
         Number of times evaluate() has been called.
     _last_progress_print : int
         Last evaluation count when progress was printed.
+    show_progress : bool
+        Whether to print progress during evaluation.
     """
 
     # Class-level constant for progress printing interval
@@ -103,6 +105,7 @@ class ObjectiveFunction:
         uncertainties: Optional[NDArray[np.floating]] = None,
         compute_shadows_flag: bool = True,
         articulation_matrices: Optional[Dict[str, NDArray[np.floating]]] = None,
+        show_progress: bool = True,
     ) -> None:
         """Initialize the objective function with observation data."""
         # Validate inputs
@@ -167,9 +170,10 @@ class ObjectiveFunction:
         # Dict mapping component names to (N, 4, 4) rotation matrices
         self.articulation_matrices = articulation_matrices if articulation_matrices else {}
 
-        # Statistics
+        # Statistics and progress tracking
         self.n_evaluations = 0
         self._last_progress_print = 0
+        self.show_progress = show_progress
 
         logger.debug(
             f"ObjectiveFunction initialized: {n_obs} observations, "
@@ -297,10 +301,11 @@ class ObjectiveFunction:
         """
         self.n_evaluations += 1
 
-        # Print progress every PROGRESS_PRINT_INTERVAL evaluations
-        if self.n_evaluations - self._last_progress_print >= self.PROGRESS_PRINT_INTERVAL:
-            print(f"      [Evaluations: {self.n_evaluations}]", flush=True)
-            self._last_progress_print = self.n_evaluations
+        # Print progress every PROGRESS_PRINT_INTERVAL evaluations (serial mode only)
+        if self.show_progress:
+            if self.n_evaluations - self._last_progress_print >= self.PROGRESS_PRINT_INTERVAL:
+                print(f"      [Evaluations: {self.n_evaluations}]", flush=True)
+                self._last_progress_print = self.n_evaluations
 
         params = np.asarray(params, dtype=np.float64)
 
