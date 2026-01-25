@@ -126,7 +126,7 @@ print("Imports successful!")
 config_path = "intelsat_901/intelsat_901_config.yaml"
 
 # Number of observation points
-n_observations = 50
+n_observations = 20
 
 # Observer/Ground Station SPICE ID
 OBSERVER_ID = 399999
@@ -644,6 +644,7 @@ result_quick = invert_lightcurve(
     omega_max_deg_per_s=0.5,
     seed=123,  # reproducibility
     articulation_matrices=articulation_matrices,  # Fixed component angles
+    workers=-1,  # Use all CPU cores for parallel optimization
 )
 
 inversion_time_quick = time.time() - start_time
@@ -751,6 +752,7 @@ result_full = invert_lightcurve(
     mcmc_n_samples=500,  # Reduced for demo (use 1000+ in production)
     mcmc_burn_in=100,
     articulation_matrices=articulation_matrices,  # Fixed component angles
+    workers=-1,  # Use all CPU cores for parallel optimization
 )
 
 inversion_time_full = time.time() - start_time
@@ -984,12 +986,29 @@ print("="*60)
 #     constraint_mode=None,       # ConstraintMode enum
 #     omega_max_deg_per_s=30.0,   # Max angular velocity
 #     seed=None,                  # Random seed
+#     workers=1,                  # Parallel workers (-1 = all cores)
 #
 #     # MCMC options (uncertainty_mode="full")
 #     mcmc_n_samples=1000,        # Posterior samples
 #     mcmc_burn_in=100,           # Burn-in steps
 # )
 # ```
+#
+# ### Workers Parameter
+#
+# The `workers` parameter controls parallel evaluation during differential evolution:
+#
+# | Value | Behavior |
+# |-------|----------|
+# | `1` | Serial execution (default, safest) |
+# | `-1` | Use all available CPU cores |
+# | `N` | Use N parallel workers |
+#
+# **Performance impact**: On a 16-core CPU, `workers=-1` can reduce optimization
+# time from ~1.5 hours to ~10-15 minutes per multi-start.
+#
+# **Note**: Parallelization requires the objective function to be picklable.
+# If you encounter errors, fall back to `workers=1`.
 #
 # ### InversionResult
 #
