@@ -10,9 +10,12 @@ outputs from the inversion pipeline, including:
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from ..io.stl_loader import Satellite
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -224,6 +227,7 @@ def invert_lightcurve(
     seed: Optional[int] = None,
     mcmc_n_samples: int = 1000,
     mcmc_burn_in: int = 100,
+    articulation_matrices: Optional[Dict[str, NDArray[np.floating]]] = None,
 ) -> InversionResult:
     """
     Run the full lightcurve inversion pipeline.
@@ -274,6 +278,12 @@ def invert_lightcurve(
         Number of MCMC samples for full uncertainty mode. Default is 1000.
     mcmc_burn_in : int, optional
         Number of MCMC burn-in steps. Default is 100.
+    articulation_matrices : dict, optional
+        Pre-computed rotation matrices for articulated components.
+        Dict mapping component names to (N, 4, 4) transformation matrices.
+        Use this for fixed articulation angles (e.g., solar panels at 0°,
+        antenna dishes at 15°). Generate with:
+        ``compute_rotation_matrices_from_angles(angles_dict, satellite)``
 
     Returns
     -------
@@ -347,6 +357,7 @@ def invert_lightcurve(
         observer_distances=observer_distances,
         uncertainties=measurement_uncertainties,
         compute_shadows_flag=compute_shadows,
+        articulation_matrices=articulation_matrices,
     )
 
     # Get parameter bounds

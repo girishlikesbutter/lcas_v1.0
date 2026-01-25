@@ -105,11 +105,11 @@ for comp_name, art_cap in config.articulation_capabilities.items():
 # Define component masses (kg)
 # These are example values for demonstration purposes
 masses = {
-    "Bus": 1500.0,       # Main spacecraft bus
-    "SP_North": 50.0,    # North solar panel
-    "SP_South": 50.0,    # South solar panel
-    "AD_West": 25.0,     # West antenna dish
-    "AD_East": 25.0,     # East antenna dish
+    "Bus": 1532.0,       # Main spacecraft bus
+    "SP_North": 170.0,    # North solar panel
+    "SP_South": 170.0,    # South solar panel
+    "AD_West": 50.0,     # West antenna dish
+    "AD_East": 50.0,     # East antenna dish
 }
 
 total_mass = sum(masses.values())
@@ -509,3 +509,5 @@ print(f"  I_zz error: {abs(I[2,2] - I_zz_expected):.6e}")
 # - Attitude dynamics simulation (Euler equations)
 # - Lightcurve inversion (estimating rotation state from observations)
 # - Spacecraft design and analysis
+
+# %%

@@ -9,7 +9,7 @@ and observed lightcurves given a set of initial attitude parameters.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 import numpy as np
 from numpy.typing import NDArray
 
@@ -74,6 +74,11 @@ class ObjectiveFunction:
         Array of measurement uncertainties for weighted chi-squared.
     compute_shadows : bool, optional
         Whether to compute shadows via ray tracing. Default True.
+    articulation_matrices : dict, optional
+        Pre-computed rotation matrices for articulated components.
+        Dict mapping component names to (N, 4, 4) transformation matrices.
+        Used for fixed articulation angles (e.g., solar panels at 0°,
+        antenna dishes at 15°).
 
     Attributes
     ----------
@@ -92,6 +97,7 @@ class ObjectiveFunction:
         observer_distances: NDArray[np.floating],
         uncertainties: Optional[NDArray[np.floating]] = None,
         compute_shadows_flag: bool = True,
+        articulation_matrices: Optional[Dict[str, NDArray[np.floating]]] = None,
     ) -> None:
         """Initialize the objective function with observation data."""
         # Validate inputs
@@ -152,12 +158,17 @@ class ObjectiveFunction:
         # Shadow computation flag
         self.compute_shadows_flag = compute_shadows_flag
 
+        # Articulation matrices for fixed component angles
+        # Dict mapping component names to (N, 4, 4) rotation matrices
+        self.articulation_matrices = articulation_matrices if articulation_matrices else {}
+
         # Statistics
         self.n_evaluations = 0
 
         logger.debug(
             f"ObjectiveFunction initialized: {n_obs} observations, "
-            f"shadows={'on' if compute_shadows_flag else 'off'}"
+            f"shadows={'on' if compute_shadows_flag else 'off'}, "
+            f"articulation_components={list(self.articulation_matrices.keys()) if self.articulation_matrices else 'none'}"
         )
 
     def _compute_body_frame_vectors(
@@ -238,6 +249,7 @@ class ObjectiveFunction:
             lit_status_dict = compute_shadows(
                 satellite=self.satellite,
                 k1_vectors=k1_vectors,
+                explicit_component_matrices=self.articulation_matrices,
                 show_progress=False,
             )
         else:
@@ -251,6 +263,7 @@ class ObjectiveFunction:
             observer_distances=self.observer_distances,
             satellite=self.satellite,
             epochs=self.observation_times,
+            pre_computed_matrices=self.articulation_matrices,
             show_progress=False,
         )
 

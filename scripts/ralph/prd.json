@@ -425,8 +425,8 @@
         "Typecheck passes"
       ],
       "priority": 28,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses Rodrigues' formula for axis-angle rotation matrix, makes mesh copy to avoid modification"
     },
     {
       "id": "US-029",
@@ -441,8 +441,8 @@
         "Typecheck passes"
       ],
       "priority": 29,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added ArticulationCapabilitySpec dataclass, articulation_angles, articulation_capabilities, and component_names parameters. Validates angles against limits and applies articulation via apply_articulation_to_mesh()."
     },
     {
       "id": "US-030",
@@ -458,8 +458,8 @@
         "Typecheck passes"
       ],
       "priority": 30,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Function loads components from config, extracts articulation capabilities, applies defaults (0° for solar panels, 15° for 'AD' prefix dishes), logs warnings for defaults used"
     },
     {
       "id": "US-031",
@@ -472,8 +472,8 @@
         "Typecheck passes"
       ],
       "priority": 31,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "All three functions now exported in both import statement and __all__ list"
     },
     {
       "id": "US-032",
@@ -489,8 +489,8 @@
         "Typecheck passes"
       ],
       "priority": 32,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Notebook restructured with config-based workflow as Section 1 (recommended), low-level API in Section 2, and analytical validation in Section 3. Demonstrates RSO_ConfigManager loading, masses dict, default and custom articulation angles, and state comparison table."
     }
   ]
 }

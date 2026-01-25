@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.18.1
+#       jupytext_version: 1.19.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# # Lightcurve Inversion Workflow
+# # Lightcurve Inversion Workflow - Intelsat 901
 #
 # This notebook demonstrates the complete lightcurve inversion pipeline for estimating
 # satellite initial attitude and angular velocity from observed lightcurves.
@@ -23,21 +23,25 @@
 #
 # The inversion workflow consists of:
 #
-# 1. **Generate synthetic observations** (forward model)
+# 1. **Load satellite model** (Intelsat 901 from STL files)
+#    - Config-based loading via RSO_ConfigManager
+#    - SPICE-based observation geometry
+#
+# 2. **Generate synthetic observations** (forward model)
 #    - Define "true" attitude parameters
 #    - Propagate attitude over observation window
 #    - Generate synthetic lightcurve using LCAS forward model
 #    - Optionally add noise
 #
-# 2. **Run inversion** (inverse problem)
+# 3. **Run inversion** (inverse problem)
 #    - Optimize to recover parameters from lightcurve
 #    - Multi-start global optimization with local refinement
 #
-# 3. **Estimate uncertainties**
+# 4. **Estimate uncertainties**
 #    - **Quick mode**: Fisher Information Matrix (fast, approximate)
 #    - **Full mode**: MCMC posterior sampling (thorough)
 #
-# 4. **Validate and visualize results**
+# 5. **Validate and visualize results**
 #    - Compare recovered vs true parameters
 #    - Plot observed vs predicted lightcurves
 #    - Show residuals and uncertainty distributions
@@ -45,6 +49,7 @@
 # ## Prerequisites
 #
 # - LCAS installed with all dependencies
+# - SPICE kernels installed (run `python install_dependencies.py`)
 # - `emcee` and `corner` packages (for full uncertainty mode)
 
 # %% [markdown]
@@ -55,6 +60,7 @@
 import sys
 from pathlib import Path
 import time
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -65,8 +71,24 @@ if '__file__' in globals():
 else:
     PROJECT_ROOT = Path.cwd().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+os.chdir(PROJECT_ROOT)
 
-# Import LCAS modules
+# Import config and IO modules
+from src.config.rso_config_manager import RSO_ConfigManager
+from src.io.stl_loader import STLLoader
+
+# Import SPICE handler
+from src.spice.spice_handler import SpiceHandler
+
+# Import computation modules
+from src.computation.brdf import BRDFManager, BRDFCalculator
+from src.computation.observation_geometry import compute_observation_geometry
+from src.computation import compute_inertia_from_config
+
+# Import articulation module for fixed component angles
+from src.articulation import compute_rotation_matrices_from_angles
+
+# Import dynamics and inversion modules
 from src.dynamics import propagate_attitude
 from src.inversion import (
     invert_lightcurve,
@@ -79,182 +101,254 @@ from src.inversion import (
     quaternion_to_axis_angle,
 )
 
+# Import visualization modules (same as pipeline notebooks)
+from src.visualization.lightcurve_plotter import create_light_curve_plot
+from src.visualization.plotly_animation_generator import create_interactive_3d_animation
+
+# Import for forward model with animation data
+from src.computation.shadow_engine import compute_shadows
+from src.computation.lightcurve_generator import generate_lightcurves
+
 print(f"Project root: {PROJECT_ROOT}")
 print("Imports successful!")
 
 # %% [markdown]
 # ---
-# ## 1. Create a Simple Satellite Model
+# ## 1. Load Intelsat 901 Satellite Model
 #
-# For this demonstration, we'll create a simple satellite model using trimesh
-# primitives. This avoids the complexity of loading SPICE kernels while still
-# demonstrating the full inversion workflow.
-#
-# In practice, you would load a real satellite model with:
-# ```python
-# from src.io.stl_loader import STLLoader
-# satellite = STLLoader.create_satellite_from_stl_config(config, config_manager)
-# ```
+# We load the Intelsat 901 satellite model from STL files using the config-based
+# approach. This provides a realistic satellite geometry for the inversion demo.
 
 # %%
-import trimesh
-from src.io.stl_loader import Satellite, SatelliteComponent, Facet
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+config_path = "intelsat_901/intelsat_901_config.yaml"
 
-def create_simple_satellite():
-    """
-    Create a simple satellite model with a box body and two solar panels.
-
-    Returns
-    -------
-    Satellite
-        A Satellite object with three components.
-    """
-    # Create box body (2m x 2m x 3m)
-    body_mesh = trimesh.creation.box(extents=[2.0, 2.0, 3.0])
-    body_facets = _mesh_to_facets(body_mesh, brdf_name="body_brdf")
-    body_component = SatelliteComponent(
-        name="Body",
-        facets=body_facets,
-        mesh=body_mesh,
-    )
-
-    # Create North solar panel (thin box: 4m x 0.1m x 2m)
-    # Positioned at y = +3m (offset from body center)
-    sp_n_mesh = trimesh.creation.box(extents=[4.0, 0.1, 2.0])
-    sp_n_mesh.apply_translation([0.0, 3.0, 0.0])
-    sp_n_facets = _mesh_to_facets(sp_n_mesh, brdf_name="panel_brdf")
-    sp_n_component = SatelliteComponent(
-        name="SP_North",
-        facets=sp_n_facets,
-        mesh=sp_n_mesh,
-    )
-
-    # Create South solar panel (thin box: 4m x 0.1m x 2m)
-    # Positioned at y = -3m (offset from body center)
-    sp_s_mesh = trimesh.creation.box(extents=[4.0, 0.1, 2.0])
-    sp_s_mesh.apply_translation([0.0, -3.0, 0.0])
-    sp_s_facets = _mesh_to_facets(sp_s_mesh, brdf_name="panel_brdf")
-    sp_s_component = SatelliteComponent(
-        name="SP_South",
-        facets=sp_s_facets,
-        mesh=sp_s_mesh,
-    )
-
-    # Create satellite
-    satellite = Satellite(
-        name="SimpleTestSat",
-        components=[body_component, sp_n_component, sp_s_component],
-    )
-
-    # Set up BRDF parameters
-    # Simple diffuse BRDF for testing
-    satellite.brdf_mappings = {
-        "body_brdf": {
-            "r_d": 0.3,  # diffuse reflectance
-            "r_s": 0.1,  # specular reflectance
-            "n_phong": 10.0,  # Phong exponent
-        },
-        "panel_brdf": {
-            "r_d": 0.1,
-            "r_s": 0.6,  # panels are more specular
-            "n_phong": 50.0,
-        },
-    }
-
-    return satellite
-
-
-def _mesh_to_facets(mesh: trimesh.Trimesh, brdf_name: str):
-    """Convert trimesh to list of Facet objects."""
-    facets = []
-    vertices = mesh.vertices
-
-    for face_idx, face in enumerate(mesh.faces):
-        v0 = vertices[face[0]]
-        v1 = vertices[face[1]]
-        v2 = vertices[face[2]]
-
-        # Compute centroid
-        centroid = (v0 + v1 + v2) / 3.0
-
-        # Compute normal (cross product)
-        e1 = v1 - v0
-        e2 = v2 - v0
-        normal = np.cross(e1, e2)
-        area = 0.5 * np.linalg.norm(normal)
-        normal = normal / (2.0 * area)  # normalize
-
-        facet = Facet(
-            vertices=np.array([v0, v1, v2]),
-            normal=normal,
-            area=area,
-            centroid=centroid,
-            brdf_name=brdf_name,
-        )
-        facets.append(facet)
-
-    return facets
-
-
-# Create the satellite
-satellite = create_simple_satellite()
-print(f"Created satellite: {satellite.name}")
-print(f"Components: {[c.name for c in satellite.components]}")
-total_facets = sum(len(c.facets) for c in satellite.components)
-print(f"Total facets: {total_facets}")
-
-# %% [markdown]
-# ---
-# ## 2. Define Observation Geometry
-#
-# We need to define the observation geometry:
-# - Sun position (J2000)
-# - Observer position (J2000)
-# - Satellite position (J2000)
-#
-# For simplicity, we use a fixed geometry where:
-# - Satellite is at origin
-# - Sun is at a fixed position (1 AU along +X, slightly offset in Y)
-# - Observer is at a fixed position (40,000 km along +Z)
-
-# %%
 # Number of observation points
 n_observations = 50
 
-# Time array: 0 to 120 seconds (2 minutes of observations)
-observation_times = np.linspace(0, 120, n_observations)
+# Observer/Ground Station SPICE ID
+OBSERVER_ID = 399999
 
-# Fixed geometry in J2000 frame
-# Sun: ~1 AU away, mostly along +X
-sun_distance_km = 1.496e8  # 1 AU in km
-sun_direction = np.array([0.98, 0.17, 0.1])  # mostly +X
-sun_direction /= np.linalg.norm(sun_direction)
-sun_position = sun_distance_km * sun_direction
+# Load RSO configuration
+config_manager = RSO_ConfigManager(PROJECT_ROOT)
+config = config_manager.load_config(config_path)
 
-# Observer: ground station ~40,000 km away, mostly along +Z
-observer_distance_km = 40000.0
-observer_direction = np.array([0.1, 0.2, 0.97])  # mostly +Z
-observer_direction /= np.linalg.norm(observer_direction)
-observer_position = observer_distance_km * observer_direction
+# Get paths from configuration
+metakernel_path = config_manager.get_metakernel_path(config)
+output_dir = config_manager.get_output_directory(config)
 
-# Satellite at origin (for simplicity)
-satellite_position = np.array([0.0, 0.0, 0.0])
+# Use configuration values
+satellite_id = config.spice_config.satellite_id
+start_time_utc = config.simulation_defaults.start_time
+end_time_utc = config.simulation_defaults.end_time
 
-# Create arrays for all observation times (geometry is constant for this demo)
-sun_positions_j2000 = np.tile(sun_position, (n_observations, 1))
-observer_positions_j2000 = np.tile(observer_position, (n_observations, 1))
-satellite_positions_j2000 = np.tile(satellite_position, (n_observations, 1))
-observer_distances = np.full(n_observations, observer_distance_km)
+print("="*70)
+print("LIGHTCURVE INVERSION WORKFLOW - Intelsat 901")
+print("="*70)
+print("\nConfiguration:")
+print(f"  Satellite: {config.name}")
+print(f"  Config file: {config_path}")
+print(f"  Components: {list(config.components.keys())}")
+print(f"  SPICE metakernel exists: {metakernel_path.exists()}")
 
-print("Observation geometry defined:")
-print(f"  Number of observations: {n_observations}")
-print(f"  Time span: {observation_times[0]} to {observation_times[-1]} seconds")
-print(f"  Sun position: {sun_position / sun_distance_km} * {sun_distance_km:.2e} km")
-print(f"  Observer position: {observer_position / observer_distance_km} * {observer_distance_km:.0f} km")
+# %%
+# Load satellite model from STL files
+print(f"\nLoading {config.name} satellite model from STL files...")
+model_load_start = time.time()
+
+satellite = STLLoader.create_satellite_from_stl_config(
+    config=config,
+    config_manager=config_manager
+)
+
+model_load_time = time.time() - model_load_start
+
+print(f"Model loaded: {satellite.name} ({model_load_time:.2f}s)")
+print(f"   Components: {len(satellite.components)}")
+for component in satellite.components:
+    print(f"     - {component.name}: {len(component.facets)} facets")
+
+# Count total facets
+total_facets = sum(len(comp.facets) for comp in satellite.components if comp.facets)
+print(f"   Total facets: {total_facets:,}")
+
+# Set up BRDF materials
+brdf_manager = BRDFManager(config)
+brdf_calc = BRDFCalculator()
+brdf_calc.update_satellite_brdf_with_manager(satellite, brdf_manager)
 
 # %% [markdown]
 # ---
-# ## 3. Define True Attitude Parameters
+# ## 1.5 Configure Fixed Articulation Angles
+#
+# For this inversion workflow, we assume **fixed articulation angles**:
+# - Solar panels (SP_North, SP_South): 0 degrees
+# - Antenna dishes (AD_East, AD_West): 15 degrees
+#
+# These angles are held constant throughout the observation window.
+# The inversion will only estimate initial attitude and angular velocity.
+
+# %%
+# ============================================================================
+# FIXED ARTICULATION CONFIGURATION
+# ============================================================================
+# Define fixed angles for articulated components (constant for all epochs)
+# These represent the "true" configuration during observations
+
+SOLAR_PANEL_ANGLE_DEG = 0.0    # Solar panels at 0 degrees
+ANTENNA_DISH_ANGLE_DEG = 15.0  # Antenna dishes at 15 degrees
+
+print("Fixed articulation configuration:")
+print(f"  Solar panels (SP_North, SP_South): {SOLAR_PANEL_ANGLE_DEG}°")
+print(f"  Antenna dishes (AD_East, AD_West): {ANTENNA_DISH_ANGLE_DEG}°")
+
+# Note: We'll create the rotation matrices after we know n_observations
+# (done in Section 3 after SPICE geometry computation)
+
+# %% [markdown]
+# ---
+# ## 2. Calculate Satellite Inertia Tensor
+#
+# For tumbling dynamics, we need the inertia tensor of the satellite.
+# This is computed from the STL meshes and component masses.
+
+# %%
+# Define component masses (kg) - these are approximate values for Intelsat 901
+# In practice, you would use actual mass properties from the satellite datasheet
+component_masses = {
+    'Bus': 1532.0,        # Main bus
+    'SP_North': 170.0,    # North solar panel
+    'SP_South': 170.0,    # South solar panel
+    'AD_East': 50.0,     # East antenna dish
+    'AD_West': 50.0,     # West antenna dish
+}
+
+print("\nComponent masses:")
+for name, mass in component_masses.items():
+    print(f"  {name}: {mass:.1f} kg")
+print(f"  Total: {sum(component_masses.values()):.1f} kg")
+
+# %%
+# Calculate inertia tensor
+print("\nCalculating inertia tensor...")
+inertia_start = time.time()
+
+inertia_result = compute_inertia_from_config(
+    config=config,
+    config_manager=config_manager,
+    masses=component_masses,
+    articulation_angles={'SP_North': 0.0, 'SP_South': 0.0}  # Solar panels at 0 degrees
+)
+
+inertia_time = time.time() - inertia_start
+print(f"Inertia calculated ({inertia_time:.2f}s)")
+
+# Extract the inertia tensor (3x3 matrix)
+inertia_tensor = inertia_result.inertia_tensor
+
+print(f"\nInertia tensor (kg·m²):")
+print(f"  Ixx: {inertia_tensor[0, 0]:.2f}")
+print(f"  Iyy: {inertia_tensor[1, 1]:.2f}")
+print(f"  Izz: {inertia_tensor[2, 2]:.2f}")
+print(f"\nPrincipal moments: {inertia_result.principal_moments}")
+print(f"Center of mass: {inertia_result.center_of_mass}")
+
+# %% [markdown]
+# ---
+# ## 3. Initialize SPICE and Compute Observation Geometry
+#
+# We use NASA SPICE to compute realistic observation geometry:
+# - Sun position in J2000 frame
+# - Observer (ground station) position in J2000 frame
+# - Satellite position in J2000 frame
+#
+# The geometry changes over time as Earth rotates and the satellite orbits.
+
+# %%
+# Initialize SPICE
+print("Initializing SPICE...")
+spice_init_start = time.time()
+spice_handler = SpiceHandler()
+spice_handler.load_metakernel_programmatically(str(metakernel_path))
+spice_init_time = time.time() - spice_init_start
+print(f"SPICE initialized ({spice_init_time:.2f}s)")
+
+# Generate time series
+print(f"\nTime range: {start_time_utc} to {end_time_utc}")
+print(f"   Time points: {n_observations}")
+
+start_et = spice_handler.utc_to_et(start_time_utc)
+end_et = spice_handler.utc_to_et(end_time_utc)
+epochs = np.linspace(start_et, end_et, n_observations)
+
+duration_hours = (end_et - start_et) / 3600
+time_resolution_min = duration_hours * 60 / n_observations
+print(f"   Duration: {duration_hours:.1f} hours")
+print(f"   Resolution: {time_resolution_min:.1f} minutes")
+
+# For the inversion, we need relative observation times starting from 0
+observation_times = epochs - epochs[0]  # seconds from start
+
+# %%
+# Compute observation geometry using SPICE
+print("\nComputing observation geometry...")
+geometry_start = time.time()
+
+geometry_data = compute_observation_geometry(
+    epochs=epochs,
+    satellite_id=satellite_id,
+    observer_id=OBSERVER_ID,
+    spice_handler=spice_handler,
+    config=config
+)
+
+geometry_time = time.time() - geometry_start
+print(f"Geometry computed ({geometry_time:.2f}s)")
+
+# Extract J2000 positions for the inversion objective function
+sun_positions_j2000 = geometry_data['sun_positions']
+observer_positions_j2000 = geometry_data['obs_positions']
+satellite_positions_j2000 = geometry_data['sat_positions']
+observer_distances = geometry_data['observer_distances']
+
+# Also extract body-frame vectors (for reference/validation)
+k1_vectors_spice = geometry_data['k1_vectors']  # Sun direction in body frame (from SPICE attitude)
+k2_vectors_spice = geometry_data['k2_vectors']  # Observer direction in body frame
+
+print("\nObservation geometry:")
+print(f"  Number of observations: {n_observations}")
+print(f"  Time span: {observation_times[0]:.1f} to {observation_times[-1]:.1f} seconds")
+print(f"  Observer distance range: {observer_distances.min():.0f} - {observer_distances.max():.0f} km")
+print(f"  Sun positions shape: {sun_positions_j2000.shape}")
+print(f"  Satellite positions shape: {satellite_positions_j2000.shape}")
+
+# %%
+# ============================================================================
+# CREATE FIXED ARTICULATION MATRICES
+# ============================================================================
+# Now that we know n_observations, create the rotation matrices for fixed angles
+
+fixed_articulation_angles = {
+    'SP_North': np.full(n_observations, SOLAR_PANEL_ANGLE_DEG),
+    'SP_South': np.full(n_observations, SOLAR_PANEL_ANGLE_DEG),
+    'AD_East': np.full(n_observations, ANTENNA_DISH_ANGLE_DEG),
+    'AD_West': np.full(n_observations, ANTENNA_DISH_ANGLE_DEG),
+}
+
+# Convert to rotation matrices using the articulation module
+articulation_matrices = compute_rotation_matrices_from_angles(
+    fixed_articulation_angles, satellite
+)
+
+print("\nArticulation matrices created:")
+for comp_name, matrices in articulation_matrices.items():
+    print(f"  {comp_name}: shape {matrices.shape}, angle = {fixed_articulation_angles[comp_name][0]:.1f}°")
+
+# %% [markdown]
+# ---
+# ## 4. Define True Attitude Parameters
 #
 # Define the "true" initial attitude and angular velocity that we will
 # try to recover through inversion.
@@ -277,7 +371,7 @@ true_q0 = np.array([
 
 # True initial angular velocity (rad/s in body frame)
 # Spin at 5 deg/s about body Z axis
-true_omega_deg_per_s = np.array([0.5, -0.3, 5.0])  # mostly Z-axis spin
+true_omega_deg_per_s = np.array([0.005, -0.003, 0.05])  # mostly Z-axis spin
 true_omega0 = np.deg2rad(true_omega_deg_per_s)
 
 # Convert to axis-angle representation (for comparison with inversion output)
@@ -291,24 +385,34 @@ print(f"  Total angular velocity: {np.rad2deg(np.linalg.norm(true_omega0)):.2f} 
 
 # %% [markdown]
 # ---
-# ## 4. Generate Synthetic Lightcurve (Forward Model)
+# ## 5. Generate Synthetic Lightcurve (Forward Model)
 #
 # Now we generate a synthetic "observed" lightcurve by running the forward model
-# with the true parameters. This creates our test data for inversion.
+# with the true parameters. We use **tumbling mode** which evolves both quaternion
+# and angular velocity according to Euler's equations using the inertia tensor.
 
 # %%
 print("\nGenerating synthetic lightcurve with true parameters...")
-start_time = time.time()
+print("  Using TUMBLING mode with inertia tensor")
+print("  Shadows: ENABLED")
+print(f"  Articulation: SP={SOLAR_PANEL_ANGLE_DEG}°, AD={ANTENNA_DISH_ANGLE_DEG}°")
+forward_start_time = time.time()
 
-# Propagate true attitude
+# Propagate true attitude using tumbling dynamics (Euler's equations)
 true_quaternions, true_omega_history = propagate_attitude(
     q0=true_q0,
     omega0=true_omega0,
     times=observation_times,
-    mode="principal_axis",
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
 )
 
-# Create objective function (we'll use it to generate the forward model)
+print(f"  Angular velocity evolved from {np.rad2deg(np.linalg.norm(true_omega0)):.2f} deg/s")
+print(f"    to {np.rad2deg(np.linalg.norm(true_omega_history[-1])):.2f} deg/s (final)")
+
+# %%
+# Create ObjectiveFunction to compute body-frame vectors from propagated quaternions
+# (This uses the J2000 positions and transforms them to body frame using our attitude)
 objective_for_forward = ObjectiveFunction(
     satellite=satellite,
     observation_times=observation_times,
@@ -317,15 +421,53 @@ objective_for_forward = ObjectiveFunction(
     observer_positions_j2000=observer_positions_j2000,
     satellite_positions_j2000=satellite_positions_j2000,
     observer_distances=observer_distances,
-    compute_shadows_flag=False,  # Skip shadows for speed in this demo
+    compute_shadows_flag=True,
+    articulation_matrices=articulation_matrices,
 )
 
-# Compute body-frame vectors and generate lightcurve
+# Get body-frame vectors from propagated attitude
 k1_vectors, k2_vectors = objective_for_forward._compute_body_frame_vectors(true_quaternions)
-true_lightcurve = objective_for_forward._generate_predicted_lightcurve(k1_vectors, k2_vectors)
+print(f"  Body-frame vectors computed: k1 {k1_vectors.shape}, k2 {k2_vectors.shape}")
 
-forward_time = time.time() - start_time
-print(f"Forward model completed in {forward_time:.2f} seconds")
+# %%
+# Compute shadows with ray tracing
+print("\nComputing shadows...")
+shadow_start = time.time()
+
+lit_status_dict = compute_shadows(
+    satellite=satellite,
+    k1_vectors=k1_vectors,
+    explicit_component_matrices=articulation_matrices,
+    show_progress=True,
+)
+
+shadow_time = time.time() - shadow_start
+print(f"Shadow computation completed ({shadow_time:.2f}s)")
+
+# %%
+# Generate lightcurve WITH animation data collection
+print("\nGenerating lightcurve with animation data...")
+lc_start = time.time()
+
+true_lightcurve, total_flux, _, _, _, animation_data = generate_lightcurves(
+    facet_lit_status_dict=lit_status_dict,
+    k1_vectors_array=k1_vectors,
+    k2_vectors_array=k2_vectors,
+    observer_distances=observer_distances,
+    satellite=satellite,
+    epochs=epochs,
+    pre_computed_matrices=articulation_matrices,
+    generate_no_shadow=False,
+    animate=True,  # Collect animation data for Plotly visualization
+    show_progress=True,
+)
+
+lc_time = time.time() - lc_start
+forward_time = time.time() - forward_start_time
+
+print(f"Lightcurve generation completed ({lc_time:.2f}s)")
+print(f"Animation data collected: {len(animation_data) if animation_data else 0} frames")
+print(f"\nTotal forward model time: {forward_time:.2f} seconds")
 print(f"  Lightcurve range: [{true_lightcurve.min():.2f}, {true_lightcurve.max():.2f}] mag")
 
 # %%
@@ -338,24 +480,87 @@ print(f"\nAdded Gaussian noise (sigma = {noise_sigma} mag)")
 print(f"  Observed lightcurve range: [{observed_lightcurve.min():.2f}, {observed_lightcurve.max():.2f}] mag")
 
 # %%
-# Plot the synthetic observations
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(observation_times, true_lightcurve, 'b-', linewidth=1.5, label='True lightcurve')
-ax.scatter(observation_times, observed_lightcurve, c='red', s=20, alpha=0.7, label='Observed (with noise)')
-ax.set_xlabel('Time (s)')
-ax.set_ylabel('Magnitude')
-ax.set_title('Synthetic Lightcurve (Forward Model)')
-ax.legend()
-ax.invert_yaxis()  # magnitudes are brighter when smaller
-ax.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig(PROJECT_ROOT / 'data' / 'results' / 'inversion_synthetic_lightcurve.png', dpi=150)
-plt.show()
-print("Figure saved to data/results/inversion_synthetic_lightcurve.png")
+# Prepare data for plotting (same format as pipeline notebooks)
+time_hours = (epochs - epochs[0]) / 3600.0  # Time in hours from start
+utc_times = [spice_handler.et_to_utc(epoch, "C", 0) for epoch in epochs]
+
+# Compute phase angles
+phase_angles = np.zeros(n_observations)
+for i in range(n_observations):
+    cos_phase = np.dot(k1_vectors[i], k2_vectors[i])
+    cos_phase = np.clip(cos_phase, -1.0, 1.0)
+    phase_angles[i] = np.degrees(np.arccos(cos_phase))
+
+print(f"Phase angles computed: {phase_angles.min():.1f}° to {phase_angles.max():.1f}°")
+
+# %%
+# Plot the synthetic lightcurve using pipeline plotting function
+print("\nCreating lightcurve plot...")
+
+plot = create_light_curve_plot(
+    time_hours=time_hours,
+    epochs=epochs,
+    magnitudes=true_lightcurve,
+    phase_angles=phase_angles,
+    utc_times=utc_times,
+    satellite_name=satellite.name,
+    plot_mode="single",  # Single curve mode
+    output_dir=output_dir,
+    observer_distances=observer_distances,
+    no_plot=False,
+    save=True
+)
+
+print(f"Lightcurve plot saved to: {output_dir}")
 
 # %% [markdown]
 # ---
-# ## 5. Configuration Options
+# ## 5.5 Interactive 3D Animation
+#
+# Visualize the satellite's facet-level illumination over time using Plotly.
+# This helps verify the forward model is working correctly before running the inversion.
+
+# %%
+# Create interactive 3D animation (same as pipeline notebooks)
+if animation_data is None or len(animation_data) == 0:
+    print("No animation data available.")
+else:
+    print("\nCreating interactive 3D animation...")
+
+    # Build geometry_data dict for animation (needs sat_att_matrices)
+    # We'll use identity matrices since body-frame vectors already account for attitude
+    geometry_data_for_anim = {
+        'k1_vectors': k1_vectors,
+        'k2_vectors': k2_vectors,
+        'observer_distances': observer_distances,
+        'sun_positions': sun_positions_j2000,
+        'sat_positions': satellite_positions_j2000,
+        'obs_positions': observer_positions_j2000,
+        'sat_att_matrices': np.array([np.eye(3) for _ in range(n_observations)]),
+    }
+
+    animation_path = create_interactive_3d_animation(
+        animation_data=animation_data,
+        magnitudes=true_lightcurve,
+        time_hours=time_hours,
+        geometry_data=geometry_data_for_anim,
+        satellite_name=satellite.name,
+        output_dir=output_dir,
+        show_j2000_frame=True,
+        show_body_frame=True,
+        show_sun_vector=True,
+        show_observer_vector=True,
+        frame_duration_ms=100,
+        save=True,
+        color_mode='flux'  # 'lit_status' or 'flux'
+    )
+
+    if animation_path:
+        print(f"Animation saved to: {animation_path}")
+
+# %% [markdown]
+# ---
+# ## 6. Configuration Options
 #
 # Before running the inversion, let's review all the configuration options
 # available for the `invert_lightcurve` function.
@@ -382,7 +587,7 @@ print("Figure saved to data/results/inversion_synthetic_lightcurve.png")
 # %%
 # Show default bounds
 print("Default parameter bounds (omega_max = 30 deg/s):")
-bounds = get_default_bounds(omega_max_deg_per_s=30.0)
+bounds = get_default_bounds(omega_max_deg_per_s=0.5)
 param_names = ['axis_angle_x', 'axis_angle_y', 'axis_angle_z', 'omega_x', 'omega_y', 'omega_z']
 for name, (low, high) in zip(param_names, bounds):
     if 'omega' in name:
@@ -395,7 +600,7 @@ for name, (low, high) in zip(param_names, bounds):
 print("\nConstraint mode comparison (omega_max = 30 deg/s):")
 
 for mode in [ConstraintMode.FREE, ConstraintMode.PHYSICS_INFORMED]:
-    bounds = get_bounds(mode, omega_max=np.deg2rad(30.0))
+    bounds = get_bounds(mode, omega_max=np.deg2rad(0.5))
     omega_bounds = bounds[3:]  # last 3 are omega bounds
     omega_max_component = np.rad2deg(omega_bounds[0][1])
     print(f"\n  {mode.name}:")
@@ -405,14 +610,20 @@ for mode in [ConstraintMode.FREE, ConstraintMode.PHYSICS_INFORMED]:
 
 # %% [markdown]
 # ---
-# ## 6. Run Inversion with Quick (Fisher) Uncertainty
+# ## 7. Run Inversion with Quick (Fisher) Uncertainty
 #
 # First, we'll run the inversion with quick uncertainty estimation
 # using the Fisher Information Matrix approximation.
+#
+# **Important**: We use `mode="tumbling"` and pass the `inertia_tensor` so the
+# inversion uses the same physics model as the forward model.
 
 # %%
 print("\n" + "="*60)
 print("Running inversion with QUICK (Fisher) uncertainty mode...")
+print("  Using TUMBLING mode with inertia tensor")
+print("  Shadows: ENABLED")
+print(f"  Articulation: SP={SOLAR_PANEL_ANGLE_DEG}°, AD={ANTENNA_DISH_ANGLE_DEG}°")
 print("="*60)
 
 start_time = time.time()
@@ -425,19 +636,21 @@ result_quick = invert_lightcurve(
     observer_positions_j2000=observer_positions_j2000,
     satellite_positions_j2000=satellite_positions_j2000,
     observer_distances=observer_distances,
-    mode="principal_axis",
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
     uncertainty_mode="quick",
-    compute_shadows=False,  # Skip shadows for speed
+    compute_shadows=True,  # Enable shadows for accurate physics
     n_starts=3,
-    omega_max_deg_per_s=30.0,
+    omega_max_deg_per_s=0.5,
     seed=123,  # reproducibility
+    articulation_matrices=articulation_matrices,  # Fixed component angles
 )
 
 inversion_time_quick = time.time() - start_time
 print(f"\nInversion completed in {inversion_time_quick:.2f} seconds")
 
 # %% [markdown]
-# ### 6.1 Analyze Quick Mode Results
+# ### 7.1 Analyze Quick Mode Results
 
 # %%
 # Display recovered parameters
@@ -501,7 +714,7 @@ print("Figure saved to data/results/inversion_quick_results.png")
 
 # %% [markdown]
 # ---
-# ## 7. Run Inversion with Full (MCMC) Uncertainty
+# ## 8. Run Inversion with Full (MCMC) Uncertainty
 #
 # Now we'll run the inversion with full MCMC posterior sampling.
 # This takes longer but provides complete uncertainty characterization.
@@ -512,8 +725,11 @@ print("Figure saved to data/results/inversion_quick_results.png")
 # %%
 print("\n" + "="*60)
 print("Running inversion with FULL (MCMC) uncertainty mode...")
+print("  Using TUMBLING mode with inertia tensor")
+print("  Shadows: ENABLED")
+print(f"  Articulation: SP={SOLAR_PANEL_ANGLE_DEG}°, AD={ANTENNA_DISH_ANGLE_DEG}°")
 print("="*60)
-print("(This may take a while...)")
+print("(This will take several minutes with shadows enabled...)")
 
 start_time = time.time()
 
@@ -525,21 +741,23 @@ result_full = invert_lightcurve(
     observer_positions_j2000=observer_positions_j2000,
     satellite_positions_j2000=satellite_positions_j2000,
     observer_distances=observer_distances,
-    mode="principal_axis",
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
     uncertainty_mode="full",
-    compute_shadows=False,  # Skip shadows for speed
+    compute_shadows=True,  # Enable shadows for accurate physics
     n_starts=2,  # Fewer starts for demo (MCMC is the main uncertainty source)
     omega_max_deg_per_s=30.0,
     seed=123,
     mcmc_n_samples=500,  # Reduced for demo (use 1000+ in production)
     mcmc_burn_in=100,
+    articulation_matrices=articulation_matrices,  # Fixed component angles
 )
 
 inversion_time_full = time.time() - start_time
 print(f"\nInversion completed in {inversion_time_full:.2f} seconds")
 
 # %% [markdown]
-# ### 7.1 Analyze Full Mode Results
+# ### 8.1 Analyze Full Mode Results
 
 # %%
 # Display recovered parameters
@@ -626,7 +844,7 @@ except ValueError as e:
 
 # %% [markdown]
 # ---
-# ## 8. Compare Quick vs Full Uncertainty Methods
+# ## 9. Compare Quick vs Full Uncertainty Methods
 #
 # Let's compare the results and uncertainties from both methods.
 
@@ -678,7 +896,7 @@ if result_quick.uncertainties is not None and result_full.uncertainties is not N
 
 # %% [markdown]
 # ---
-# ## 9. Round-Trip Validation Summary
+# ## 10. Round-Trip Validation Summary
 #
 # This notebook demonstrated the complete round-trip:
 #

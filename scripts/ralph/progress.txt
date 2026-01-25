@@ -369,3 +369,68 @@ Started: Wed Jan 21 12:33:02 PM NZDT 2026
   - Return STLComponent objects (mesh, position, mass) for use with compute_inertia_from_stl()
   - Component positions come from config.components[name].position (List[float])
 ---
+
+## 2026-01-21 - US-028
+- What was implemented: Created apply_articulation_to_mesh() helper function for rotating meshes about articulation axis
+- Files changed:
+  - src/computation/inertia_calculator.py - added apply_articulation_to_mesh() function
+- **Learnings for future iterations:**
+  - Rodrigues' formula for axis-angle rotation: R = I + sin(θ)K + (1 - cos(θ))K² where K is skew-symmetric matrix of axis
+  - Rotation about offset center: translate to center, rotate, translate back
+  - Always make a copy of the mesh before modifying vertices (mesh.copy())
+  - Use np.asarray() at function start to ensure proper numpy arrays
+  - Apply same transformation to both mesh vertices AND component position
+  - Function returns tuple (rotated_mesh, updated_position) for use in inertia calculation
+  - Export of this function is handled in separate story (US-031)
+---
+
+## 2026-01-21 - US-029
+- What was implemented: Added articulation angle support to compute_inertia_from_stl() function
+- Files changed:
+  - src/computation/inertia_calculator.py - added ArticulationCapabilitySpec dataclass, articulation_angles, articulation_capabilities, and component_names parameters
+- **Learnings for future iterations:**
+  - ArticulationCapabilitySpec is a lightweight dataclass mirroring the essential fields from RSO config's ArticulationCapability
+  - component_names parameter is required when using articulation_angles to map angles to components
+  - Angle validation happens upfront before processing any components (fail-fast)
+  - Components without articulation capability in the capabilities dict are silently ignored (logged at debug level)
+  - If articulation_angles specified without capabilities dict, a warning is logged and components are unchanged
+  - apply_articulation_to_mesh() is called inline during component processing to avoid extra passes
+---
+
+## 2026-01-21 - US-030
+- What was implemented: Created compute_inertia_from_config() high-level function that takes config+masses and returns InertiaResult
+- Files changed:
+  - src/computation/inertia_calculator.py - added compute_inertia_from_config() function
+- **Learnings for future iterations:**
+  - Function combines load_components_from_config() and compute_inertia_from_stl() into single API
+  - ArticulationCapability from config (List types) must be converted to ArticulationCapabilitySpec (numpy arrays)
+  - Default angles: 0° for all articulable components except 'AD' prefix (antenna dishes) which get 15°
+  - Logger warning is emitted for each component where default angle is used
+  - Effective angles dict is only passed when non-empty, otherwise None to avoid unnecessary processing
+  - Component names order from masses.keys() must match the STLComponent list order from load_components_from_config
+---
+
+## 2026-01-21 - US-031
+- What was implemented: Added compute_inertia_from_config and apply_articulation_to_mesh to src/computation/__init__.py exports
+- Files changed:
+  - src/computation/__init__.py - added compute_inertia_from_config and apply_articulation_to_mesh to imports and __all__ list
+- **Learnings for future iterations:**
+  - load_components_from_config was already exported from a prior story (US-027)
+  - Exports need to be added in two places: the import statement and the __all__ list
+  - Use `python -c "from src.computation import X"` to verify exports work correctly
+  - Simple export changes are low-risk but still require typecheck validation
+---
+
+## 2026-01-21 - US-032
+- What was implemented: Updated inertia calculation notebook to use config-based workflow as the primary demonstration
+- Files changed:
+  - notebooks/inversion/01_inertia_calculation.py - restructured notebook with config-based workflow
+- **Learnings for future iterations:**
+  - Config-based workflow requires RSO_ConfigManager initialized with PROJECT_ROOT
+  - Masses are defined in notebook (dict mapping component names to masses in kg), not in config file
+  - compute_inertia_from_config() applies default angles: 0° for solar panels, 15° for 'AD' prefix components
+  - Warnings are logged when default articulation angles are used (helpful for users to know)
+  - Articulation state comparison can be shown with a table of principal moments at different angles
+  - Component names in masses dict must match exactly the names in config.components
+  - Testing workflow changes: verify imports, then run a functional test with real config data
+---
