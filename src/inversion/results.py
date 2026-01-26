@@ -513,9 +513,8 @@ def invert_lightcurve_multifidelity(
     uncertainty_mode: Literal["quick", "full"] = "quick",
     inertia_tensor: Optional[NDArray[np.floating]] = None,
     measurement_uncertainties: Optional[NDArray[np.floating]] = None,
-    n_starts_coarse: int = 5,
-    n_starts_fine: int = 2,
-    n_seeds_to_refine: int = 3,
+    n_starts_coarse: int = 20,
+    n_seeds_to_refine: int = 20,
     constraint_mode: Optional[Any] = None,
     omega_max_deg_per_s: float = 30.0,
     seed: Optional[int] = None,
@@ -528,13 +527,16 @@ def invert_lightcurve_multifidelity(
     Run multi-fidelity lightcurve inversion for faster convergence.
 
     This function uses a two-stage optimization approach:
-    1. **Coarse stage**: Fast exploration with shadows disabled (no ray tracing)
-    2. **Fine stage**: Accurate refinement with shadows enabled (full physics)
+    1. **Coarse stage**: Comprehensive exploration with shadows disabled (fast)
+       - Many multi-start optimizations (global + local) with cheap forward model
+       - Thoroughly explores parameter space to find candidate solutions
+    2. **Fine stage**: Local refinement with shadows enabled (accurate)
+       - Takes top-N candidates from coarse stage
+       - Runs LOCAL optimization only (no global search) with full physics
+       - Picks the best result
 
-    The coarse stage quickly identifies promising regions in parameter space,
-    then the fine stage refines these using the full physics model. This
-    approach is typically 2-5x faster than single-fidelity optimization
-    for problems with many observations.
+    The coarse stage does the heavy lifting of exploration cheaply, then the
+    fine stage just corrects for shadow effects via local refinement.
 
     Parameters
     ----------
@@ -564,11 +566,11 @@ def invert_lightcurve_multifidelity(
     measurement_uncertainties : ndarray, optional
         Measurement uncertainties for weighted chi-squared fitting.
     n_starts_coarse : int, optional
-        Number of multi-starts for the coarse (no shadow) stage. Default is 5.
-    n_starts_fine : int, optional
-        Number of multi-starts for each fine (shadow) refinement. Default is 2.
+        Number of multi-starts for the coarse (no shadow) stage. Default is 20.
+        More starts = more thorough exploration of parameter space.
     n_seeds_to_refine : int, optional
-        Number of top coarse results to refine in the fine stage. Default is 3.
+        Number of top coarse results to refine in the fine stage. Default is 20.
+        Each seed gets LOCAL refinement only (no global search).
     constraint_mode : ConstraintMode, optional
         Constraint mode for bounds. If None, uses default bounds.
     omega_max_deg_per_s : float, optional
@@ -606,10 +608,11 @@ def invert_lightcurve_multifidelity(
     - Without shadows, all facets are assumed lit (faster computation)
     - The coarse model captures the main attitude-dependent brightness variations
     - Good coarse solutions are usually good starting points for fine optimization
-    - The fine stage corrects for shadow effects (self-occlusion)
+    - The fine stage corrects for shadow effects via local refinement only
 
-    For simple geometries with minimal self-shadowing, the speedup is modest.
-    For complex geometries with significant shadows, the speedup can be 3-5x.
+    The fine stage does NOT run global optimization - it only runs L-BFGS-B
+    local refinement from each coarse seed. This keeps the expensive
+    evaluations to a minimum (hundreds, not thousands per seed).
 
     Examples
     --------
@@ -621,15 +624,14 @@ def invert_lightcurve_multifidelity(
     ...     observer_positions_j2000=obs_pos,
     ...     satellite_positions_j2000=sat_pos,
     ...     observer_distances=distances,
-    ...     n_starts_coarse=5,   # Broad exploration
-    ...     n_starts_fine=2,     # Focused refinement
-    ...     n_seeds_to_refine=3, # Top-3 coarse results
-    ...     workers=-1,          # Use all CPU cores
+    ...     n_starts_coarse=20,    # Thorough exploration (cheap)
+    ...     n_seeds_to_refine=20,  # Refine all candidates (local only)
+    ...     workers=-1,            # Use all CPU cores
     ... )
     """
     # Import dependencies
     from .objective_function import ObjectiveFunction
-    from .optimizers import multi_start_optimize, global_optimize, local_refine, get_default_bounds
+    from .optimizers import multi_start_optimize, local_refine, get_default_bounds
     from .constraints import ConstraintMode, get_bounds
     from .uncertainty import compute_fisher_uncertainty, compute_mcmc_uncertainty
     from .quaternion_utils import axis_angle_to_quaternion, normalize_quaternion
@@ -646,7 +648,7 @@ def invert_lightcurve_multifidelity(
     workers_str = "all cores" if workers == -1 else str(workers)
     print(f"Mode: {mode} | Uncertainty: {uncertainty_mode}", flush=True)
     print(f"Observations: {n_obs} | Parameters: 6 | Workers: {workers_str}", flush=True)
-    print(f"Coarse: {n_starts_coarse} starts (no shadows) -> Top {n_seeds_to_refine} -> Fine: {n_starts_fine} starts/seed (with shadows)", flush=True)
+    print(f"Coarse: {n_starts_coarse} starts (no shadows) -> Top {n_seeds_to_refine} seeds -> Fine: local refinement only (with shadows)", flush=True)
     print("-" * 80, flush=True)
 
     # Validate inputs
@@ -735,49 +737,31 @@ def invert_lightcurve_multifidelity(
         articulation_matrices=articulation_matrices,
     )
 
-    # Refine top-N coarse results with fine model
+    # Refine top-N coarse results with fine model (LOCAL REFINEMENT ONLY)
     fine_results = []
     seeds_to_use = min(n_seeds_to_refine, len(coarse_results))
 
+    print(f"\nRefining {seeds_to_use} seeds with local optimization (L-BFGS-B)...", flush=True)
+
     for i in range(seeds_to_use):
         seed_params = coarse_results[i].params
-        seed_i = None if seed is None else seed + 1000 + i  # Different seed for fine stage
+        coarse_cost = coarse_results[i].cost
 
-        print(f"\n  Refining seed {i+1}/{seeds_to_use} (coarse cost = {coarse_results[i].cost:.6f}):", flush=True)
+        # Evaluate seed with fine model to get initial cost
+        initial_fine_cost = objective_fine.evaluate(seed_params)
 
-        # Run global optimization seeded with coarse result
-        for j in range(n_starts_fine):
-            start_seed = None if seed_i is None else seed_i + j
+        # Run LOCAL refinement only (no global search)
+        refined_result = local_refine(
+            objective=objective_fine,
+            x0=seed_params,
+            bounds=bounds,
+            maxiter=500,
+            show_progress=False,
+            initial_cost=initial_fine_cost,
+        )
 
-            print(f"    Start {j+1}/{n_starts_fine}:", flush=True)
-            print(f"      Global optimization (seeded)...", flush=True)
-
-            # Use x0 to seed the differential evolution
-            global_result = global_optimize(
-                objective=objective_fine,
-                bounds=bounds,
-                seed=start_seed,
-                x0=seed_params,  # Seed with coarse result
-                maxiter=500,
-                polish=False,
-                show_progress=True,
-                workers=workers,
-            )
-
-            print(f"      Local refinement (L-BFGS-B)...", flush=True)
-
-            # Refine with local optimizer
-            refined_result = local_refine(
-                objective=objective_fine,
-                x0=global_result.params,
-                bounds=bounds,
-                maxiter=500,
-                show_progress=True,
-                initial_cost=global_result.cost,
-            )
-
-            fine_results.append(refined_result)
-            print(f"    Start {j+1} complete: cost = {refined_result.cost:.6f}", flush=True)
+        fine_results.append(refined_result)
+        print(f"  Seed {i+1}/{seeds_to_use}: coarse={coarse_cost:.6f} -> fine={refined_result.cost:.6f}", flush=True)
 
     # Sort fine results by cost
     fine_results.sort(key=lambda r: r.cost)

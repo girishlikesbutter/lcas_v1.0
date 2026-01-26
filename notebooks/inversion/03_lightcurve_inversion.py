@@ -722,12 +722,13 @@ print("Figure saved to data/results/inversion_quick_results.png")
 # accurate refinement (with shadows).
 #
 # **How it works:**
-# 1. **Coarse stage**: Fast exploration with `compute_shadows=False`
+# 1. **Coarse stage**: Comprehensive exploration with `compute_shadows=False`
 #    - Cheaper forward model (all facets lit, no ray tracing)
-#    - Quickly identifies promising regions in parameter space
-# 2. **Fine stage**: Accurate refinement with `compute_shadows=True`
+#    - Many multi-start optimizations to thoroughly explore parameter space
+# 2. **Fine stage**: Local refinement only with `compute_shadows=True`
 #    - Full physics model with shadow ray tracing
-#    - Seeded with best coarse results for faster convergence
+#    - LOCAL optimization only (L-BFGS-B) on each coarse seed
+#    - No global search in fine stage - keeps expensive evaluations minimal
 #
 # **Expected speedup:** 2-5x for typical problems with complex geometry.
 
@@ -735,9 +736,8 @@ print("Figure saved to data/results/inversion_quick_results.png")
 # Configuration for multi-fidelity
 USE_MULTIFIDELITY = False  # Toggle between single-fidelity and multi-fidelity
 
-N_STARTS_COARSE = 5   # Number of coarse stage multi-starts
-N_STARTS_FINE = 2     # Number of fine stage multi-starts per seed
-N_SEEDS_TO_REFINE = 3 # Top-N coarse results to refine
+N_STARTS_COARSE = 20   # Number of coarse stage multi-starts (thorough exploration)
+N_SEEDS_TO_REFINE = 20 # Top-N coarse results to refine (local refinement only)
 
 # %%
 if USE_MULTIFIDELITY:
@@ -746,8 +746,8 @@ if USE_MULTIFIDELITY:
     print("\n" + "="*60)
     print("Running MULTI-FIDELITY inversion...")
     print("  Using TUMBLING mode with inertia tensor")
-    print(f"  Coarse: {N_STARTS_COARSE} starts, no shadows")
-    print(f"  Fine: refine top-{N_SEEDS_TO_REFINE}, {N_STARTS_FINE} starts each, with shadows")
+    print(f"  Coarse: {N_STARTS_COARSE} starts (global+local), no shadows")
+    print(f"  Fine: top-{N_SEEDS_TO_REFINE} seeds, local refinement only, with shadows")
     print(f"  Articulation: SP={SOLAR_PANEL_ANGLE_DEG}°, AD={ANTENNA_DISH_ANGLE_DEG}°")
     print("="*60)
 
@@ -765,7 +765,6 @@ if USE_MULTIFIDELITY:
         inertia_tensor=inertia_tensor,
         uncertainty_mode="quick",
         n_starts_coarse=N_STARTS_COARSE,
-        n_starts_fine=N_STARTS_FINE,
         n_seeds_to_refine=N_SEEDS_TO_REFINE,
         omega_max_deg_per_s=0.5,
         seed=123,
