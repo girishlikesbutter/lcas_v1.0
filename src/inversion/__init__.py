@@ -47,6 +47,7 @@ from .uncertainty import (
 from .results import (
     InversionResult,
     invert_lightcurve,
+    invert_lightcurve_multifidelity,
 )
 
 __all__ = [
@@ -72,4 +73,5 @@ __all__ = [
     # Results
     "InversionResult",
     "invert_lightcurve",
+    "invert_lightcurve_multifidelity",
 ]

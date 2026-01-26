@@ -715,6 +715,95 @@ print("Figure saved to data/results/inversion_quick_results.png")
 
 # %% [markdown]
 # ---
+# ## 7.5 Multi-Fidelity Inversion (Recommended for Large Problems)
+#
+# For problems with many observations or slow convergence, use the multi-fidelity
+# approach which runs a fast coarse optimization (no shadows) followed by
+# accurate refinement (with shadows).
+#
+# **How it works:**
+# 1. **Coarse stage**: Fast exploration with `compute_shadows=False`
+#    - Cheaper forward model (all facets lit, no ray tracing)
+#    - Quickly identifies promising regions in parameter space
+# 2. **Fine stage**: Accurate refinement with `compute_shadows=True`
+#    - Full physics model with shadow ray tracing
+#    - Seeded with best coarse results for faster convergence
+#
+# **Expected speedup:** 2-5x for typical problems with complex geometry.
+
+# %%
+# Configuration for multi-fidelity
+USE_MULTIFIDELITY = False  # Toggle between single-fidelity and multi-fidelity
+
+N_STARTS_COARSE = 5   # Number of coarse stage multi-starts
+N_STARTS_FINE = 2     # Number of fine stage multi-starts per seed
+N_SEEDS_TO_REFINE = 3 # Top-N coarse results to refine
+
+# %%
+if USE_MULTIFIDELITY:
+    from src.inversion import invert_lightcurve_multifidelity
+
+    print("\n" + "="*60)
+    print("Running MULTI-FIDELITY inversion...")
+    print("  Using TUMBLING mode with inertia tensor")
+    print(f"  Coarse: {N_STARTS_COARSE} starts, no shadows")
+    print(f"  Fine: refine top-{N_SEEDS_TO_REFINE}, {N_STARTS_FINE} starts each, with shadows")
+    print(f"  Articulation: SP={SOLAR_PANEL_ANGLE_DEG}°, AD={ANTENNA_DISH_ANGLE_DEG}°")
+    print("="*60)
+
+    start_time_mf = time.time()
+
+    result_mf = invert_lightcurve_multifidelity(
+        observed_lightcurve=observed_lightcurve,
+        satellite=satellite,
+        observation_times=observation_times,
+        sun_positions_j2000=sun_positions_j2000,
+        observer_positions_j2000=observer_positions_j2000,
+        satellite_positions_j2000=satellite_positions_j2000,
+        observer_distances=observer_distances,
+        mode="tumbling",
+        inertia_tensor=inertia_tensor,
+        uncertainty_mode="quick",
+        n_starts_coarse=N_STARTS_COARSE,
+        n_starts_fine=N_STARTS_FINE,
+        n_seeds_to_refine=N_SEEDS_TO_REFINE,
+        omega_max_deg_per_s=0.5,
+        seed=123,
+        articulation_matrices=articulation_matrices,
+        workers=-1,
+    )
+
+    inversion_time_mf = time.time() - start_time_mf
+
+    # Display multi-fidelity results
+    print("\n" + "-"*50)
+    print("MULTI-FIDELITY RESULTS")
+    print("-"*50)
+
+    print(f"\nRecovered angular velocity (deg/s): {np.rad2deg(result_mf.omega0)}")
+    print(f"True angular velocity (deg/s):      {np.rad2deg(true_omega0)}")
+
+    omega_error_mf = result_mf.omega0 - true_omega0
+    print(f"\nError magnitude: {np.linalg.norm(np.rad2deg(omega_error_mf)):.4f} deg/s")
+    print(f"Chi-squared: {result_mf.chi_squared:.6f}")
+    print(f"RMS residual: {result_mf.rms_residual:.6f} mag")
+    print(f"Total time: {inversion_time_mf:.2f} seconds")
+
+    # Plot multi-fidelity results
+    fig_mf, axes_mf = plt.subplots(1, 2, figsize=(14, 5))
+    result_mf.plot_lightcurve_comparison(ax=axes_mf[0])
+    axes_mf[0].set_title('Observed vs Predicted Lightcurve (Multi-Fidelity)')
+    result_mf.plot_residuals(ax=axes_mf[1])
+    axes_mf[1].set_title('Residuals (Multi-Fidelity)')
+    plt.tight_layout()
+    plt.savefig(PROJECT_ROOT / 'data' / 'results' / 'inversion_multifidelity_results.png', dpi=150)
+    plt.show()
+    print("Figure saved to data/results/inversion_multifidelity_results.png")
+else:
+    print("\nMulti-fidelity inversion disabled. Set USE_MULTIFIDELITY = True to enable.")
+
+# %% [markdown]
+# ---
 # ## 8. Run Inversion with Full (MCMC) Uncertainty
 #
 # Now we'll run the inversion with full MCMC posterior sampling.

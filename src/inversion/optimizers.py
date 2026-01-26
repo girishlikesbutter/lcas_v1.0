@@ -120,6 +120,7 @@ def global_optimize(
     objective: ObjectiveFunction,
     bounds: Optional[List[Tuple[float, float]]] = None,
     seed: Optional[int] = None,
+    x0: Optional[NDArray[np.floating]] = None,
     maxiter: int = 1000,
     tol: float = 0.01,
     workers: int = 1,
@@ -139,6 +140,11 @@ def global_optimize(
         If None, uses default bounds with omega max of 30 deg/s.
     seed : int, optional
         Random seed for reproducibility.
+    x0 : ndarray, optional
+        Initial guess for seeding the optimization. When provided, this is
+        used as a starting point in the population for differential evolution.
+        Useful for multi-fidelity optimization where coarse results seed fine
+        optimization. Requires scipy >= 1.9.0.
     maxiter : int, optional
         Maximum number of generations. Default is 1000.
     tol : float, optional
@@ -184,21 +190,28 @@ def global_optimize(
             print(f"      (Parallel mode: {actual_workers} workers)", flush=True)
 
         try:
+            # Build kwargs for differential evolution
+            de_kwargs = {
+                "func": _parallel_evaluate_wrapper,
+                "bounds": bounds,
+                "seed": seed,
+                "maxiter": maxiter,
+                "tol": tol,
+                "workers": workers,
+                "polish": polish,
+                "callback": None,  # Callbacks can't be used with parallel workers
+                "strategy": "best1bin",
+                "mutation": (0.5, 1.0),
+                "recombination": 0.7,
+                "updating": "deferred",
+            }
+
+            # Add x0 if provided (seeds the initial population)
+            if x0 is not None:
+                de_kwargs["x0"] = x0
+
             # Run differential evolution with the wrapper function
-            result = differential_evolution(
-                _parallel_evaluate_wrapper,
-                bounds=bounds,
-                seed=seed,
-                maxiter=maxiter,
-                tol=tol,
-                workers=workers,
-                polish=polish,
-                callback=None,  # Callbacks can't be used with parallel workers
-                strategy="best1bin",
-                mutation=(0.5, 1.0),
-                recombination=0.7,
-                updating="deferred",
-            )
+            result = differential_evolution(**de_kwargs)
         finally:
             # Clean up module-level state
             _parallel_state['objective'] = None
@@ -221,21 +234,28 @@ def global_optimize(
                 print(f"      Generation {generation_count[0]}: best cost = {current_cost:.6f}", flush=True)
             return False  # Return False to continue optimization
 
+        # Build kwargs for differential evolution
+        de_kwargs = {
+            "func": objective.evaluate,
+            "bounds": bounds,
+            "seed": seed,
+            "maxiter": maxiter,
+            "tol": tol,
+            "workers": workers,
+            "polish": polish,
+            "callback": progress_callback if show_progress else None,
+            "strategy": "best1bin",
+            "mutation": (0.5, 1.0),
+            "recombination": 0.7,
+            "updating": "deferred",
+        }
+
+        # Add x0 if provided (seeds the initial population)
+        if x0 is not None:
+            de_kwargs["x0"] = x0
+
         # Run differential evolution
-        result = differential_evolution(
-            objective.evaluate,
-            bounds=bounds,
-            seed=seed,
-            maxiter=maxiter,
-            tol=tol,
-            workers=workers,
-            polish=polish,
-            callback=progress_callback if show_progress else None,
-            strategy="best1bin",
-            mutation=(0.5, 1.0),
-            recombination=0.7,
-            updating="deferred",
-        )
+        result = differential_evolution(**de_kwargs)
 
         if show_progress:
             print(f"      Converged at generation {generation_count[0]}, cost = {result.fun:.6f}", flush=True)
