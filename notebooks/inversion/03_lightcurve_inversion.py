@@ -126,7 +126,7 @@ print("Imports successful!")
 config_path = "intelsat_901/intelsat_901_config.yaml"
 
 # Number of observation points
-n_observations = 20
+n_observations = 50
 
 # Observer/Ground Station SPICE ID
 OBSERVER_ID = 399999
@@ -734,10 +734,10 @@ print("Figure saved to data/results/inversion_quick_results.png")
 
 # %%
 # Configuration for multi-fidelity
-USE_MULTIFIDELITY = False  # Toggle between single-fidelity and multi-fidelity
+USE_MULTIFIDELITY = True  # Toggle between single-fidelity and multi-fidelity
 
-N_STARTS_COARSE = 20   # Number of coarse stage multi-starts (thorough exploration)
-N_SEEDS_TO_REFINE = 20 # Top-N coarse results to refine (local refinement only)
+N_STARTS_COARSE = 5   # Number of coarse stage multi-starts (thorough exploration)
+N_SEEDS_TO_REFINE = 1 # Top-N coarse results to refine (local refinement only)
 
 # %%
 if USE_MULTIFIDELITY:
