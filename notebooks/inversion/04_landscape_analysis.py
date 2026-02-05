@@ -805,3 +805,294 @@ for pair_name, (deltas_i, deltas_j, objectives_2d, param_i, param_j) in slice_2d
     print(f"  Global min: {min_val:.6f} at delta_i={min_delta_i:.6f}, delta_j={min_delta_j:.6f}")
     print(f"  Objective at true (0,0): {true_val:.6f}")
     print(f"  Objective range: {obj_range:.4f}")
+
+# %% [markdown]
+# ---
+# ## 10. Gradient and Hessian Analysis at True Solution
+#
+# Compute the numerical gradient and Hessian of the objective function at the true
+# parameters to assess optimization difficulty. The condition number of the Hessian
+# reveals how well-posed the inversion problem is.
+
+# %%
+# Define numerical gradient computation using central finite differences
+
+
+def compute_numerical_gradient(
+    objective_fn: ObjectiveFunction,
+    params: np.ndarray,
+    step_sizes: np.ndarray | None = None,
+) -> np.ndarray:
+    """
+    Compute numerical gradient using central finite differences.
+
+    Parameters
+    ----------
+    objective_fn : ObjectiveFunction
+        The objective function to evaluate.
+    params : np.ndarray
+        The parameter vector at which to compute the gradient.
+    step_sizes : np.ndarray, optional
+        Step size for each parameter. If None, uses automatic scaling.
+
+    Returns
+    -------
+    gradient : np.ndarray
+        Gradient vector (same shape as params).
+    """
+    n_params = len(params)
+    gradient = np.zeros(n_params)
+
+    # Default step sizes based on parameter magnitudes
+    if step_sizes is None:
+        # Use relative step size, with minimum absolute step
+        step_sizes = np.maximum(np.abs(params) * 1e-5, 1e-8)
+
+    for i in range(n_params):
+        h = step_sizes[i]
+        params_plus = params.copy()
+        params_minus = params.copy()
+        params_plus[i] += h
+        params_minus[i] -= h
+
+        # Central difference: f'(x) ≈ (f(x+h) - f(x-h)) / (2h)
+        gradient[i] = (objective_fn(params_plus) - objective_fn(params_minus)) / (2 * h)
+
+    return gradient
+
+
+# %%
+# Define numerical Hessian computation using finite differences
+
+
+def compute_numerical_hessian(
+    objective_fn: ObjectiveFunction,
+    params: np.ndarray,
+    step_sizes: np.ndarray | None = None,
+) -> np.ndarray:
+    """
+    Compute numerical Hessian using finite differences.
+
+    Parameters
+    ----------
+    objective_fn : ObjectiveFunction
+        The objective function to evaluate.
+    params : np.ndarray
+        The parameter vector at which to compute the Hessian.
+    step_sizes : np.ndarray, optional
+        Step size for each parameter. If None, uses automatic scaling.
+
+    Returns
+    -------
+    hessian : np.ndarray
+        Hessian matrix (shape: n_params x n_params).
+    """
+    n_params = len(params)
+    hessian = np.zeros((n_params, n_params))
+
+    # Default step sizes
+    if step_sizes is None:
+        step_sizes = np.maximum(np.abs(params) * 1e-4, 1e-6)
+
+    f_center = objective_fn(params)
+
+    # Diagonal elements: f''_ii ≈ (f(x+h) - 2f(x) + f(x-h)) / h^2
+    for i in range(n_params):
+        h_i = step_sizes[i]
+        params_plus = params.copy()
+        params_minus = params.copy()
+        params_plus[i] += h_i
+        params_minus[i] -= h_i
+
+        f_plus = objective_fn(params_plus)
+        f_minus = objective_fn(params_minus)
+
+        hessian[i, i] = (f_plus - 2 * f_center + f_minus) / (h_i ** 2)
+
+    # Off-diagonal elements: f''_ij ≈ (f(x+hi+hj) - f(x+hi-hj) - f(x-hi+hj) + f(x-hi-hj)) / (4 hi hj)
+    for i in range(n_params):
+        for j in range(i + 1, n_params):
+            h_i = step_sizes[i]
+            h_j = step_sizes[j]
+
+            params_pp = params.copy()
+            params_pm = params.copy()
+            params_mp = params.copy()
+            params_mm = params.copy()
+
+            params_pp[i] += h_i
+            params_pp[j] += h_j
+            params_pm[i] += h_i
+            params_pm[j] -= h_j
+            params_mp[i] -= h_i
+            params_mp[j] += h_j
+            params_mm[i] -= h_i
+            params_mm[j] -= h_j
+
+            f_pp = objective_fn(params_pp)
+            f_pm = objective_fn(params_pm)
+            f_mp = objective_fn(params_mp)
+            f_mm = objective_fn(params_mm)
+
+            hessian[i, j] = (f_pp - f_pm - f_mp + f_mm) / (4 * h_i * h_j)
+            hessian[j, i] = hessian[i, j]  # Symmetric
+
+    return hessian
+
+
+# %%
+# Compute gradient at true parameters
+print("\nComputing numerical gradient at true parameters...")
+
+# Use appropriate step sizes for each parameter type
+# axis_angle (indices 0-2): step ~ 1e-5 rad
+# omega (indices 3-5): step ~ 1e-7 rad/s (smaller because omega values are small)
+gradient_step_sizes = np.array([1e-5, 1e-5, 1e-5, 1e-7, 1e-7, 1e-7])
+
+t_start = time.time()
+gradient = compute_numerical_gradient(objective_fn, true_params, gradient_step_sizes)
+t_gradient = time.time() - t_start
+
+print(f"Gradient computed in {t_gradient:.1f}s")
+print(f"\nGradient at true parameters:")
+for i, name in enumerate(param_names):
+    print(f"  d(obj)/d({name}): {gradient[i]:.6e}")
+
+gradient_norm = np.linalg.norm(gradient)
+print(f"\nGradient norm: {gradient_norm:.6e}")
+print("  (Should be small if true parameters are at or near minimum)")
+
+# %%
+# Compute Hessian at true parameters
+print("\nComputing numerical Hessian at true parameters...")
+print("  This requires many function evaluations, please wait...")
+
+# Use appropriate step sizes for Hessian
+hessian_step_sizes = np.array([1e-4, 1e-4, 1e-4, 1e-6, 1e-6, 1e-6])
+
+t_start = time.time()
+hessian = compute_numerical_hessian(objective_fn, true_params, hessian_step_sizes)
+t_hessian = time.time() - t_start
+
+print(f"Hessian computed in {t_hessian:.1f}s")
+print(f"\nHessian matrix shape: {hessian.shape}")
+
+# %%
+# Analyze Hessian eigenvalues
+print("\n" + "=" * 60)
+print("HESSIAN EIGENVALUE ANALYSIS")
+print("=" * 60)
+
+# Compute eigenvalues and eigenvectors
+eigenvalues, eigenvectors = np.linalg.eigh(hessian)
+
+# Sort by absolute eigenvalue (descending)
+sort_idx = np.argsort(np.abs(eigenvalues))[::-1]
+eigenvalues_sorted = eigenvalues[sort_idx]
+eigenvectors_sorted = eigenvectors[:, sort_idx]
+
+print("\nHessian eigenvalues (sorted by magnitude):")
+for i, (ev, idx) in enumerate(zip(eigenvalues_sorted, sort_idx)):
+    print(f"  λ_{i+1} = {ev:.6e}")
+
+# Condition number
+# Use absolute values since we care about magnitude
+positive_eigenvalues = eigenvalues[eigenvalues > 0]
+if len(positive_eigenvalues) > 0:
+    lambda_max = np.max(np.abs(eigenvalues))
+    lambda_min = np.min(np.abs(positive_eigenvalues))
+    condition_number = lambda_max / lambda_min if lambda_min > 0 else np.inf
+else:
+    lambda_max = np.max(np.abs(eigenvalues))
+    lambda_min = np.min(np.abs(eigenvalues[eigenvalues != 0]))
+    condition_number = lambda_max / lambda_min if lambda_min > 0 else np.inf
+
+print(f"\nCondition number (|λ_max| / |λ_min|): {condition_number:.2e}")
+
+# Check for positive definiteness
+n_positive = np.sum(eigenvalues > 0)
+n_negative = np.sum(eigenvalues < 0)
+n_zero = np.sum(np.abs(eigenvalues) < 1e-10)
+
+print(f"\nEigenvalue signs:")
+print(f"  Positive: {n_positive}")
+print(f"  Negative: {n_negative}")
+print(f"  Near-zero (|λ| < 1e-10): {n_zero}")
+
+if n_negative > 0:
+    print("\n  WARNING: Negative eigenvalues indicate true params may not be at a minimum!")
+if n_zero > 0:
+    print("\n  WARNING: Near-zero eigenvalues indicate flat directions (rank deficiency)!")
+
+# %% [markdown]
+# ### Interpretation of Condition Number
+#
+# The condition number of the Hessian indicates how well-posed the optimization problem is:
+#
+# | Condition Number | Interpretation |
+# |-----------------|----------------|
+# | < 10 | Well-conditioned, easy to optimize |
+# | 10 - 100 | Moderately conditioned |
+# | 100 - 1000 | Poorly conditioned, may need scaling |
+# | > 1000 | **Ill-conditioned**, optimization will be difficult |
+#
+# **Key insight**: A condition number > 1000 suggests the problem is ill-conditioned,
+# meaning small perturbations in the data can cause large changes in the solution.
+# This often indicates that some parameters are poorly constrained by the observations.
+
+# %%
+# Identify well-constrained vs poorly constrained parameters
+print("\n" + "=" * 60)
+print("PARAMETER CONSTRAINT ANALYSIS")
+print("=" * 60)
+
+# Analyze contribution of each parameter to eigenvectors
+# Parameters with large components in low-eigenvalue eigenvectors are poorly constrained
+print("\nEigenvector components (rows = parameters, columns = eigenvectors):")
+print("  λ_1 (largest) ... λ_6 (smallest)")
+print()
+
+for i, name in enumerate(param_names):
+    components = eigenvectors_sorted[i, :]
+    print(f"  {name:15s}: ", end="")
+    for comp in components:
+        print(f"{comp:8.4f}", end=" ")
+    print()
+
+# Identify parameters dominant in low-eigenvalue eigenvectors
+print("\n\nParameter constraint classification:")
+print("-" * 40)
+
+# The smallest eigenvalue's eigenvector indicates the most poorly constrained direction
+# Parameters with large magnitude in this eigenvector are poorly constrained
+threshold_dominant = 0.4  # Component > 0.4 is considered dominant
+
+for i in range(len(eigenvalues_sorted)):
+    ev = eigenvalues_sorted[i]
+    eigvec = eigenvectors_sorted[:, i]
+    dominant_params = [param_names[j] for j in range(6) if np.abs(eigvec[j]) > threshold_dominant]
+
+    if len(dominant_params) > 0:
+        constraint_level = "WELL" if i < 3 else "POORLY"
+        print(f"  Eigenvalue λ_{i+1} = {ev:.4e}: {constraint_level} constrained direction")
+        print(f"    Dominant parameters: {', '.join(dominant_params)}")
+
+# Summary classification based on diagonal Hessian elements (simpler metric)
+print("\n\nSimplified constraint classification (Hessian diagonal):")
+print("-" * 40)
+
+hessian_diag = np.diag(hessian)
+median_curvature = np.median(np.abs(hessian_diag))
+
+for i, name in enumerate(param_names):
+    curvature = hessian_diag[i]
+    relative_curvature = np.abs(curvature) / median_curvature if median_curvature > 0 else 0
+
+    if relative_curvature > 1.0:
+        constraint = "WELL constrained"
+    elif relative_curvature > 0.1:
+        constraint = "MODERATELY constrained"
+    else:
+        constraint = "POORLY constrained"
+
+    print(f"  {name:15s}: Hessian_ii = {curvature:12.4e} -> {constraint}")
