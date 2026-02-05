@@ -369,3 +369,55 @@ Started: Thu Feb 06 2026
   - generate_test_case pattern: returns dict with all components needed for optimization
 ---
 
+## 2026-02-06 - US-018
+- Implemented robustness sweep experiment (Section 13) in notebook 07
+- Added CountedObjective class and multistart_local() function (reused from notebook 06)
+- Configured sweep parameters:
+  - Noise levels: [0.01, 0.02, 0.05, 0.1, 0.2] mag (5 levels)
+  - Observation counts: [20, 35, 50, 75, 100] (5 configurations)
+  - 5 trials per cell = 25 cells x 5 trials = 125 total optimizations
+- Used multi-start local optimizer with LHS initialization (best from notebook 06):
+  - Evaluation budget: 5000
+  - Number of starts: 50
+  - Evals per start: 100
+- Result storage in 2D arrays:
+  - success_matrix: [n_noise x n_observations] success rates
+  - mean_omega_error: [n_noise x n_observations] angular velocity errors
+  - mean_rms_residual: [n_noise x n_observations] RMS residuals
+- all_trial_results list stores detailed per-trial data for analysis
+- Added formatted output tables showing success rate and omega error matrices
+- Typecheck passed with `python -m compileall src/ notebooks/inversion/07_robustness_analysis.py -q`
+- Files changed: notebooks/inversion/07_robustness_analysis.py (+341 lines)
+- **Learnings for future iterations:**
+  - Use unique seeds for each trial: BASE_SEED + i * 1000 + j * 100 + trial
+  - Create fresh CountedObjective per trial (new instance for each optimization)
+  - Store both aggregated (2D arrays) and detailed (list of dicts) results for flexibility
+  - Use different seeds for data generation vs optimizer (trial_seed vs trial_seed + 10000)
+---
+
+## 2026-02-06 - US-019
+- Implemented robustness heatmap visualization (Section 14) in notebook 07
+- Created heatmap using imshow with RdYlGn colormap (red=low, green=high success)
+- Flipped matrix vertically to show low noise at top of plot for intuitive reading
+- Annotated all cells with success rate percentages
+- Adaptive text color: white for dark backgrounds (<50%), black for light
+- Implemented 80% success rate contour visualization (Section 15)
+- Used pcolormesh + contour overlay for threshold line
+- Added contour label at 80% threshold
+- Implemented minimum data requirements analysis:
+  - Identifies maximum allowable noise per observation count
+  - Identifies minimum observations required per noise level
+  - Finds "best" combination using noise * n_obs score
+- Created summary with clear recommendation statement
+- Saves robustness_heatmap.png and robustness_heatmap_contour.png to diagnostics folder
+- Saves robustness_summary.txt with full analysis details
+- Typecheck passed with `python -m compileall src/ notebooks/inversion/07_robustness_analysis.py -q`
+- Files changed: notebooks/inversion/07_robustness_analysis.py (+330 lines)
+- **Learnings for future iterations:**
+  - Use [::-1] to flip matrix vertically for imshow (low values at top)
+  - For pcolormesh with contour overlay, use cell edges for mesh and cell centers for contour
+  - Adaptive text color improves readability on heatmaps
+  - reliable_cells list pattern useful for finding configurations meeting criteria
+  - noise * n_obs product provides good "efficiency" score for finding optimal tradeoffs
+---
+

@@ -989,3 +989,333 @@ for i, noise in enumerate(NOISE_LEVELS):
     print(row)
 
 print("-" * len(header))
+
+# %% [markdown]
+# ---
+# ## 14. Robustness Heatmap Visualization
+#
+# Create a heatmap showing success rate as a function of noise level and observation count.
+# This visualization helps identify minimum data requirements for reliable inversion.
+
+# %%
+fig, ax = plt.subplots(figsize=(10, 8))
+
+# Create heatmap
+# Note: imshow expects (row, col) = (y, x), so success_matrix[i,j] with:
+#   i = noise index (y-axis, increasing downward)
+#   j = observation count index (x-axis, increasing rightward)
+# We want noise to increase upward, so flip the matrix vertically
+heatmap = ax.imshow(
+    success_matrix[::-1],  # Flip to have low noise at top
+    cmap='RdYlGn',
+    aspect='auto',
+    vmin=0,
+    vmax=1,
+    extent=[0, len(N_OBSERVATIONS_LIST), 0, len(NOISE_LEVELS)],
+)
+
+# Add colorbar
+cbar = plt.colorbar(heatmap, ax=ax, label='Success Rate')
+cbar.set_ticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+cbar.set_ticklabels(['0%', '20%', '40%', '60%', '80%', '100%'])
+
+# Set axis labels and ticks
+ax.set_xlabel('Number of Observations', fontsize=12)
+ax.set_ylabel('Noise Level (mag)', fontsize=12)
+
+# Set x-ticks at cell centers
+ax.set_xticks(np.arange(len(N_OBSERVATIONS_LIST)) + 0.5)
+ax.set_xticklabels(N_OBSERVATIONS_LIST)
+
+# Set y-ticks at cell centers (reversed since we flipped the matrix)
+ax.set_yticks(np.arange(len(NOISE_LEVELS)) + 0.5)
+ax.set_yticklabels(NOISE_LEVELS[::-1])  # Reversed to match flipped data
+
+# Annotate cells with success rate values
+for i, noise in enumerate(NOISE_LEVELS):
+    for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+        # Position in flipped coordinates
+        y_pos = len(NOISE_LEVELS) - 1 - i + 0.5
+        x_pos = j + 0.5
+        value = success_matrix[i, j]
+
+        # Choose text color based on background
+        text_color = 'white' if value < 0.5 else 'black'
+
+        ax.text(
+            x_pos, y_pos, f'{value*100:.0f}%',
+            ha='center', va='center',
+            color=text_color, fontsize=11, fontweight='bold'
+        )
+
+# Add title
+ax.set_title('Inversion Success Rate vs Data Quality', fontsize=14, fontweight='bold')
+
+plt.tight_layout()
+plt.savefig('data/results/inversion_diagnostics/robustness_heatmap.png', dpi=150)
+plt.show()
+
+print("\nHeatmap saved to data/results/inversion_diagnostics/robustness_heatmap.png")
+
+# %% [markdown]
+# ---
+# ## 15. 80% Success Contour and Data Requirements Analysis
+#
+# Draw contour at 80% success rate and identify minimum data requirements.
+
+# %%
+fig, ax = plt.subplots(figsize=(10, 8))
+
+# Create mesh grid for contour plot
+# X-axis: observation counts, Y-axis: noise levels
+X, Y = np.meshgrid(
+    np.arange(len(N_OBSERVATIONS_LIST) + 1),  # +1 for cell edges
+    np.arange(len(NOISE_LEVELS) + 1),
+)
+
+# For pcolormesh, we need to flip the matrix vertically for proper orientation
+# (low noise at top of plot)
+success_matrix_flipped = success_matrix[::-1]
+
+# Create pcolormesh (heatmap)
+mesh = ax.pcolormesh(
+    X, Y, success_matrix_flipped,
+    cmap='RdYlGn',
+    vmin=0,
+    vmax=1,
+    shading='flat',
+)
+
+# Add colorbar
+cbar = plt.colorbar(mesh, ax=ax, label='Success Rate')
+cbar.set_ticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+cbar.set_ticklabels(['0%', '20%', '40%', '60%', '80%', '100%'])
+
+# Add contour line at 80% success rate
+# Need to create proper grid for contour (cell centers)
+X_centers = np.arange(len(N_OBSERVATIONS_LIST)) + 0.5
+Y_centers = np.arange(len(NOISE_LEVELS)) + 0.5
+X_contour, Y_contour = np.meshgrid(X_centers, Y_centers)
+
+# Add contour at 80% threshold
+contour = ax.contour(
+    X_contour, Y_contour, success_matrix_flipped,
+    levels=[0.8],
+    colors='blue',
+    linewidths=3,
+    linestyles='dashed',
+)
+ax.clabel(contour, fmt='80%%', fontsize=12, colors='blue')
+
+# Annotate cells with success rate values
+for i, noise in enumerate(NOISE_LEVELS):
+    for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+        # Position in flipped coordinates
+        y_pos = len(NOISE_LEVELS) - 1 - i + 0.5
+        x_pos = j + 0.5
+        value = success_matrix[i, j]
+
+        # Choose text color based on background
+        text_color = 'white' if value < 0.5 else 'black'
+
+        ax.text(
+            x_pos, y_pos, f'{value*100:.0f}%',
+            ha='center', va='center',
+            color=text_color, fontsize=11, fontweight='bold'
+        )
+
+# Set axis labels and ticks
+ax.set_xlabel('Number of Observations', fontsize=12)
+ax.set_ylabel('Noise Level (mag)', fontsize=12)
+
+# Set x-ticks at cell centers
+ax.set_xticks(np.arange(len(N_OBSERVATIONS_LIST)) + 0.5)
+ax.set_xticklabels(N_OBSERVATIONS_LIST)
+
+# Set y-ticks at cell centers (reversed to show low noise at top)
+ax.set_yticks(np.arange(len(NOISE_LEVELS)) + 0.5)
+ax.set_yticklabels(NOISE_LEVELS[::-1])
+
+# Add title
+ax.set_title(
+    'Inversion Success Rate with 80% Threshold Contour',
+    fontsize=14, fontweight='bold'
+)
+
+plt.tight_layout()
+plt.savefig('data/results/inversion_diagnostics/robustness_heatmap_contour.png', dpi=150)
+plt.show()
+
+print("\nHeatmap with contour saved to data/results/inversion_diagnostics/robustness_heatmap_contour.png")
+
+# %%
+# Identify minimum data requirements for reliable inversion (>=80% success rate)
+print("\n" + "=" * 70)
+print("MINIMUM DATA REQUIREMENTS ANALYSIS")
+print("=" * 70)
+
+# Find cells with >= 80% success rate
+reliable_cells = []
+for i, noise in enumerate(NOISE_LEVELS):
+    for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+        if success_matrix[i, j] >= 0.8:
+            reliable_cells.append({
+                'noise': noise,
+                'n_obs': n_obs,
+                'success_rate': success_matrix[i, j],
+            })
+
+if reliable_cells:
+    print(f"\nCells with >= 80% success rate: {len(reliable_cells)}")
+    print("-" * 50)
+
+    # Find maximum noise level that achieves 80% for each observation count
+    print("\nMaximum allowable noise for reliable inversion:")
+    for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+        max_noise = None
+        for i, noise in enumerate(NOISE_LEVELS):
+            if success_matrix[i, j] >= 0.8:
+                max_noise = noise
+        if max_noise is not None:
+            print(f"  n_obs = {n_obs:3d}: noise <= {max_noise:.2f} mag")
+        else:
+            print(f"  n_obs = {n_obs:3d}: No noise level achieves 80%")
+
+    # Find minimum observations required for each noise level
+    print("\nMinimum observations required for reliable inversion:")
+    for i, noise in enumerate(NOISE_LEVELS):
+        min_obs = None
+        for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+            if success_matrix[i, j] >= 0.8:
+                min_obs = n_obs
+                break  # First one that works (minimum)
+        if min_obs is not None:
+            print(f"  noise = {noise:.2f} mag: n_obs >= {min_obs}")
+        else:
+            print(f"  noise = {noise:.2f} mag: Not achievable with tested observation counts")
+
+    # Overall summary: find the "knee" of the requirements curve
+    # Look for the minimum combination that achieves 80%
+    min_product = float('inf')
+    best_combo = None
+    for cell in reliable_cells:
+        # Score by some combination (favor lower noise and fewer observations)
+        score = cell['noise'] * cell['n_obs']
+        if score < min_product:
+            min_product = score
+            best_combo = cell
+
+    if best_combo:
+        print(f"\n" + "-" * 50)
+        print("RECOMMENDED MINIMUM REQUIREMENTS:")
+        print(f"  At least {best_combo['n_obs']} observations with noise <= {best_combo['noise']:.2f} mag")
+        print(f"  (achieves {best_combo['success_rate']*100:.0f}% success rate)")
+else:
+    print("\nWARNING: No configuration achieved >= 80% success rate!")
+    print("Consider using more observations or lower noise data.")
+    best_combo = None
+
+# %% [markdown]
+# ---
+# ## 16. Save Robustness Analysis Summary
+
+# %%
+# Generate summary report
+summary_lines = [
+    "=" * 70,
+    "ROBUSTNESS ANALYSIS SUMMARY",
+    "=" * 70,
+    "",
+    "SWEEP CONFIGURATION:",
+    f"  Noise levels (mag): {NOISE_LEVELS}",
+    f"  Observation counts: {N_OBSERVATIONS_LIST}",
+    f"  Trials per cell: {N_TRIALS_PER_CELL}",
+    f"  Total optimizations: {len(all_trial_results)}",
+    f"  Optimizer: Multi-start local (LHS) with {EVAL_BUDGET} eval budget",
+    "",
+    "-" * 70,
+    "SUCCESS RATE MATRIX (%):",
+    "-" * 70,
+    "",
+]
+
+# Add matrix header
+header = "          | " + " | ".join([f"n={n:3d}" for n in N_OBSERVATIONS_LIST]) + " |"
+summary_lines.append(header)
+summary_lines.append("-" * len(header))
+
+# Add data rows
+for i, noise in enumerate(NOISE_LEVELS):
+    row = f"σ={noise:.2f}  | " + " | ".join([f"{success_matrix[i,j]*100:5.0f}%" for j in range(n_obs_configs)]) + " |"
+    summary_lines.append(row)
+
+summary_lines.append("-" * len(header))
+summary_lines.append("")
+
+# Add requirements analysis
+summary_lines.extend([
+    "-" * 70,
+    "MINIMUM DATA REQUIREMENTS FOR RELIABLE INVERSION (>=80% success):",
+    "-" * 70,
+    "",
+])
+
+# Maximum noise per observation count
+summary_lines.append("Maximum allowable noise:")
+for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+    max_noise = None
+    for i, noise in enumerate(NOISE_LEVELS):
+        if success_matrix[i, j] >= 0.8:
+            max_noise = noise
+    if max_noise is not None:
+        summary_lines.append(f"  n_obs = {n_obs:3d}: noise <= {max_noise:.2f} mag")
+    else:
+        summary_lines.append(f"  n_obs = {n_obs:3d}: No noise level achieves 80%")
+
+summary_lines.append("")
+
+# Minimum observations per noise level
+summary_lines.append("Minimum observations required:")
+for i, noise in enumerate(NOISE_LEVELS):
+    min_obs = None
+    for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+        if success_matrix[i, j] >= 0.8:
+            min_obs = n_obs
+            break
+    if min_obs is not None:
+        summary_lines.append(f"  noise = {noise:.2f} mag: n_obs >= {min_obs}")
+    else:
+        summary_lines.append(f"  noise = {noise:.2f} mag: Not achievable")
+
+summary_lines.append("")
+
+# Key finding
+summary_lines.extend([
+    "-" * 70,
+    "KEY FINDING:",
+    "-" * 70,
+    "",
+])
+
+if best_combo:
+    summary_lines.append(
+        f"Reliable inversion (>=80% success) requires at least {best_combo['n_obs']} "
+        f"observations with noise <= {best_combo['noise']:.2f} mag."
+    )
+else:
+    summary_lines.append(
+        "No tested configuration achieved >=80% success rate. "
+        "Consider using more observations or lower noise data."
+    )
+
+summary_lines.append("")
+summary_lines.append("=" * 70)
+
+# Write to file
+summary_text = "\n".join(summary_lines)
+summary_path = Path('data/results/inversion_diagnostics/robustness_summary.txt')
+with open(summary_path, 'w') as f:
+    f.write(summary_text)
+
+print(summary_text)
+print(f"\nSummary saved to {summary_path}")
