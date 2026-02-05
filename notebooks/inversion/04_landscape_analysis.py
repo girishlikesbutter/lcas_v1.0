@@ -601,3 +601,207 @@ for idx, (name, (deltas, objectives)) in enumerate(slice_results.items()):
     print(f"  Objective at true: {true_val:.6f}")
     print(f"  Objective range: {obj_range:.4f}")
     print(f"  Curvature at min: {curvature:.4f}")
+
+# %% [markdown]
+# ---
+# ## 9. 2D Objective Function Slices
+#
+# Compute 2D heatmaps showing how the objective varies when changing two parameters
+# simultaneously. This reveals correlations, ridges, and valleys in the parameter space.
+
+# %%
+# Define the 2D slice computation function
+
+
+def compute_2d_slice(
+    objective_fn: ObjectiveFunction,
+    true_params: np.ndarray,
+    param_i: int,
+    param_j: int,
+    delta_i: tuple[float, float],
+    delta_j: tuple[float, float],
+    n_points: int = 31,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute a 2D slice of the objective function along two parameter axes.
+
+    Parameters
+    ----------
+    objective_fn : ObjectiveFunction
+        The objective function to evaluate.
+    true_params : np.ndarray
+        The true parameter vector (6 elements).
+    param_i : int
+        Index of the first parameter to vary (x-axis).
+    param_j : int
+        Index of the second parameter to vary (y-axis).
+    delta_i : tuple[float, float]
+        Range of delta values (min, max) for parameter i.
+    delta_j : tuple[float, float]
+        Range of delta values (min, max) for parameter j.
+    n_points : int
+        Number of points along each axis (total evaluations = n_points^2).
+
+    Returns
+    -------
+    deltas_i : np.ndarray
+        Delta values for parameter i (shape: n_points).
+    deltas_j : np.ndarray
+        Delta values for parameter j (shape: n_points).
+    objectives : np.ndarray
+        2D array of objective values (shape: n_points x n_points).
+        objectives[j, i] corresponds to delta_j[j] and delta_i[i].
+    """
+    deltas_i = np.linspace(delta_i[0], delta_i[1], n_points)
+    deltas_j = np.linspace(delta_j[0], delta_j[1], n_points)
+    objectives = np.zeros((n_points, n_points))
+
+    for j_idx, dj in enumerate(deltas_j):
+        for i_idx, di in enumerate(deltas_i):
+            params = true_params.copy()
+            params[param_i] = true_params[param_i] + di
+            params[param_j] = true_params[param_j] + dj
+            objectives[j_idx, i_idx] = objective_fn(params)
+
+    return deltas_i, deltas_j, objectives
+
+
+# %%
+# Define parameter pairs to analyze
+# (ax_x, ax_y), (ax_x, omega_z), (omega_x, omega_y), (omega_x, omega_z)
+param_pairs = [
+    (0, 1, "axis_angle_x vs axis_angle_y"),
+    (0, 5, "axis_angle_x vs omega_z"),
+    (3, 4, "omega_x vs omega_y"),
+    (3, 5, "omega_x vs omega_z"),
+]
+
+# Define delta ranges for each parameter type
+# axis_angle indices: 0, 1, 2 (radians)
+# omega indices: 3, 4, 5 (rad/s)
+delta_axis_angle = (-0.5, 0.5)  # radians
+delta_omega = (-0.01, 0.01)  # rad/s
+
+# Number of points for 2D grid (total = n_points^2)
+n_2d_points = 31  # 961 evaluations per pair
+
+print("\nComputing 2D slices for parameter pairs...")
+print(f"  Grid size: {n_2d_points} x {n_2d_points} = {n_2d_points**2} evaluations per pair")
+
+# Store 2D results
+slice_2d_results: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray, int, int]] = {}
+
+for param_i, param_j, pair_name in param_pairs:
+    print(f"\n  Computing: {pair_name}...", flush=True)
+    t_start = time.time()
+
+    # Select appropriate delta ranges based on parameter type
+    delta_i = delta_axis_angle if param_i < 3 else delta_omega
+    delta_j = delta_axis_angle if param_j < 3 else delta_omega
+
+    deltas_i, deltas_j, objectives_2d = compute_2d_slice(
+        objective_fn, true_params, param_i, param_j, delta_i, delta_j, n_2d_points
+    )
+
+    slice_2d_results[pair_name] = (deltas_i, deltas_j, objectives_2d, param_i, param_j)
+
+    t_elapsed = time.time() - t_start
+    print(f"    Done ({t_elapsed:.1f}s), objective range: [{objectives_2d.min():.4f}, {objectives_2d.max():.4f}]")
+
+print("\nAll 2D slices computed!")
+
+# %%
+# Plot 2D slices as heatmaps with contour overlay in 2x2 figure
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+axes = axes.flatten()
+
+# Define parameter labels and units
+param_labels = {
+    0: ('axis_angle_x', 'rad'),
+    1: ('axis_angle_y', 'rad'),
+    2: ('axis_angle_z', 'rad'),
+    3: ('omega_x', 'rad/s'),
+    4: ('omega_y', 'rad/s'),
+    5: ('omega_z', 'rad/s'),
+}
+
+for idx, (pair_name, (deltas_i, deltas_j, objectives_2d, param_i, param_j)) in enumerate(slice_2d_results.items()):
+    ax = axes[idx]
+
+    # Create meshgrid for plotting
+    X, Y = np.meshgrid(deltas_i, deltas_j)
+
+    # Plot heatmap
+    im = ax.pcolormesh(X, Y, objectives_2d, shading='auto', cmap='viridis')
+    cbar = plt.colorbar(im, ax=ax, label='Objective')
+
+    # Add contour overlay
+    contour_levels = np.linspace(objectives_2d.min(), objectives_2d.max(), 10)
+    ax.contour(X, Y, objectives_2d, levels=contour_levels, colors='white', linewidths=0.5, alpha=0.7)
+
+    # Mark true parameter location (delta = 0, 0)
+    ax.plot(0, 0, 'r*', markersize=15, markeredgecolor='white', markeredgewidth=1.5, label='True')
+
+    # Labels
+    label_i, unit_i = param_labels[param_i]
+    label_j, unit_j = param_labels[param_j]
+    ax.set_xlabel(f'$\\Delta$ {label_i} ({unit_i})', fontsize=11)
+    ax.set_ylabel(f'$\\Delta$ {label_j} ({unit_j})', fontsize=11)
+    ax.set_title(pair_name, fontsize=12, fontweight='bold')
+    ax.legend(loc='upper right', fontsize=9)
+
+plt.suptitle('2D Objective Function Slices', fontsize=14, fontweight='bold')
+plt.tight_layout()
+
+# Save figure
+fig_2d_path = output_dir_diagnostics / "2d_slices.png"
+plt.savefig(fig_2d_path, dpi=150, bbox_inches='tight')
+print(f"\nSaved 2D slices figure to: {fig_2d_path}")
+
+plt.show()
+
+# %% [markdown]
+# ### 2D Slice Analysis Summary
+#
+# The 2D slices reveal correlations and structure in the objective function landscape:
+#
+# - **Circular/elliptical contours**: Indicate well-separated parameters with clear minimum
+# - **Elongated valleys/ridges**: Indicate parameter correlations (changes along the valley
+#   direction have similar objective values, making optimization harder)
+# - **Irregular shapes**: May indicate multiple local minima or complex parameter interactions
+#
+# Key observations from each pair:
+# - **(ax_x, ax_y)**: Shows coupling between orientation components
+# - **(ax_x, omega_z)**: Shows coupling between initial orientation and spin rate
+# - **(omega_x, omega_y)**: Shows coupling between angular velocity components
+# - **(omega_x, omega_z)**: Shows coupling between transverse and spin angular velocities
+
+# %%
+# Print quantitative analysis of 2D slices
+print("\n" + "=" * 60)
+print("2D SLICE ANALYSIS SUMMARY")
+print("=" * 60)
+
+for pair_name, (deltas_i, deltas_j, objectives_2d, param_i, param_j) in slice_2d_results.items():
+    # Find global minimum
+    min_idx_flat = np.argmin(objectives_2d)
+    min_j, min_i = np.unravel_index(min_idx_flat, objectives_2d.shape)
+    min_val = objectives_2d[min_j, min_i]
+    min_delta_i = deltas_i[min_i]
+    min_delta_j = deltas_j[min_j]
+
+    # Value at true parameters (center of grid)
+    center_i = len(deltas_i) // 2
+    center_j = len(deltas_j) // 2
+    true_val = objectives_2d[center_j, center_i]
+
+    # Objective range
+    obj_range = objectives_2d.max() - objectives_2d.min()
+
+    label_i, _ = param_labels[param_i]
+    label_j, _ = param_labels[param_j]
+
+    print(f"\n{pair_name}:")
+    print(f"  Global min: {min_val:.6f} at delta_i={min_delta_i:.6f}, delta_j={min_delta_j:.6f}")
+    print(f"  Objective at true (0,0): {true_val:.6f}")
+    print(f"  Objective range: {obj_range:.4f}")
