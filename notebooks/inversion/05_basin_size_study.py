@@ -794,6 +794,154 @@ print(f"\nTest plot saved to: {output_dir / 'inversion_diagnostics' / 'sample_in
 
 # %% [markdown]
 # ---
+# ## 13. Basin Size Sweep Experiment
+#
+# Systematically measure success rate vs. initialization radius.
+# Test radii from 0.01 to 10 degrees with 20 trials per radius.
+
+# %%
+# Define the radii to test (in degrees)
+test_radii = [0.01, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]
+n_trials_per_radius = 20
+
+print("=" * 70)
+print("BASIN SIZE SWEEP EXPERIMENT")
+print("=" * 70)
+print(f"\nRadii to test: {test_radii} degrees")
+print(f"Trials per radius: {n_trials_per_radius}")
+print(f"Total optimizations: {len(test_radii) * n_trials_per_radius}")
+
+# %%
+# Data structure to store results
+# For each radius, store: successes, omega_errors, rms_residuals, n_evals
+sweep_results = {
+    'radii': np.array(test_radii),
+    'n_trials': n_trials_per_radius,
+    # Per-trial results (n_radii x n_trials)
+    'success': np.zeros((len(test_radii), n_trials_per_radius), dtype=bool),
+    'omega_error': np.zeros((len(test_radii), n_trials_per_radius)),
+    'rms_residual': np.zeros((len(test_radii), n_trials_per_radius)),
+    'n_evals': np.zeros((len(test_radii), n_trials_per_radius), dtype=int),
+    'final_objective': np.zeros((len(test_radii), n_trials_per_radius)),
+}
+
+# %%
+# Run the sweep experiment
+print("\nRunning basin size sweep...")
+print("-" * 70)
+
+total_start_time = time.time()
+
+for r_idx, radius in enumerate(test_radii):
+    print(f"\nRadius {radius:.2f} degrees ({r_idx + 1}/{len(test_radii)})")
+
+    # Generate all starting points for this radius
+    # Use different seeds for each radius to ensure diversity
+    base_seed = 1000 * (r_idx + 1)
+    starting_points = sample_in_ball(
+        true_params=true_params,
+        radius=radius,
+        n_samples=n_trials_per_radius,
+        param_scales=param_scales,
+        seed=base_seed,
+    )
+
+    # Verify samples are within the ball
+    all_inside, scaled_distances = verify_samples_in_ball(
+        starting_points, true_params, radius, param_scales
+    )
+    if not all_inside:
+        print(f"  WARNING: Some samples outside ball!")
+
+    # Run optimization for each starting point
+    radius_successes = 0
+    for trial_idx in range(n_trials_per_radius):
+        x0 = starting_points[trial_idx]
+
+        # Run local optimization
+        x_opt, f_opt, scipy_success, n_evals = run_local_optimization(
+            objective_fn, x0, bounds
+        )
+
+        # Evaluate success
+        success, omega_error_deg, rms_residual = evaluate_success(
+            x_opt, true_params, objective_fn, noise_sigma
+        )
+
+        # Store results
+        sweep_results['success'][r_idx, trial_idx] = success
+        sweep_results['omega_error'][r_idx, trial_idx] = omega_error_deg
+        sweep_results['rms_residual'][r_idx, trial_idx] = rms_residual
+        sweep_results['n_evals'][r_idx, trial_idx] = n_evals
+        sweep_results['final_objective'][r_idx, trial_idx] = f_opt
+
+        if success:
+            radius_successes += 1
+
+    # Print summary for this radius
+    success_rate = radius_successes / n_trials_per_radius * 100
+    mean_omega_err = sweep_results['omega_error'][r_idx].mean()
+    mean_evals = sweep_results['n_evals'][r_idx].mean()
+    print(f"  Success rate: {radius_successes}/{n_trials_per_radius} = {success_rate:.0f}%")
+    print(f"  Mean omega error: {mean_omega_err:.4f} deg/s")
+    print(f"  Mean evaluations: {mean_evals:.0f}")
+
+total_elapsed = time.time() - total_start_time
+print("\n" + "-" * 70)
+print(f"Sweep completed in {total_elapsed:.1f}s")
+print(f"Total optimizations: {len(test_radii) * n_trials_per_radius}")
+
+# %%
+# Compute summary statistics for each radius
+summary_stats = {
+    'radii': test_radii,
+    'success_rate': [],
+    'mean_omega_error': [],
+    'std_omega_error': [],
+    'mean_rms_residual': [],
+    'std_rms_residual': [],
+    'mean_n_evals': [],
+    'std_n_evals': [],
+}
+
+print("\n" + "=" * 70)
+print("SUMMARY STATISTICS BY RADIUS")
+print("=" * 70)
+print(f"{'Radius':>8} | {'Success':>10} | {'Mean Omega Err':>15} | {'Mean RMS':>12} | {'Mean Evals':>12}")
+print(f"{'(deg)':>8} | {'Rate (%)':>10} | {'(deg/s)':>15} | {'(mag)':>12} | {'':>12}")
+print("-" * 70)
+
+for r_idx, radius in enumerate(test_radii):
+    successes = sweep_results['success'][r_idx]
+    omega_errors = sweep_results['omega_error'][r_idx]
+    rms_residuals = sweep_results['rms_residual'][r_idx]
+    n_evals_arr = sweep_results['n_evals'][r_idx]
+
+    success_rate = successes.sum() / len(successes) * 100
+    mean_omega = omega_errors.mean()
+    std_omega = omega_errors.std()
+    mean_rms = rms_residuals.mean()
+    std_rms = rms_residuals.std()
+    mean_evals = n_evals_arr.mean()
+    std_evals = n_evals_arr.std()
+
+    summary_stats['success_rate'].append(success_rate)
+    summary_stats['mean_omega_error'].append(mean_omega)
+    summary_stats['std_omega_error'].append(std_omega)
+    summary_stats['mean_rms_residual'].append(mean_rms)
+    summary_stats['std_rms_residual'].append(std_rms)
+    summary_stats['mean_n_evals'].append(mean_evals)
+    summary_stats['std_n_evals'].append(std_evals)
+
+    print(f"{radius:>8.2f} | {success_rate:>10.1f} | {mean_omega:>15.6f} | {mean_rms:>12.6f} | {mean_evals:>12.1f}")
+
+# Convert to numpy arrays for easier manipulation
+for key in summary_stats:
+    if key != 'radii':
+        summary_stats[key] = np.array(summary_stats[key])
+
+# %% [markdown]
+# ---
 # ## Setup Complete
 #
 # We now have:
@@ -806,10 +954,11 @@ print(f"\nTest plot saved to: {output_dir / 'inversion_diagnostics' / 'sample_in
 # - `sample_in_ball()`: Function to generate random samples in a hypersphere
 # - `verify_samples_in_ball()`: Function to verify samples are within the ball
 # - `param_scales`: Scale factors for proper distance measurement
+# - `sweep_results`: Raw results from basin size sweep (US-009)
+# - `summary_stats`: Aggregated statistics per radius (US-009)
 #
-# The next user stories (US-009 onwards) will add:
-# - Basin size sweep experiment
-# - Visualization and threshold identification
+# The next user story (US-010) will add:
+# - Visualization and critical radius identification
 
 # %%
 # Summary of key objects for downstream analysis
@@ -827,6 +976,9 @@ print(f"    run_local_optimization(): L-BFGS-B wrapper")
 print(f"    evaluate_success(): Success criteria checker")
 print(f"    sample_in_ball(): Random sampling within hypersphere")
 print(f"    verify_samples_in_ball(): Verify samples within radius")
+print(f"\n  Basin sweep results:")
+print(f"    sweep_results: Dict with per-trial data ({len(test_radii)} radii x {n_trials_per_radius} trials)")
+print(f"    summary_stats: Dict with aggregated statistics per radius")
 print(f"\n  Success criteria:")
 print(f"    - Omega error < {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s")
 print(f"    - RMS < {RMS_THRESHOLD_FACTOR * noise_sigma:.4f} mag")
