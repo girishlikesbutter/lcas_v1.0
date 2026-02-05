@@ -396,3 +396,208 @@ print(f"  n_observations: {n_observations}")
 param_names = ['axis_angle_x', 'axis_angle_y', 'axis_angle_z', 'omega_x', 'omega_y', 'omega_z']
 print(f"\n  Parameter names: {param_names}")
 print(f"  Units: axis_angle in radians, omega in rad/s")
+
+# %% [markdown]
+# ---
+# ## 8. 1D Objective Function Slices
+#
+# Compute how the objective function varies when changing one parameter at a time,
+# keeping all other parameters fixed at their true values.
+
+# %%
+# Define the 1D slice computation function
+
+
+def compute_1d_slice(
+    objective_fn: ObjectiveFunction,
+    true_params: np.ndarray,
+    param_index: int,
+    delta_range: tuple[float, float],
+    n_points: int = 51,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute a 1D slice of the objective function along one parameter axis.
+
+    Parameters
+    ----------
+    objective_fn : ObjectiveFunction
+        The objective function to evaluate.
+    true_params : np.ndarray
+        The true parameter vector (6 elements).
+    param_index : int
+        Index of the parameter to vary (0-5).
+    delta_range : tuple[float, float]
+        Range of delta values (min_delta, max_delta) to add to the true parameter.
+    n_points : int
+        Number of points to evaluate along the slice.
+
+    Returns
+    -------
+    deltas : np.ndarray
+        The delta values from the true parameter.
+    objectives : np.ndarray
+        The objective function values at each point.
+    """
+    deltas = np.linspace(delta_range[0], delta_range[1], n_points)
+    objectives = np.zeros(n_points)
+
+    for i, delta in enumerate(deltas):
+        params = true_params.copy()
+        params[param_index] = true_params[param_index] + delta
+        objectives[i] = objective_fn(params)
+
+    return deltas, objectives
+
+
+# %%
+# Compute 1D slices for all 6 parameters
+print("\nComputing 1D slices for all parameters...")
+print("  Axis-angle parameters: delta range = +/- 0.5 rad")
+print("  Angular velocity parameters: delta range = +/- 0.01 rad/s")
+
+# Define delta ranges for each parameter type
+axis_angle_delta = (-0.5, 0.5)  # radians
+omega_delta = (-0.01, 0.01)  # rad/s
+
+# Number of points for smooth curves
+n_slice_points = 51
+
+# Store results for all parameters
+slice_results: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+
+for idx, name in enumerate(param_names):
+    print(f"  Computing slice for {name}...", end=" ", flush=True)
+    t_start = time.time()
+
+    # Choose appropriate delta range based on parameter type
+    if idx < 3:  # axis_angle parameters
+        delta_range = axis_angle_delta
+    else:  # omega parameters
+        delta_range = omega_delta
+
+    deltas, objectives = compute_1d_slice(
+        objective_fn, true_params, idx, delta_range, n_slice_points
+    )
+    slice_results[name] = (deltas, objectives)
+
+    t_elapsed = time.time() - t_start
+    print(f"done ({t_elapsed:.1f}s)")
+
+print("All 1D slices computed!")
+
+# %%
+# Plot 1D slices in 2x3 subplot figure (linear scale)
+fig, axes = plt.subplots(2, 3, figsize=(14, 8))
+axes = axes.flatten()
+
+# Define units for labels
+units = ['rad', 'rad', 'rad', 'rad/s', 'rad/s', 'rad/s']
+
+for idx, (name, (deltas, objectives)) in enumerate(slice_results.items()):
+    ax = axes[idx]
+
+    # Plot the objective function
+    ax.plot(deltas, objectives, 'b-', linewidth=1.5)
+
+    # Mark the true parameter location (delta = 0)
+    obj_at_true_param = objectives[len(objectives) // 2]  # center point
+    ax.axvline(x=0, color='r', linestyle='--', linewidth=1.5, label='True value')
+    ax.plot(0, obj_at_true_param, 'ro', markersize=8, label=f'Min: {obj_at_true_param:.4f}')
+
+    # Labels
+    ax.set_xlabel(f'$\\Delta$ {name} ({units[idx]})', fontsize=11)
+    ax.set_ylabel('Objective', fontsize=11)
+    ax.set_title(f'{name}', fontsize=12, fontweight='bold')
+    ax.legend(loc='upper right', fontsize=9)
+    ax.grid(True, alpha=0.3)
+
+plt.suptitle('1D Objective Function Slices (Linear Scale)', fontsize=14, fontweight='bold')
+plt.tight_layout()
+
+# Save linear scale figure
+output_dir_diagnostics = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics"
+output_dir_diagnostics.mkdir(parents=True, exist_ok=True)
+
+linear_fig_path = output_dir_diagnostics / "1d_slices_linear.png"
+plt.savefig(linear_fig_path, dpi=150, bbox_inches='tight')
+print(f"\nSaved linear scale plot to: {linear_fig_path}")
+
+plt.show()
+
+# %%
+# Plot 1D slices with log y-axis to see structure near minimum
+fig, axes = plt.subplots(2, 3, figsize=(14, 8))
+axes = axes.flatten()
+
+for idx, (name, (deltas, objectives)) in enumerate(slice_results.items()):
+    ax = axes[idx]
+
+    # Plot the objective function with log scale
+    ax.semilogy(deltas, objectives, 'b-', linewidth=1.5)
+
+    # Mark the true parameter location (delta = 0)
+    obj_at_true_param = objectives[len(objectives) // 2]
+    ax.axvline(x=0, color='r', linestyle='--', linewidth=1.5, label='True value')
+    ax.semilogy(0, obj_at_true_param, 'ro', markersize=8, label=f'Min: {obj_at_true_param:.4f}')
+
+    # Labels
+    ax.set_xlabel(f'$\\Delta$ {name} ({units[idx]})', fontsize=11)
+    ax.set_ylabel('Objective (log scale)', fontsize=11)
+    ax.set_title(f'{name}', fontsize=12, fontweight='bold')
+    ax.legend(loc='upper right', fontsize=9)
+    ax.grid(True, alpha=0.3, which='both')
+
+plt.suptitle('1D Objective Function Slices (Log Scale)', fontsize=14, fontweight='bold')
+plt.tight_layout()
+
+# Save log scale figure as the main output
+log_fig_path = output_dir_diagnostics / "1d_slices.png"
+plt.savefig(log_fig_path, dpi=150, bbox_inches='tight')
+print(f"Saved log scale plot to: {log_fig_path}")
+
+plt.show()
+
+# %% [markdown]
+# ### 1D Slice Analysis Summary
+#
+# The 1D slices show how the objective function varies when changing each parameter
+# individually while holding all others at their true values. Key observations:
+#
+# - **Axis-angle parameters**: Show the sensitivity of the objective to initial orientation
+# - **Angular velocity parameters**: Show the sensitivity to initial rotation rates
+# - **Minimum location**: The true parameters (delta=0) should be near the minimum
+# - **Curvature**: Steep sides indicate well-constrained parameters; flat regions indicate
+#   poorly constrained parameters
+
+# %%
+# Print quantitative analysis of 1D slices
+print("\n" + "=" * 60)
+print("1D SLICE ANALYSIS SUMMARY")
+print("=" * 60)
+
+for idx, (name, (deltas, objectives)) in enumerate(slice_results.items()):
+    # Find minimum value and location
+    min_idx = np.argmin(objectives)
+    min_val = objectives[min_idx]
+    min_delta = deltas[min_idx]
+
+    # Value at true parameters
+    true_idx = len(objectives) // 2
+    true_val = objectives[true_idx]
+
+    # Approximate curvature at minimum (second derivative)
+    # Using central difference: f''(x) ≈ (f(x+h) - 2f(x) + f(x-h)) / h^2
+    if min_idx > 0 and min_idx < len(objectives) - 1:
+        h = deltas[1] - deltas[0]
+        curvature = (objectives[min_idx + 1] - 2 * objectives[min_idx] + objectives[min_idx - 1]) / (h ** 2)
+    else:
+        curvature = np.nan
+
+    # Range of objective values
+    obj_range = objectives.max() - objectives.min()
+
+    print(f"\n{name}:")
+    print(f"  Min objective: {min_val:.6f} at delta = {min_delta:.6f}")
+    print(f"  Objective at true: {true_val:.6f}")
+    print(f"  Objective range: {obj_range:.4f}")
+    print(f"  Curvature at min: {curvature:.4f}")
