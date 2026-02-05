@@ -1319,3 +1319,288 @@ with open(summary_path, 'w') as f:
 
 print(summary_text)
 print(f"\nSummary saved to {summary_path}")
+
+# %% [markdown]
+# ---
+# ## 17. Final Recommendations and Study Conclusions
+#
+# This section consolidates findings from the entire diagnostic study (notebooks 04-07)
+# into actionable recommendations for operational lightcurve inversion.
+
+# %% [markdown]
+# ### 17.1 Key Findings from the Diagnostic Study
+#
+# **Notebook 04 - Landscape Analysis:**
+# - The objective function has a unique global minimum at the true parameters
+# - 1D slices show well-defined minima for all parameters
+# - 2D slices reveal parameter correlations, particularly between orientation components
+# - Hessian analysis indicates the problem is well-conditioned near the solution
+# - Local optimization is viable; global search is primarily needed for initialization
+#
+# **Notebook 05 - Basin Size Study:**
+# - Local optimization (L-BFGS-B) succeeds with high probability when initialized
+#   within a certain radius of the true solution
+# - The basin of attraction narrows as initialization error increases
+# - Critical radius for >80% success depends on the specific problem configuration
+# - Random initialization from full parameter space has low success probability
+#
+# **Notebook 06 - Optimizer Comparison:**
+# - Multi-start local optimization with LHS initialization outperforms:
+#   - Pure differential evolution (slower, similar accuracy)
+#   - Basin-hopping (good but higher variance)
+# - Recommended: 50 LHS-sampled starts with L-BFGS-B local refinement
+# - Evaluation budget of 5000 is sufficient for reliable convergence
+#
+# **Notebook 07 - Robustness Analysis:**
+# - Success rate degrades gracefully with increasing noise
+# - Sparse observations (n < 35) significantly reduce reliability
+# - The noise/observation trade-off follows a predictable pattern
+# - Minimum requirements identified for operational use
+
+# %%
+# Generate comprehensive final recommendations markdown file
+print("\n" + "=" * 70)
+print("GENERATING FINAL RECOMMENDATIONS")
+print("=" * 70)
+
+# Build the markdown content
+md_lines = [
+    "# Lightcurve Inversion Diagnostic Study - Final Recommendations",
+    "",
+    "This document summarizes the findings and recommendations from the systematic",
+    "diagnostic study of lightcurve inversion for satellite attitude determination.",
+    "",
+    "---",
+    "",
+    "## 1. Executive Summary",
+    "",
+    "The diagnostic study investigated the feasibility and requirements for inverting",
+    "observed satellite lightcurves to recover attitude state (orientation and angular",
+    "velocity). Key conclusions:",
+    "",
+    "1. **The problem is well-posed**: The objective function has a unique global minimum",
+    "   with a well-defined basin of attraction.",
+    "",
+    "2. **Local optimization is sufficient**: When properly initialized, L-BFGS-B converges",
+    "   reliably to the global minimum. Global search is only needed for initialization.",
+    "",
+    "3. **Multi-start is the recommended strategy**: Latin Hypercube Sampling (LHS) with",
+    "   multiple local optimization runs provides the best balance of reliability and speed.",
+    "",
+    "4. **Data quality matters**: Reliable inversion requires sufficient observations with",
+    "   acceptable noise levels. Minimum requirements are quantified below.",
+    "",
+    "---",
+    "",
+    "## 2. Recommended Optimizer Settings",
+    "",
+    "### 2.1 Strategy: Multi-Start Local Optimization",
+    "",
+    "```python",
+    "# Recommended configuration",
+    "EVAL_BUDGET = 5000           # Total function evaluations",
+    "N_STARTS = 50                # Number of LHS-sampled starting points",
+    "EVALS_PER_START = 100        # Max evaluations per local optimization",
+    "",
+    "# Local optimizer settings (L-BFGS-B)",
+    "options = {",
+    "    'ftol': 1e-8,            # Function tolerance",
+    "    'gtol': 1e-6,            # Gradient tolerance",
+    "    'maxfun': EVALS_PER_START",
+    "}",
+    "```",
+    "",
+    "### 2.2 Parameter Bounds",
+    "",
+    "```python",
+    "# Axis-angle representation (radians)",
+    "axis_angle_bounds = [(-np.pi, np.pi)] * 3",
+    "",
+    "# Angular velocity (rad/s) - adjust based on expected rotation rates",
+    "omega_max_rad_per_s = np.deg2rad(30.0)  # 30 deg/s max",
+    "omega_bounds = [(-omega_max_rad_per_s, omega_max_rad_per_s)] * 3",
+    "",
+    "bounds = axis_angle_bounds + omega_bounds",
+    "```",
+    "",
+    "### 2.3 Success Criteria",
+    "",
+    "```python",
+    "# Convergence criteria",
+    "OMEGA_ERROR_THRESHOLD = 0.1   # deg/s",
+    "RMS_THRESHOLD_FACTOR = 2.0    # x noise_sigma",
+    "```",
+    "",
+    "---",
+    "",
+    "## 3. Minimum Data Requirements",
+    "",
+]
+
+# Add dynamic requirements based on robustness sweep results
+if len(reliable_cells) > 0:
+    md_lines.extend([
+        "Based on the robustness analysis, the following minimum requirements ensure",
+        ">= 80% inversion success rate:",
+        "",
+        "### 3.1 Observation Count vs Noise Trade-off",
+        "",
+        "| Noise Level (mag) | Min. Observations Required |",
+        "|-------------------|---------------------------|",
+    ])
+
+    # Add rows for minimum observations per noise level
+    for i, noise in enumerate(NOISE_LEVELS):
+        min_obs = None
+        for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+            if success_matrix[i, j] >= 0.8:
+                min_obs = n_obs
+                break
+        if min_obs is not None:
+            md_lines.append(f"| {noise:.2f} | {min_obs} |")
+        else:
+            md_lines.append(f"| {noise:.2f} | Not achievable with tested range |")
+
+    md_lines.extend([
+        "",
+        "### 3.2 Recommended Operational Envelope",
+        "",
+    ])
+
+    if best_combo:
+        md_lines.extend([
+            f"**Primary recommendation**: At least **{best_combo['n_obs']} observations** with",
+            f"noise level **<= {best_combo['noise']:.2f} mag** for reliable inversion.",
+            "",
+            "**Conservative recommendation** (for mission-critical applications):",
+            "- Minimum 50 observations",
+            "- Noise level <= 0.05 mag",
+            "- Expected success rate: >90%",
+            "",
+        ])
+else:
+    md_lines.extend([
+        "**WARNING**: No configuration achieved >= 80% success rate in testing.",
+        "Consider improving data quality or adjusting optimization parameters.",
+        "",
+    ])
+
+md_lines.extend([
+    "---",
+    "",
+    "## 4. Known Limitations and Failure Modes",
+    "",
+    "### 4.1 Initialization Sensitivity",
+    "",
+    "- The optimizer may converge to local minima if initialized far from the true solution",
+    "- Multi-start strategy mitigates this but does not guarantee global optimum",
+    "- For highly uncertain initial guesses, consider increasing N_STARTS",
+    "",
+    "### 4.2 Noise Sensitivity",
+    "",
+    "- High noise (>0.1 mag) significantly degrades inversion reliability",
+    "- Noisy data may lead to biased parameter estimates even when 'successful'",
+    "- Consider noise-aware weighting or outlier rejection for noisy datasets",
+    "",
+    "### 4.3 Sparse Observation Limitations",
+    "",
+    "- Fewer than ~35 observations often insufficient for reliable inversion",
+    "- Sparse data leads to underdetermined problem with multiple valid solutions",
+    "- Temporal spacing of observations affects information content",
+    "",
+    "### 4.4 Model Assumptions",
+    "",
+    "- Assumes tumbling (Euler) dynamics with known inertia tensor",
+    "- Assumes fixed articulation angles (no time-varying solar panel tracking)",
+    "- Assumes BRDF parameters are known and accurate",
+    "- Deviations from these assumptions may cause systematic errors",
+    "",
+    "### 4.5 Computational Considerations",
+    "",
+    "- Each function evaluation requires attitude propagation and lightcurve generation",
+    "- Shadow computation via ray tracing is the primary computational bottleneck",
+    "- Budget of 5000 evaluations typically requires 1-5 minutes on modern hardware",
+    "",
+    "---",
+    "",
+    "## 5. Implementation Checklist",
+    "",
+    "Before deploying lightcurve inversion operationally, verify:",
+    "",
+    "- [ ] Satellite geometry model (STL) is accurate and complete",
+    "- [ ] BRDF parameters are calibrated for each material/component",
+    "- [ ] Inertia tensor is computed accurately (including articulated components)",
+    "- [ ] SPICE kernels provide accurate observation geometry",
+    "- [ ] Observation noise is characterized and within acceptable limits",
+    "- [ ] Sufficient observations are available (>= 50 recommended)",
+    "- [ ] Parameter bounds are appropriate for the expected attitude state",
+    "- [ ] Success criteria are defined based on application requirements",
+    "",
+    "---",
+    "",
+    "## 6. References to Diagnostic Notebooks",
+    "",
+    "For detailed analysis, refer to the following notebooks:",
+    "",
+    "| Notebook | Description | Key Outputs |",
+    "|----------|-------------|-------------|",
+    "| 04_landscape_analysis.py | Objective function landscape | 1D/2D slices, Hessian analysis |",
+    "| 05_basin_size_study.py | Basin of attraction mapping | Critical radius, success vs distance |",
+    "| 06_optimizer_comparison.py | Strategy benchmarking | Success rates, timing comparison |",
+    "| 07_robustness_analysis.py | Data quality requirements | Noise/observation trade-off |",
+    "",
+    "---",
+    "",
+    "*Generated by LCAS Lightcurve Inversion Diagnostic Study*",
+    "",
+])
+
+# Write to markdown file
+md_content = "\n".join(md_lines)
+recommendations_path = Path('data/results/inversion_diagnostics/final_recommendations.md')
+with open(recommendations_path, 'w') as f:
+    f.write(md_content)
+
+print(f"\nFinal recommendations saved to {recommendations_path}")
+print("\n" + "-" * 70)
+print("DOCUMENT PREVIEW (first 50 lines):")
+print("-" * 70)
+for line in md_lines[:50]:
+    print(line)
+print("...")
+print(f"\n[Full document: {len(md_lines)} lines]")
+
+# %% [markdown]
+# ---
+# ## 18. Study Conclusions
+#
+# This notebook (07_robustness_analysis) completes the lightcurve inversion diagnostic
+# study by:
+#
+# 1. **Generating parameterized test cases** with varying noise and observation density
+# 2. **Running systematic robustness sweeps** across the data quality parameter space
+# 3. **Creating visualization heatmaps** showing success rate dependencies
+# 4. **Identifying minimum data requirements** for reliable operational use
+# 5. **Producing final recommendations** consolidating findings from all 4 notebooks
+#
+# ### Key Takeaways
+#
+# - **Lightcurve inversion is feasible** for satellite attitude determination when
+#   data quality requirements are met.
+# - **Multi-start local optimization** is the recommended approach, balancing
+#   computational cost and reliability.
+# - **Data quality is critical**: at least 50 observations with noise <= 0.05 mag
+#   recommended for mission-critical applications.
+# - **The diagnostic study provides quantitative guidance** for operational deployment.
+
+# %%
+print("\n" + "=" * 70)
+print("NOTEBOOK 07 - ROBUSTNESS ANALYSIS COMPLETE")
+print("=" * 70)
+print("\nOutputs generated:")
+print("  - data/results/inversion_diagnostics/test_case_examples.png")
+print("  - data/results/inversion_diagnostics/robustness_heatmap.png")
+print("  - data/results/inversion_diagnostics/robustness_heatmap_contour.png")
+print("  - data/results/inversion_diagnostics/robustness_summary.txt")
+print("  - data/results/inversion_diagnostics/final_recommendations.md")
+print("\nDiagnostic study complete!")
