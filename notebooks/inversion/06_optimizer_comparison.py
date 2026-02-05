@@ -1391,3 +1391,416 @@ print(f"\nTotal trials: {len(comparison_results)}")
 print(f"Strategies: {STRATEGIES}")
 print(f"Trials per strategy: {N_TRIALS}")
 print(f"Budget per trial: {COMPARISON_BUDGET} evaluations")
+
+# %% [markdown]
+# ---
+# ## 18. Optimizer Comparison Visualization
+#
+# This section provides comprehensive visualization of the optimizer comparison
+# results to clearly identify which strategy performs best.
+
+# %%
+# Output directory for saving figures
+OUTPUT_DIR = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+print(f"Output directory: {OUTPUT_DIR}")
+
+# %% [markdown]
+# ### 18.1 Box Plot: Final Objective Values by Strategy
+#
+# This plot shows the distribution of final objective values achieved by each
+# optimization strategy. Lower values indicate better fits to the observed data.
+
+# %%
+fig_objectives, ax_obj = plt.subplots(figsize=(10, 6))
+
+# Prepare data for box plot
+objective_data = [strategy_results[s]['best_objectives'] for s in STRATEGIES]
+
+# Create box plot
+bp_obj = ax_obj.boxplot(
+    objective_data,
+    labels=STRATEGIES,
+    patch_artist=True,
+    medianprops={'color': 'black', 'linewidth': 2},
+)
+
+# Color the boxes
+colors = ['#3498db', '#e74c3c', '#2ecc71']  # Blue, Red, Green
+for patch, color in zip(bp_obj['boxes'], colors):
+    patch.set_facecolor(color)
+    patch.set_alpha(0.7)
+
+# Add individual data points
+for i, (data, color) in enumerate(zip(objective_data, colors)):
+    # Jitter x positions slightly for visibility
+    x_jitter = np.random.normal(i + 1, 0.04, len(data))
+    ax_obj.scatter(x_jitter, data, alpha=0.6, color=color, s=50, edgecolor='black', linewidth=0.5)
+
+# Add reference line at objective value at true params
+ax_obj.axhline(y=obj_at_true, color='gray', linestyle='--', linewidth=1.5,
+               label=f'Objective at true params: {obj_at_true:.4f}')
+
+ax_obj.set_ylabel('Final Objective Value', fontsize=12)
+ax_obj.set_xlabel('Optimization Strategy', fontsize=12)
+ax_obj.set_title('Optimizer Comparison: Final Objective Values', fontsize=14, fontweight='bold')
+ax_obj.legend(loc='upper right')
+ax_obj.grid(axis='y', alpha=0.3)
+
+plt.tight_layout()
+
+# Save figure
+fig_objectives.savefig(OUTPUT_DIR / 'optimizer_comparison_objectives.png', dpi=150, bbox_inches='tight')
+print(f"Saved: {OUTPUT_DIR / 'optimizer_comparison_objectives.png'}")
+
+plt.show()
+
+# %% [markdown]
+# ### 18.2 Box Plot: Parameter Errors by Strategy
+#
+# This plot shows the distribution of angular velocity errors (omega error in deg/s)
+# for each strategy. Lower errors indicate better parameter recovery.
+
+# %%
+fig_errors, ax_err = plt.subplots(figsize=(10, 6))
+
+# Prepare data for box plot
+error_data = [strategy_results[s]['omega_errors'] for s in STRATEGIES]
+
+# Create box plot
+bp_err = ax_err.boxplot(
+    error_data,
+    labels=STRATEGIES,
+    patch_artist=True,
+    medianprops={'color': 'black', 'linewidth': 2},
+)
+
+# Color the boxes
+for patch, color in zip(bp_err['boxes'], colors):
+    patch.set_facecolor(color)
+    patch.set_alpha(0.7)
+
+# Add individual data points
+for i, (data, color) in enumerate(zip(error_data, colors)):
+    x_jitter = np.random.normal(i + 1, 0.04, len(data))
+    ax_err.scatter(x_jitter, data, alpha=0.6, color=color, s=50, edgecolor='black', linewidth=0.5)
+
+# Add success threshold line
+ax_err.axhline(y=OMEGA_ERROR_THRESHOLD_DEG_PER_S, color='red', linestyle='--', linewidth=1.5,
+               label=f'Success threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s')
+
+ax_err.set_ylabel('Angular Velocity Error (deg/s)', fontsize=12)
+ax_err.set_xlabel('Optimization Strategy', fontsize=12)
+ax_err.set_title('Optimizer Comparison: Parameter Errors', fontsize=14, fontweight='bold')
+ax_err.legend(loc='upper right')
+ax_err.grid(axis='y', alpha=0.3)
+
+# Set y-axis to log scale if there's large variation
+max_err = max(max(d) for d in error_data)
+min_err = min(min(d) for d in error_data if min(d) > 0)
+if max_err / max(min_err, 1e-6) > 100:
+    ax_err.set_yscale('log')
+
+plt.tight_layout()
+
+# Save figure
+fig_errors.savefig(OUTPUT_DIR / 'optimizer_comparison_errors.png', dpi=150, bbox_inches='tight')
+print(f"Saved: {OUTPUT_DIR / 'optimizer_comparison_errors.png'}")
+
+plt.show()
+
+# %% [markdown]
+# ### 18.3 Bar Chart: Success Rates with Confidence Intervals
+#
+# This plot shows the success rate for each strategy with 95% confidence intervals
+# based on binomial uncertainty.
+
+# %%
+def compute_binomial_ci(
+    n_success: int,
+    n_trials: int,
+    confidence: float = 0.95,
+) -> tuple[float, float, float]:
+    """
+    Compute success rate and Wilson score confidence interval.
+
+    Parameters
+    ----------
+    n_success : int
+        Number of successful trials.
+    n_trials : int
+        Total number of trials.
+    confidence : float
+        Confidence level (default 0.95 for 95% CI).
+
+    Returns
+    -------
+    tuple
+        (success_rate, lower_bound, upper_bound)
+    """
+    from scipy import stats
+
+    p = n_success / n_trials
+    z = stats.norm.ppf((1 + confidence) / 2)
+
+    # Wilson score interval
+    denominator = 1 + z**2 / n_trials
+    center = (p + z**2 / (2 * n_trials)) / denominator
+    margin = z * np.sqrt((p * (1 - p) + z**2 / (4 * n_trials)) / n_trials) / denominator
+
+    lower = max(0, center - margin)
+    upper = min(1, center + margin)
+
+    return p, lower, upper
+
+
+# %%
+fig_success, ax_sr = plt.subplots(figsize=(10, 6))
+
+# Calculate success rates and confidence intervals
+success_rates = []
+ci_lower = []
+ci_upper = []
+
+for strategy in STRATEGIES:
+    n_success = strategy_results[strategy]['successes'].sum()
+    rate, lower, upper = compute_binomial_ci(n_success, N_TRIALS)
+    success_rates.append(rate * 100)
+    ci_lower.append(rate * 100 - lower * 100)
+    ci_upper.append(upper * 100 - rate * 100)
+
+# Create bar chart
+x_pos = np.arange(len(STRATEGIES))
+bars = ax_sr.bar(x_pos, success_rates, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
+
+# Add error bars for confidence intervals
+ax_sr.errorbar(
+    x_pos, success_rates,
+    yerr=[ci_lower, ci_upper],
+    fmt='none',
+    color='black',
+    linewidth=2,
+    capsize=8,
+    capthick=2,
+)
+
+# Add value labels on bars
+for i, (bar, rate) in enumerate(zip(bars, success_rates)):
+    height = bar.get_height()
+    ax_sr.annotate(
+        f'{rate:.0f}%',
+        xy=(bar.get_x() + bar.get_width() / 2, height),
+        xytext=(0, 5),
+        textcoords='offset points',
+        ha='center',
+        va='bottom',
+        fontsize=14,
+        fontweight='bold',
+    )
+
+# Add 80% threshold line
+ax_sr.axhline(y=80, color='orange', linestyle='--', linewidth=2, label='80% threshold')
+
+ax_sr.set_ylabel('Success Rate (%)', fontsize=12)
+ax_sr.set_xlabel('Optimization Strategy', fontsize=12)
+ax_sr.set_title('Optimizer Comparison: Success Rates (95% CI)', fontsize=14, fontweight='bold')
+ax_sr.set_xticks(x_pos)
+ax_sr.set_xticklabels(STRATEGIES, fontsize=11)
+ax_sr.set_ylim(0, 110)
+ax_sr.legend(loc='upper right')
+ax_sr.grid(axis='y', alpha=0.3)
+
+plt.tight_layout()
+
+# Save figure
+fig_success.savefig(OUTPUT_DIR / 'optimizer_comparison_success_rate.png', dpi=150, bbox_inches='tight')
+print(f"Saved: {OUTPUT_DIR / 'optimizer_comparison_success_rate.png'}")
+
+plt.show()
+
+# %% [markdown]
+# ### 18.4 Summary Table
+#
+# Consolidated comparison table with key metrics for each strategy.
+
+# %%
+print("\n" + "=" * 80)
+print("OPTIMIZER COMPARISON SUMMARY TABLE")
+print("=" * 80)
+print(f"\nFixed evaluation budget: {COMPARISON_BUDGET} function evaluations")
+print(f"Trials per strategy: {N_TRIALS}")
+print(f"Noise level: {noise_sigma} mag")
+print()
+
+# Print formatted summary table
+header = f"{'Strategy':<15} | {'Success Rate':>12} | {'Mean Error':>12} | {'Mean Time':>10} | {'Median Obj':>12}"
+separator = "-" * len(header)
+print(header)
+print(separator)
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS * 100
+    mean_omega_err = sr['omega_errors'].mean()
+    std_omega_err = sr['omega_errors'].std()
+    mean_time = sr['wall_times'].mean()
+    median_obj = np.median(sr['best_objectives'])
+
+    print(f"{strategy:<15} | {success_rate:>10.0f}% | {mean_omega_err:>9.4f}°/s | {mean_time:>8.1f}s | {median_obj:>12.4f}")
+
+print(separator)
+
+# %%
+# Generate summary table as a formatted string for saving
+summary_table_lines = []
+summary_table_lines.append("=" * 80)
+summary_table_lines.append("OPTIMIZER COMPARISON SUMMARY TABLE")
+summary_table_lines.append("=" * 80)
+summary_table_lines.append(f"")
+summary_table_lines.append(f"Fixed evaluation budget: {COMPARISON_BUDGET} function evaluations")
+summary_table_lines.append(f"Trials per strategy: {N_TRIALS}")
+summary_table_lines.append(f"Noise level: {noise_sigma} mag")
+summary_table_lines.append(f"Success criteria: omega error < {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s AND RMS < {RMS_THRESHOLD_FACTOR} x noise_sigma")
+summary_table_lines.append("")
+summary_table_lines.append(f"{'Strategy':<15} | {'Success Rate':>12} | {'Mean Error':>12} | {'Mean Time':>10} | {'Median Obj':>12}")
+summary_table_lines.append("-" * 80)
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS * 100
+    mean_omega_err = sr['omega_errors'].mean()
+    mean_time = sr['wall_times'].mean()
+    median_obj = np.median(sr['best_objectives'])
+    summary_table_lines.append(
+        f"{strategy:<15} | {success_rate:>10.0f}% | {mean_omega_err:>9.4f}°/s | {mean_time:>8.1f}s | {median_obj:>12.4f}"
+    )
+
+summary_table_lines.append("-" * 80)
+summary_table_text = "\n".join(summary_table_lines)
+
+# %% [markdown]
+# ---
+# ## 19. Conclusions
+#
+# Based on the optimizer comparison experiment, we can draw the following conclusions:
+
+# %%
+# Determine the best strategy based on success rate and other metrics
+best_strategy = None
+best_success_rate = -1.0
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS
+    if success_rate > best_success_rate:
+        best_success_rate = success_rate
+        best_strategy = strategy
+
+# Calculate relative speedup compared to baseline (DE)
+de_mean_time = strategy_results['DE']['wall_times'].mean()
+best_mean_time = strategy_results[best_strategy]['wall_times'].mean()
+speedup_vs_de = de_mean_time / best_mean_time if best_mean_time > 0 else 1.0
+
+# Calculate mean errors for comparison
+best_mean_error = strategy_results[best_strategy]['omega_errors'].mean()
+de_mean_error = strategy_results['DE']['omega_errors'].mean()
+
+print("=" * 80)
+print("CONCLUSIONS")
+print("=" * 80)
+
+conclusion_lines = []
+
+# Main finding
+conclusion_lines.append(f"\n**Best Strategy: {best_strategy}**")
+conclusion_lines.append(f"- Achieves {best_success_rate * 100:.0f}% success rate ({int(best_success_rate * N_TRIALS)}/{N_TRIALS} trials)")
+conclusion_lines.append(f"- Mean angular velocity error: {best_mean_error:.4f} deg/s")
+
+# Speed comparison
+if speedup_vs_de > 1.1:
+    conclusion_lines.append(f"- {speedup_vs_de:.1f}x faster than Differential Evolution baseline")
+elif speedup_vs_de < 0.9:
+    conclusion_lines.append(f"- {1/speedup_vs_de:.1f}x slower than Differential Evolution baseline")
+else:
+    conclusion_lines.append(f"- Comparable speed to Differential Evolution baseline")
+
+# Strategy-specific insights
+conclusion_lines.append(f"\n**Strategy Comparison:**")
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS * 100
+    mean_time = sr['wall_times'].mean()
+    mean_error = sr['omega_errors'].mean()
+    conclusion_lines.append(f"- {strategy}: {success_rate:.0f}% success, {mean_error:.4f}°/s error, {mean_time:.1f}s")
+
+# Recommendation
+conclusion_lines.append(f"\n**Recommendation:**")
+if best_success_rate >= 0.8:
+    conclusion_lines.append(f"For operational use, {best_strategy} is recommended as it achieves ≥80% success rate")
+    conclusion_lines.append(f"within the {COMPARISON_BUDGET}-evaluation budget.")
+elif best_success_rate >= 0.5:
+    conclusion_lines.append(f"Consider increasing the evaluation budget or using multiple restarts, as")
+    conclusion_lines.append(f"the best strategy ({best_strategy}) only achieves {best_success_rate * 100:.0f}% success.")
+else:
+    conclusion_lines.append(f"All strategies struggle with this problem. Consider:")
+    conclusion_lines.append(f"- Increasing evaluation budget significantly")
+    conclusion_lines.append(f"- Using better initialization (e.g., from prior knowledge)")
+    conclusion_lines.append(f"- Simplifying the problem or using regularization")
+
+for line in conclusion_lines:
+    print(line)
+
+# %%
+# Save comprehensive summary to file
+summary_file_path = OUTPUT_DIR / "optimizer_comparison_summary.txt"
+
+with open(summary_file_path, 'w') as f:
+    f.write("LIGHTCURVE INVERSION: OPTIMIZER COMPARISON STUDY\n")
+    f.write("=" * 80 + "\n\n")
+    f.write(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+    f.write(f"Notebook: 06_optimizer_comparison.py\n\n")
+
+    # Summary table
+    f.write(summary_table_text)
+    f.write("\n\n")
+
+    # Conclusions
+    f.write("CONCLUSIONS\n")
+    f.write("-" * 80 + "\n")
+    for line in conclusion_lines:
+        # Remove markdown formatting for plain text
+        clean_line = line.replace("**", "")
+        f.write(clean_line + "\n")
+
+    f.write("\n")
+    f.write("-" * 80 + "\n")
+    f.write("Figures saved:\n")
+    f.write(f"  - optimizer_comparison_objectives.png\n")
+    f.write(f"  - optimizer_comparison_errors.png\n")
+    f.write(f"  - optimizer_comparison_success_rate.png\n")
+
+print(f"\nSummary saved to: {summary_file_path}")
+
+# %% [markdown]
+# ---
+# ## Summary
+#
+# This notebook (06_optimizer_comparison.py) implements a systematic comparison
+# of three optimization strategies for lightcurve inversion:
+#
+# 1. **Multi-start local optimization** with Latin Hypercube Sampling
+# 2. **Differential Evolution** (global optimizer baseline)
+# 3. **Basin Hopping** (hybrid global/local approach)
+#
+# **Key outputs:**
+# - `optimizer_comparison_objectives.png`: Box plot of final objective values
+# - `optimizer_comparison_errors.png`: Box plot of parameter errors
+# - `optimizer_comparison_success_rate.png`: Bar chart with 95% confidence intervals
+# - `optimizer_comparison_summary.txt`: Text summary with conclusions
+#
+# **Available objects for further analysis:**
+# - `comparison_results`: List of all trial result dictionaries
+# - `strategy_results`: Organized numpy arrays per strategy
+# - `STRATEGIES`: List of strategy names
+# - `COMPARISON_BUDGET`, `N_TRIALS`: Experiment configuration
