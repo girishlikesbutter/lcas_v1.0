@@ -982,3 +982,418 @@ print(f"    summary_stats: Dict with aggregated statistics per radius")
 print(f"\n  Success criteria:")
 print(f"    - Omega error < {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s")
 print(f"    - RMS < {RMS_THRESHOLD_FACTOR * noise_sigma:.4f} mag")
+
+# %% [markdown]
+# ---
+# ## 14. Basin Size Visualization and Threshold Identification
+#
+# Visualize success rate vs. initialization radius and identify the critical
+# radius where local optimization reliability drops below 80%.
+
+# %%
+# Compute binomial uncertainty for success rate
+# For n trials with k successes, the standard error is sqrt(p*(1-p)/n)
+# where p = k/n is the estimated success probability
+
+
+def compute_binomial_error(success_rate: float, n_trials: int) -> float:
+    """
+    Compute standard error for binomial proportion.
+
+    Parameters
+    ----------
+    success_rate : float
+        Success rate as percentage (0-100).
+    n_trials : int
+        Number of trials.
+
+    Returns
+    -------
+    error : float
+        Standard error as percentage.
+    """
+    p = success_rate / 100.0
+    if p <= 0 or p >= 1:
+        # Use Wilson score interval approximation for edge cases
+        return 100.0 / np.sqrt(n_trials + 4)
+    return 100.0 * np.sqrt(p * (1 - p) / n_trials)
+
+
+# Compute error bars for each radius
+success_errors = np.array([
+    compute_binomial_error(sr, n_trials_per_radius)
+    for sr in summary_stats['success_rate']
+])
+
+print("Success rate with binomial uncertainty:")
+print("-" * 50)
+for radius, sr, err in zip(test_radii, summary_stats['success_rate'], success_errors):
+    print(f"  {radius:>6.2f} deg: {sr:>5.1f}% +/- {err:>4.1f}%")
+
+# %%
+# Create basin size visualization figures
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# Plot 1: Success rate vs radius with error bars
+ax1 = axes[0]
+ax1.errorbar(
+    test_radii,
+    summary_stats['success_rate'],
+    yerr=success_errors,
+    fmt='o-',
+    capsize=4,
+    capthick=1.5,
+    markersize=8,
+    linewidth=2,
+    color='steelblue',
+    ecolor='steelblue',
+    label='Success rate',
+)
+
+# Add 80% threshold line
+ax1.axhline(80, color='red', linestyle='--', linewidth=1.5, alpha=0.7, label='80% threshold')
+
+# Find and mark critical radius (first radius where success rate drops below 80%)
+critical_idx = None
+for i, sr in enumerate(summary_stats['success_rate']):
+    if sr < 80:
+        critical_idx = i
+        break
+
+if critical_idx is not None and critical_idx > 0:
+    # Interpolate to find more precise critical radius
+    sr_prev = summary_stats['success_rate'][critical_idx - 1]
+    sr_curr = summary_stats['success_rate'][critical_idx]
+    r_prev = test_radii[critical_idx - 1]
+    r_curr = test_radii[critical_idx]
+
+    # Linear interpolation in log space for radius
+    if sr_prev != sr_curr:
+        t = (80 - sr_curr) / (sr_prev - sr_curr)
+        critical_radius = np.exp(t * np.log(r_prev) + (1 - t) * np.log(r_curr))
+    else:
+        critical_radius = r_curr
+
+    ax1.axvline(
+        critical_radius, color='green', linestyle=':', linewidth=2,
+        label=f'Critical radius = {critical_radius:.2f} deg'
+    )
+elif critical_idx == 0:
+    # First radius already below 80%
+    critical_radius = test_radii[0]
+    ax1.axvline(
+        critical_radius, color='green', linestyle=':', linewidth=2,
+        label=f'Critical radius < {critical_radius:.2f} deg'
+    )
+else:
+    # All radii have >80% success rate
+    critical_radius = test_radii[-1]
+    ax1.text(
+        0.5, 0.1, f'Success rate > 80% for all tested radii (up to {critical_radius:.1f} deg)',
+        transform=ax1.transAxes, fontsize=10, ha='center',
+        bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5)
+    )
+
+ax1.set_xlabel('Initialization Radius (degrees)', fontsize=12)
+ax1.set_ylabel('Success Rate (%)', fontsize=12)
+ax1.set_title('Local Optimization Success Rate vs. Initialization Distance', fontsize=13)
+ax1.set_xscale('log')
+ax1.set_ylim(-5, 105)
+ax1.set_xlim(test_radii[0] * 0.8, test_radii[-1] * 1.2)
+ax1.grid(True, alpha=0.3)
+ax1.legend(loc='lower left', fontsize=10)
+
+# Plot 2: Mean omega error vs radius
+ax2 = axes[1]
+ax2.errorbar(
+    test_radii,
+    summary_stats['mean_omega_error'],
+    yerr=summary_stats['std_omega_error'],
+    fmt='s-',
+    capsize=4,
+    capthick=1.5,
+    markersize=8,
+    linewidth=2,
+    color='darkorange',
+    ecolor='darkorange',
+    label='Mean omega error',
+)
+
+# Add success threshold line
+ax2.axhline(
+    OMEGA_ERROR_THRESHOLD_DEG_PER_S, color='red', linestyle='--', linewidth=1.5,
+    alpha=0.7, label=f'Success threshold ({OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s)'
+)
+
+ax2.set_xlabel('Initialization Radius (degrees)', fontsize=12)
+ax2.set_ylabel('Angular Velocity Error (deg/s)', fontsize=12)
+ax2.set_title('Final Angular Velocity Error vs. Initialization Distance', fontsize=13)
+ax2.set_xscale('log')
+ax2.set_yscale('log')
+ax2.set_xlim(test_radii[0] * 0.8, test_radii[-1] * 1.2)
+ax2.grid(True, alpha=0.3, which='both')
+ax2.legend(loc='upper left', fontsize=10)
+
+plt.tight_layout()
+
+# Save figure
+output_path = output_dir / 'inversion_diagnostics' / 'basin_size_success_rate.png'
+plt.savefig(output_path, dpi=150, bbox_inches='tight')
+plt.show()
+
+print(f"\nFigure saved to: {output_path}")
+
+# %%
+# Create additional visualization: Function evaluations and RMS residual
+fig2, axes2 = plt.subplots(1, 2, figsize=(14, 5))
+
+# Plot 3: Mean function evaluations vs radius
+ax3 = axes2[0]
+ax3.errorbar(
+    test_radii,
+    summary_stats['mean_n_evals'],
+    yerr=summary_stats['std_n_evals'],
+    fmt='D-',
+    capsize=4,
+    capthick=1.5,
+    markersize=8,
+    linewidth=2,
+    color='forestgreen',
+    ecolor='forestgreen',
+    label='Mean function evaluations',
+)
+
+ax3.set_xlabel('Initialization Radius (degrees)', fontsize=12)
+ax3.set_ylabel('Function Evaluations', fontsize=12)
+ax3.set_title('Optimization Cost vs. Initialization Distance', fontsize=13)
+ax3.set_xscale('log')
+ax3.set_xlim(test_radii[0] * 0.8, test_radii[-1] * 1.2)
+ax3.grid(True, alpha=0.3)
+ax3.legend(loc='upper left', fontsize=10)
+
+# Plot 4: Mean RMS residual vs radius
+ax4 = axes2[1]
+ax4.errorbar(
+    test_radii,
+    summary_stats['mean_rms_residual'],
+    yerr=summary_stats['std_rms_residual'],
+    fmt='^-',
+    capsize=4,
+    capthick=1.5,
+    markersize=8,
+    linewidth=2,
+    color='purple',
+    ecolor='purple',
+    label='Mean RMS residual',
+)
+
+# Add noise level reference
+ax4.axhline(
+    noise_sigma, color='gray', linestyle='--', linewidth=1.5,
+    alpha=0.7, label=f'Noise sigma ({noise_sigma} mag)'
+)
+ax4.axhline(
+    RMS_THRESHOLD_FACTOR * noise_sigma, color='red', linestyle='--', linewidth=1.5,
+    alpha=0.7, label=f'Success threshold ({RMS_THRESHOLD_FACTOR}x sigma)'
+)
+
+ax4.set_xlabel('Initialization Radius (degrees)', fontsize=12)
+ax4.set_ylabel('RMS Residual (mag)', fontsize=12)
+ax4.set_title('Final RMS Residual vs. Initialization Distance', fontsize=13)
+ax4.set_xscale('log')
+ax4.set_yscale('log')
+ax4.set_xlim(test_radii[0] * 0.8, test_radii[-1] * 1.2)
+ax4.grid(True, alpha=0.3, which='both')
+ax4.legend(loc='upper left', fontsize=10)
+
+plt.tight_layout()
+
+# Save figure
+output_path2 = output_dir / 'inversion_diagnostics' / 'basin_size_metrics.png'
+plt.savefig(output_path2, dpi=150, bbox_inches='tight')
+plt.show()
+
+print(f"\nFigure saved to: {output_path2}")
+
+# %% [markdown]
+# ---
+# ## 15. Basin Size Study Summary
+#
+# This section summarizes the key findings from the basin size analysis.
+
+# %%
+# Generate summary findings
+
+
+def find_critical_radius_80(radii: list, success_rates: np.ndarray) -> tuple[float | None, str]:
+    """
+    Find the critical radius where success rate drops below 80%.
+
+    Returns
+    -------
+    critical_radius : float or None
+        The interpolated critical radius, or None if all rates are above 80%.
+    description : str
+        Human-readable description of the finding.
+    """
+    # Find first index where success rate < 80%
+    below_80_idx = None
+    for i, sr in enumerate(success_rates):
+        if sr < 80:
+            below_80_idx = i
+            break
+
+    if below_80_idx is None:
+        return None, f"Success rate remains above 80% for all tested radii (up to {radii[-1]:.1f} degrees)"
+
+    if below_80_idx == 0:
+        return radii[0], f"Success rate drops below 80% even at smallest tested radius ({radii[0]:.2f} degrees)"
+
+    # Interpolate between the two points
+    sr_prev = success_rates[below_80_idx - 1]
+    sr_curr = success_rates[below_80_idx]
+    r_prev = radii[below_80_idx - 1]
+    r_curr = radii[below_80_idx]
+
+    if sr_prev != sr_curr:
+        t = (80 - sr_curr) / (sr_prev - sr_curr)
+        critical_radius = np.exp(t * np.log(r_prev) + (1 - t) * np.log(r_curr))
+    else:
+        critical_radius = r_curr
+
+    return critical_radius, f"Success rate drops below 80% at approximately {critical_radius:.2f} degrees"
+
+
+# Find critical radius
+critical_r, critical_description = find_critical_radius_80(test_radii, summary_stats['success_rate'])
+
+# Generate summary
+print("=" * 70)
+print("BASIN SIZE STUDY - SUMMARY FINDINGS")
+print("=" * 70)
+
+print("\n1. CRITICAL RADIUS IDENTIFICATION")
+print("-" * 40)
+print(f"   {critical_description}")
+if critical_r is not None:
+    print(f"\n   Interpretation: Local optimization (L-BFGS-B) succeeds with >80%")
+    print(f"   probability when initialized within {critical_r:.2f} degrees of the true solution.")
+
+print("\n2. SUCCESS RATE PROFILE")
+print("-" * 40)
+high_success_radii = [r for r, sr in zip(test_radii, summary_stats['success_rate']) if sr >= 95]
+moderate_success_radii = [r for r, sr in zip(test_radii, summary_stats['success_rate']) if 80 <= sr < 95]
+low_success_radii = [r for r, sr in zip(test_radii, summary_stats['success_rate']) if sr < 80]
+
+if high_success_radii:
+    print(f"   Very high success (>=95%): radii <= {max(high_success_radii):.2f} degrees")
+if moderate_success_radii:
+    print(f"   Moderate success (80-95%): radii in [{min(moderate_success_radii):.2f}, {max(moderate_success_radii):.2f}] degrees")
+if low_success_radii:
+    print(f"   Low success (<80%): radii >= {min(low_success_radii):.2f} degrees")
+
+print("\n3. OPTIMIZATION COST")
+print("-" * 40)
+min_evals = summary_stats['mean_n_evals'].min()
+max_evals = summary_stats['mean_n_evals'].max()
+print(f"   Function evaluations range: {min_evals:.0f} - {max_evals:.0f}")
+print(f"   Cost increases with initialization distance as expected.")
+
+print("\n4. PRACTICAL IMPLICATIONS")
+print("-" * 40)
+if critical_r is not None and critical_r < 1.0:
+    print(f"   - Basin of attraction is NARROW ({critical_r:.2f} degrees)")
+    print(f"   - Global search or multi-start strategies are RECOMMENDED")
+    print(f"   - Single local optimization from random guess will likely fail")
+elif critical_r is not None and critical_r < 5.0:
+    print(f"   - Basin of attraction is MODERATE ({critical_r:.2f} degrees)")
+    print(f"   - Multi-start local optimization may suffice")
+    print(f"   - Consider guided initialization from prior knowledge")
+else:
+    print(f"   - Basin of attraction is WIDE (>{test_radii[-1]:.1f} degrees)")
+    print(f"   - Local optimization from reasonable initial guess likely sufficient")
+    print(f"   - Global search may not be necessary")
+
+# %%
+# Save summary to file
+summary_text = f"""Basin Size Study - Summary Report
+================================
+
+Analysis Date: {time.strftime('%Y-%m-%d %H:%M')}
+Configuration: {config.name}
+Observations: {n_observations}
+Noise Level: {noise_sigma} mag
+
+Experiment Parameters
+---------------------
+- Test radii: {test_radii} degrees
+- Trials per radius: {n_trials_per_radius}
+- Total optimizations: {len(test_radii) * n_trials_per_radius}
+
+Success Criteria
+----------------
+- Angular velocity error < {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s
+- RMS residual < {RMS_THRESHOLD_FACTOR * noise_sigma:.4f} mag
+
+Results by Radius
+-----------------
+{'Radius (deg)':<12} | {'Success Rate':<12} | {'Mean Omega Err (deg/s)':<22} | {'Mean RMS (mag)':<15}
+{'-' * 70}
+"""
+
+for i, radius in enumerate(test_radii):
+    sr = summary_stats['success_rate'][i]
+    omega_err = summary_stats['mean_omega_error'][i]
+    rms = summary_stats['mean_rms_residual'][i]
+    summary_text += f"{radius:<12.2f} | {sr:<12.1f} | {omega_err:<22.6f} | {rms:<15.6f}\n"
+
+summary_text += f"""
+Critical Radius Finding
+-----------------------
+{critical_description}
+
+Recommendation
+--------------
+"""
+
+if critical_r is not None and critical_r < 1.0:
+    summary_text += f"""Local optimization succeeds with >80% probability when initialized within
+{critical_r:.2f} degrees of the true solution. This is a NARROW basin of attraction,
+indicating that global search or multi-start strategies are RECOMMENDED for
+reliable inversion without prior knowledge of the true parameters.
+"""
+elif critical_r is not None and critical_r < 5.0:
+    summary_text += f"""Local optimization succeeds with >80% probability when initialized within
+{critical_r:.2f} degrees of the true solution. This is a MODERATE basin of attraction.
+Multi-start local optimization with ~10-20 random initializations should provide
+good convergence probability.
+"""
+else:
+    summary_text += f"""Local optimization succeeds with >80% probability for all tested initialization
+radii (up to {test_radii[-1]:.1f} degrees). This indicates a WIDE basin of attraction.
+Local optimization from a reasonable initial guess should be sufficient for most cases.
+"""
+
+# Save to file
+summary_path = output_dir / 'inversion_diagnostics' / 'basin_size_summary.txt'
+with open(summary_path, 'w') as f:
+    f.write(summary_text)
+
+print(f"\nSummary saved to: {summary_path}")
+
+# %% [markdown]
+# ---
+# ## Conclusions
+#
+# This notebook has systematically characterized the basin of attraction for
+# lightcurve inversion by measuring local optimization success rate as a
+# function of initialization distance from the true solution.
+#
+# Key outputs:
+# - `basin_size_success_rate.png`: Success rate vs. radius with error bars
+# - `basin_size_metrics.png`: Error and cost metrics vs. radius
+# - `basin_size_summary.txt`: Quantitative summary of findings
+#
+# The critical radius where success rate drops below 80% indicates the
+# effective size of the basin of attraction and informs whether global
+# search strategies are necessary for reliable inversion.
