@@ -648,3 +648,344 @@ print("\nReady for robustness analysis experiments.")
 print(f"  Max observations: {max_n_observations}")
 print(f"  True parameters: {true_params}")
 print(f"  Full lightcurve range: [{full_true_lightcurve.min():.2f}, {full_true_lightcurve.max():.2f}] mag")
+
+# %% [markdown]
+# ---
+# ## 12. CountedObjective Wrapper and Optimizer
+#
+# Implement the same CountedObjective wrapper and multi-start optimizer from notebook 06
+# for fair comparison.
+
+# %%
+from scipy.stats.qmc import LatinHypercube
+
+
+class CountedObjective:
+    """
+    Wrapper that counts function evaluations and enforces a budget limit.
+
+    Parameters
+    ----------
+    objective_fn : ObjectiveFunction
+        The underlying objective function to wrap.
+    budget : int
+        Maximum number of function evaluations allowed.
+    penalty_value : float
+        Value returned when budget is exhausted. Default is 1e10.
+    """
+
+    def __init__(
+        self,
+        objective_fn: ObjectiveFunction,
+        budget: int,
+        penalty_value: float = 1e10,
+    ):
+        self.objective_fn = objective_fn
+        self.budget = budget
+        self.penalty_value = penalty_value
+
+        # Tracking state
+        self.n_evals = 0
+        self.best_value = float('inf')
+        self.best_params = None
+
+    def __call__(self, params: np.ndarray) -> float:
+        """
+        Evaluate the objective function with budget enforcement.
+
+        Parameters
+        ----------
+        params : np.ndarray
+            Parameter vector to evaluate.
+
+        Returns
+        -------
+        float
+            Objective value, or penalty_value if budget is exhausted.
+        """
+        # Check budget
+        if self.n_evals >= self.budget:
+            return self.penalty_value
+
+        self.n_evals += 1
+
+        # Normalize axis-angle via quaternion round-trip
+        axis_angle = params[:3]
+        omega = params[3:]
+
+        q = axis_angle_to_quaternion(axis_angle)
+        q_normalized = normalize_quaternion(q)
+        axis_angle_norm = quaternion_to_axis_angle(q_normalized)
+
+        params_normalized = np.concatenate([axis_angle_norm, omega])
+
+        # Evaluate objective
+        value = self.objective_fn(params_normalized)
+
+        # Track best result
+        if value < self.best_value:
+            self.best_value = value
+            self.best_params = params_normalized.copy()
+
+        return value
+
+    def reset(self) -> None:
+        """Reset the counter and tracking for a new optimization trial."""
+        self.n_evals = 0
+        self.best_value = float('inf')
+        self.best_params = None
+
+    def is_budget_exhausted(self) -> bool:
+        """Check if the evaluation budget has been exhausted."""
+        return self.n_evals >= self.budget
+
+
+def multistart_local(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    n_starts: int,
+    max_evals_per_start: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Multi-start local optimization using Latin Hypercube Sampling.
+
+    Parameters
+    ----------
+    counted_objective : CountedObjective
+        Budget-enforcing objective wrapper. Should already be reset before calling.
+    bounds : list[tuple[float, float]]
+        List of (lower, upper) bounds for each parameter.
+    n_starts : int
+        Number of random starting points to try.
+    max_evals_per_start : int
+        Maximum function evaluations per local optimization.
+    seed : int | None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    dict
+        Results containing x_best, f_best, n_evals, and more.
+    """
+    n_params = len(bounds)
+    lower_bounds = np.array([b[0] for b in bounds])
+    upper_bounds = np.array([b[1] for b in bounds])
+
+    # Generate Latin Hypercube samples in [0, 1]^n
+    lhs = LatinHypercube(d=n_params, seed=seed)
+    samples_unit = lhs.random(n=n_starts)
+
+    # Scale to parameter bounds
+    initial_points = lower_bounds + samples_unit * (upper_bounds - lower_bounds)
+
+    # Track results
+    x_best = None
+    f_best = float('inf')
+
+    for x0 in initial_points:
+        # Check if budget is already exhausted
+        if counted_objective.is_budget_exhausted():
+            break
+
+        # Run L-BFGS-B from this starting point
+        result = minimize(
+            counted_objective,
+            x0,
+            method='L-BFGS-B',
+            bounds=bounds,
+            options={
+                'maxfun': max_evals_per_start,
+                'ftol': 1e-8,
+                'gtol': 1e-6,
+            },
+        )
+
+        # Update best if this is better
+        if result.fun < f_best:
+            f_best = result.fun
+            x_best = result.x.copy()
+
+    return {
+        'x_best': x_best if x_best is not None else counted_objective.best_params,
+        'f_best': f_best if f_best < float('inf') else counted_objective.best_value,
+        'n_evals': counted_objective.n_evals,
+    }
+
+
+print("CountedObjective and multistart_local() defined")
+
+# %% [markdown]
+# ---
+# ## 13. Robustness Sweep Experiment
+#
+# Systematic sweep across noise levels and observation counts to map success rate.
+#
+# **Configuration:**
+# - Noise levels: [0.01, 0.02, 0.05, 0.1, 0.2] mag
+# - Observation counts: [20, 35, 50, 75, 100]
+# - 5 trials per combination = 25 cells x 5 trials = 125 optimizations
+# - Use multi-start local optimizer (best from notebook 06)
+
+# %%
+# Sweep configuration
+NOISE_LEVELS = [0.01, 0.02, 0.05, 0.1, 0.2]  # magnitudes
+N_OBSERVATIONS_LIST = [20, 35, 50, 75, 100]
+N_TRIALS_PER_CELL = 5
+
+# Optimizer settings (from notebook 06)
+EVAL_BUDGET = 5000
+N_STARTS = 50
+EVALS_PER_START = 100
+
+# Base seed for reproducibility
+BASE_SEED = 42
+
+print("=" * 70)
+print("ROBUSTNESS SWEEP CONFIGURATION")
+print("=" * 70)
+print(f"\nNoise levels (mag): {NOISE_LEVELS}")
+print(f"Observation counts: {N_OBSERVATIONS_LIST}")
+print(f"Trials per cell: {N_TRIALS_PER_CELL}")
+print(f"Total cells: {len(NOISE_LEVELS) * len(N_OBSERVATIONS_LIST)}")
+print(f"Total optimizations: {len(NOISE_LEVELS) * len(N_OBSERVATIONS_LIST) * N_TRIALS_PER_CELL}")
+print(f"\nOptimizer: Multi-start local (LHS)")
+print(f"  Evaluation budget: {EVAL_BUDGET}")
+print(f"  Number of starts: {N_STARTS}")
+print(f"  Evals per start: {EVALS_PER_START}")
+
+# %%
+# Initialize result storage
+# 2D arrays: [n_noise x n_observations]
+n_noise = len(NOISE_LEVELS)
+n_obs_configs = len(N_OBSERVATIONS_LIST)
+
+# Success rate will be computed from trial results
+success_matrix = np.zeros((n_noise, n_obs_configs))
+mean_omega_error = np.zeros((n_noise, n_obs_configs))
+mean_rms_residual = np.zeros((n_noise, n_obs_configs))
+
+# Store all trial results for detailed analysis
+all_trial_results = []
+
+print("\nRunning robustness sweep...")
+print("-" * 70)
+
+sweep_start_time = time.time()
+
+for i, noise_sigma in enumerate(NOISE_LEVELS):
+    for j, n_obs in enumerate(N_OBSERVATIONS_LIST):
+        cell_successes = 0
+        cell_omega_errors = []
+        cell_rms_residuals = []
+
+        print(f"\nCell [{i},{j}]: noise={noise_sigma:.2f} mag, n_obs={n_obs}")
+
+        for trial in range(N_TRIALS_PER_CELL):
+            # Generate unique seed for this trial
+            trial_seed = BASE_SEED + i * 1000 + j * 100 + trial
+
+            # Generate test case
+            test_case = generate_test_case(n_obs, noise_sigma, trial_seed)
+
+            # Create counted objective for this trial
+            counted_obj = CountedObjective(
+                test_case['objective_fn'],
+                budget=EVAL_BUDGET,
+            )
+
+            # Run optimizer
+            trial_start = time.time()
+            result = multistart_local(
+                counted_objective=counted_obj,
+                bounds=bounds,
+                n_starts=N_STARTS,
+                max_evals_per_start=EVALS_PER_START,
+                seed=trial_seed + 10000,  # Different seed for optimizer
+            )
+            trial_time = time.time() - trial_start
+
+            # Get best parameters
+            x_opt = result['x_best']
+
+            # Evaluate success
+            if x_opt is not None:
+                success, omega_error, rms_residual = evaluate_success(
+                    x_opt, true_params, test_case['objective_fn'], noise_sigma
+                )
+            else:
+                success = False
+                omega_error = float('inf')
+                rms_residual = float('inf')
+
+            # Record trial result
+            trial_result = {
+                'noise_sigma': noise_sigma,
+                'n_observations': n_obs,
+                'trial': trial,
+                'seed': trial_seed,
+                'success': success,
+                'omega_error_deg': omega_error,
+                'rms_residual': rms_residual,
+                'objective_value': result['f_best'],
+                'n_evals': result['n_evals'],
+                'wall_time': trial_time,
+            }
+            all_trial_results.append(trial_result)
+
+            # Accumulate for cell statistics
+            if success:
+                cell_successes += 1
+            cell_omega_errors.append(omega_error)
+            cell_rms_residuals.append(rms_residual)
+
+            print(f"  Trial {trial+1}: {'SUCCESS' if success else 'FAIL'}, "
+                  f"omega_err={omega_error:.4f} deg/s, rms={rms_residual:.4f} mag, "
+                  f"time={trial_time:.1f}s")
+
+        # Compute cell statistics
+        success_matrix[i, j] = cell_successes / N_TRIALS_PER_CELL
+        mean_omega_error[i, j] = np.mean(cell_omega_errors)
+        mean_rms_residual[i, j] = np.mean(cell_rms_residuals)
+
+        print(f"  Cell success rate: {success_matrix[i, j]*100:.0f}%")
+
+sweep_elapsed = time.time() - sweep_start_time
+
+print("\n" + "=" * 70)
+print(f"SWEEP COMPLETE in {sweep_elapsed/60:.1f} minutes")
+print("=" * 70)
+
+# %%
+# Display success rate matrix
+print("\nSuccess Rate Matrix (%):")
+print("-" * 50)
+
+# Header row
+header = "          | " + " | ".join([f"n={n:3d}" for n in N_OBSERVATIONS_LIST]) + " |"
+print(header)
+print("-" * len(header))
+
+# Data rows
+for i, noise in enumerate(NOISE_LEVELS):
+    row = f"σ={noise:.2f}  | " + " | ".join([f"{success_matrix[i,j]*100:5.0f}%" for j in range(n_obs_configs)]) + " |"
+    print(row)
+
+print("-" * len(header))
+
+# %%
+# Display omega error matrix
+print("\nMean Omega Error Matrix (deg/s):")
+print("-" * 50)
+
+# Header row
+header = "          | " + " | ".join([f"n={n:3d}" for n in N_OBSERVATIONS_LIST]) + " |"
+print(header)
+print("-" * len(header))
+
+# Data rows
+for i, noise in enumerate(NOISE_LEVELS):
+    row = f"σ={noise:.2f}  | " + " | ".join([f"{mean_omega_error[i,j]:6.3f}" for j in range(n_obs_configs)]) + " |"
+    print(row)
+
+print("-" * len(header))
