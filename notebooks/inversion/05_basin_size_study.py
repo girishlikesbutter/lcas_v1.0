@@ -585,6 +585,215 @@ print(f"  SUCCESS: {success}")
 
 # %% [markdown]
 # ---
+# ## 11. Constrained Random Initialization Sampler
+#
+# Generate random starting points uniformly distributed within a hypersphere
+# of specified radius around the true solution. The radius is specified in
+# scaled units where different parameter types (axis-angle vs omega) have
+# different natural scales.
+
+# %%
+def sample_in_ball(
+    true_params: np.ndarray,
+    radius: float,
+    n_samples: int,
+    param_scales: np.ndarray,
+    seed: int | None = None,
+) -> np.ndarray:
+    """
+    Sample points uniformly within a hypersphere around the true parameters.
+
+    Uses the method of sampling a direction uniformly on the unit sphere and
+    then sampling a radius with the appropriate distribution for uniform
+    density in the ball.
+
+    Parameters
+    ----------
+    true_params : np.ndarray
+        Center of the ball (6 elements).
+    radius : float
+        Radius of the ball in scaled units.
+    n_samples : int
+        Number of samples to generate.
+    param_scales : np.ndarray
+        Scale factors for each parameter (6 elements). The radius is measured
+        in units where each parameter is divided by its scale. For example,
+        if param_scales = [1.0, 1.0, 1.0, 0.001, 0.001, 0.001], then a radius
+        of 0.1 corresponds to 0.1 rad deviation in axis-angle and 0.0001 rad/s
+        deviation in omega.
+    seed : int or None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    samples : np.ndarray
+        Array of shape (n_samples, 6) containing sampled parameters.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    n_dims = len(true_params)
+    samples = np.zeros((n_samples, n_dims))
+
+    for i in range(n_samples):
+        # Sample direction uniformly on unit sphere
+        # Using the method of normalizing a Gaussian vector
+        direction = np.random.randn(n_dims)
+        direction /= np.linalg.norm(direction)
+
+        # Sample radius with r^(n-1) weighting for uniform density in ball
+        # For n dimensions, CDF is (r/R)^n, so r = R * u^(1/n)
+        u = np.random.random()
+        r = radius * (u ** (1.0 / n_dims))
+
+        # Compute scaled offset
+        scaled_offset = r * direction
+
+        # Convert to actual parameter offset by multiplying by scales
+        param_offset = scaled_offset * param_scales
+
+        # Add to true parameters
+        samples[i] = true_params + param_offset
+
+    return samples
+
+
+def verify_samples_in_ball(
+    samples: np.ndarray,
+    true_params: np.ndarray,
+    radius: float,
+    param_scales: np.ndarray,
+) -> tuple[bool, np.ndarray]:
+    """
+    Verify that all samples are within the specified radius of true_params.
+
+    Parameters
+    ----------
+    samples : np.ndarray
+        Array of shape (n_samples, n_dims) containing samples.
+    true_params : np.ndarray
+        Center of the ball.
+    radius : float
+        Radius of the ball in scaled units.
+    param_scales : np.ndarray
+        Scale factors for each parameter.
+
+    Returns
+    -------
+    all_inside : bool
+        True if all samples are within the ball.
+    scaled_distances : np.ndarray
+        Array of scaled distances from true_params for each sample.
+    """
+    # Compute scaled distances
+    offsets = samples - true_params
+    scaled_offsets = offsets / param_scales
+    scaled_distances = np.linalg.norm(scaled_offsets, axis=1)
+
+    all_inside = np.all(scaled_distances <= radius * (1 + 1e-10))  # Small tolerance
+
+    return all_inside, scaled_distances
+
+
+# %%
+# Define parameter scales
+# Axis-angle: use 1 radian as natural scale
+# Omega: use 1 deg/s = 0.01745 rad/s as natural scale
+# This means radius is measured in degrees for both orientation and angular velocity
+
+AXIS_ANGLE_SCALE = np.deg2rad(1.0)  # 1 degree in radians
+OMEGA_SCALE = np.deg2rad(1.0)  # 1 deg/s in rad/s
+
+param_scales = np.array([
+    AXIS_ANGLE_SCALE,  # axis_angle_x: 1 deg
+    AXIS_ANGLE_SCALE,  # axis_angle_y: 1 deg
+    AXIS_ANGLE_SCALE,  # axis_angle_z: 1 deg
+    OMEGA_SCALE,       # omega_x: 1 deg/s
+    OMEGA_SCALE,       # omega_y: 1 deg/s
+    OMEGA_SCALE,       # omega_z: 1 deg/s
+])
+
+print("Parameter scales (for uniform ball sampling):")
+for name, scale in zip(param_names, param_scales):
+    print(f"  {name}: {scale:.6f} (= 1 degree or 1 deg/s)")
+
+# %% [markdown]
+# ---
+# ## 12. Test Random Initialization Sampler
+#
+# Verify that the sampler generates points uniformly within the specified radius.
+
+# %%
+# Test the sampler with a moderate radius
+test_radius = 5.0  # 5 degrees
+test_n_samples = 100
+test_seed = 123
+
+print(f"\nTesting sample_in_ball:")
+print(f"  Radius: {test_radius} degrees")
+print(f"  Samples: {test_n_samples}")
+print(f"  Seed: {test_seed}")
+
+test_samples = sample_in_ball(
+    true_params=true_params,
+    radius=test_radius,
+    n_samples=test_n_samples,
+    param_scales=param_scales,
+    seed=test_seed,
+)
+
+print(f"\nSample array shape: {test_samples.shape}")
+
+# Verify all samples are within the ball
+all_inside, scaled_distances = verify_samples_in_ball(
+    test_samples, true_params, test_radius, param_scales
+)
+
+print(f"\nVerification:")
+print(f"  All samples inside ball: {all_inside}")
+print(f"  Min scaled distance: {scaled_distances.min():.4f} deg")
+print(f"  Max scaled distance: {scaled_distances.max():.4f} deg")
+print(f"  Mean scaled distance: {scaled_distances.mean():.4f} deg")
+
+# For uniform distribution in a ball, expected mean distance is n/(n+1) * R
+# For n=6, this is 6/7 * R = 0.857 * R
+expected_mean_ratio = 6.0 / 7.0
+expected_mean = expected_mean_ratio * test_radius
+print(f"\nExpected mean distance (for uniform ball): {expected_mean:.4f} deg")
+print(f"Actual/Expected ratio: {scaled_distances.mean() / expected_mean:.3f}")
+
+# %%
+# Visualize the distribution of scaled distances
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+# Histogram of scaled distances
+ax1 = axes[0]
+ax1.hist(scaled_distances, bins=20, density=True, alpha=0.7, edgecolor='black')
+ax1.axvline(test_radius, color='red', linestyle='--', label=f'Radius = {test_radius}')
+ax1.axvline(scaled_distances.mean(), color='green', linestyle='--', label=f'Mean = {scaled_distances.mean():.2f}')
+ax1.set_xlabel('Scaled Distance (degrees)')
+ax1.set_ylabel('Density')
+ax1.set_title('Distribution of Sample Distances from True Parameters')
+ax1.legend()
+
+# Per-parameter offset distribution
+ax2 = axes[1]
+param_offsets_deg = np.rad2deg(test_samples - true_params)
+for i, name in enumerate(param_names[:3]):  # Just axis-angle for clarity
+    ax2.hist(param_offsets_deg[:, i], bins=15, alpha=0.5, label=name)
+ax2.set_xlabel('Offset (degrees)')
+ax2.set_ylabel('Count')
+ax2.set_title('Distribution of Axis-Angle Offsets')
+ax2.legend()
+
+plt.tight_layout()
+plt.savefig(output_dir / 'inversion_diagnostics' / 'sample_in_ball_test.png', dpi=150)
+plt.show()
+
+print(f"\nTest plot saved to: {output_dir / 'inversion_diagnostics' / 'sample_in_ball_test.png'}")
+
+# %% [markdown]
+# ---
 # ## Setup Complete
 #
 # We now have:
@@ -594,9 +803,11 @@ print(f"  SUCCESS: {success}")
 # - `run_local_optimization()`: Function to run local optimization
 # - `evaluate_success()`: Function to check if optimization succeeded
 # - `noise_sigma`: The noise level (0.05 mag)
+# - `sample_in_ball()`: Function to generate random samples in a hypersphere
+# - `verify_samples_in_ball()`: Function to verify samples are within the ball
+# - `param_scales`: Scale factors for proper distance measurement
 #
-# The next user stories (US-008 onwards) will add:
-# - Random initialization sampler
+# The next user stories (US-009 onwards) will add:
 # - Basin size sweep experiment
 # - Visualization and threshold identification
 
@@ -610,8 +821,12 @@ print(f"  true_params: {true_params}")
 print(f"  bounds: {len(bounds)} parameter bounds")
 print(f"  noise_sigma: {noise_sigma}")
 print(f"  n_observations: {n_observations}")
-print(f"\n  run_local_optimization(): L-BFGS-B wrapper")
-print(f"  evaluate_success(): Success criteria checker")
+print(f"  param_scales: {param_scales}")
+print(f"\n  Functions:")
+print(f"    run_local_optimization(): L-BFGS-B wrapper")
+print(f"    evaluate_success(): Success criteria checker")
+print(f"    sample_in_ball(): Random sampling within hypersphere")
+print(f"    verify_samples_in_ball(): Verify samples within radius")
 print(f"\n  Success criteria:")
 print(f"    - Omega error < {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s")
 print(f"    - RMS < {RMS_THRESHOLD_FACTOR * noise_sigma:.4f} mag")
