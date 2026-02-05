@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.0
+#       jupytext_version: 1.19.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -296,6 +296,8 @@ objective_temp = ObjectiveFunction(
     observer_distances=observer_distances,
     compute_shadows_flag=True,
     articulation_matrices=articulation_matrices,
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
 )
 
 # Get body-frame vectors from propagated attitude
@@ -360,7 +362,7 @@ objective_fn = ObjectiveFunction(
 )
 
 # Verify the objective value at true parameters
-obj_at_true = objective_fn(true_params)
+obj_at_true = objective_fn.evaluate(true_params)
 print(f"\nObjectiveFunction created for landscape analysis")
 print(f"  Objective value at true parameters: {obj_at_true:.6f}")
 print(f"  (This should be close to chi-squared of noise-only residuals)")
@@ -444,7 +446,7 @@ def compute_1d_slice(
     for i, delta in enumerate(deltas):
         params = true_params.copy()
         params[param_index] = true_params[param_index] + delta
-        objectives[i] = objective_fn(params)
+        objectives[i] = objective_fn.evaluate(params)
 
     return deltas, objectives
 
@@ -661,7 +663,7 @@ def compute_2d_slice(
             params = true_params.copy()
             params[param_i] = true_params[param_i] + di
             params[param_j] = true_params[param_j] + dj
-            objectives[j_idx, i_idx] = objective_fn(params)
+            objectives[j_idx, i_idx] = objective_fn.evaluate(params)
 
     return deltas_i, deltas_j, objectives
 
@@ -856,7 +858,7 @@ def compute_numerical_gradient(
         params_minus[i] -= h
 
         # Central difference: f'(x) ≈ (f(x+h) - f(x-h)) / (2h)
-        gradient[i] = (objective_fn(params_plus) - objective_fn(params_minus)) / (2 * h)
+        gradient[i] = (objective_fn.evaluate(params_plus) - objective_fn.evaluate(params_minus)) / (2 * h)
 
     return gradient
 
@@ -894,7 +896,7 @@ def compute_numerical_hessian(
     if step_sizes is None:
         step_sizes = np.maximum(np.abs(params) * 1e-4, 1e-6)
 
-    f_center = objective_fn(params)
+    f_center = objective_fn.evaluate(params)
 
     # Diagonal elements: f''_ii ≈ (f(x+h) - 2f(x) + f(x-h)) / h^2
     for i in range(n_params):
@@ -904,8 +906,8 @@ def compute_numerical_hessian(
         params_plus[i] += h_i
         params_minus[i] -= h_i
 
-        f_plus = objective_fn(params_plus)
-        f_minus = objective_fn(params_minus)
+        f_plus = objective_fn.evaluate(params_plus)
+        f_minus = objective_fn.evaluate(params_minus)
 
         hessian[i, i] = (f_plus - 2 * f_center + f_minus) / (h_i ** 2)
 
@@ -929,10 +931,10 @@ def compute_numerical_hessian(
             params_mm[i] -= h_i
             params_mm[j] -= h_j
 
-            f_pp = objective_fn(params_pp)
-            f_pm = objective_fn(params_pm)
-            f_mp = objective_fn(params_mp)
-            f_mm = objective_fn(params_mm)
+            f_pp = objective_fn.evaluate(params_pp)
+            f_pm = objective_fn.evaluate(params_pm)
+            f_mp = objective_fn.evaluate(params_mp)
+            f_mm = objective_fn.evaluate(params_mm)
 
             hessian[i, j] = (f_pp - f_pm - f_mp + f_mm) / (4 * h_i * h_j)
             hessian[j, i] = hessian[i, j]  # Symmetric

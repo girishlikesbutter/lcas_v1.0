@@ -9,7 +9,7 @@ and observed lightcurves given a set of initial attitude parameters.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 import numpy as np
 from numpy.typing import NDArray
 
@@ -79,6 +79,12 @@ class ObjectiveFunction:
         Dict mapping component names to (N, 4, 4) transformation matrices.
         Used for fixed articulation angles (e.g., solar panels at 0°,
         antenna dishes at 15°).
+    mode : str, optional
+        Attitude propagation mode: "tumbling" (default) or "principal_axis".
+        Tumbling mode uses Euler dynamics with inertia tensor.
+        Principal axis mode assumes constant angular velocity.
+    inertia_tensor : ndarray, optional
+        Inertia tensor (3, 3) for tumbling mode. Required if mode="tumbling".
 
     Attributes
     ----------
@@ -106,6 +112,8 @@ class ObjectiveFunction:
         compute_shadows_flag: bool = True,
         articulation_matrices: Optional[Dict[str, NDArray[np.floating]]] = None,
         show_progress: bool = True,
+        mode: Literal["tumbling", "principal_axis"] = "tumbling",
+        inertia_tensor: Optional[NDArray[np.floating]] = None,
     ) -> None:
         """Initialize the objective function with observation data."""
         # Validate inputs
@@ -141,6 +149,18 @@ class ObjectiveFunction:
                 f"must match observation_times length ({n_obs})"
             )
 
+        # Validate mode and inertia tensor
+        if mode not in ("tumbling", "principal_axis"):
+            raise ValueError(f"mode must be 'tumbling' or 'principal_axis', got '{mode}'")
+        if mode == "tumbling" and inertia_tensor is None:
+            raise ValueError("inertia_tensor is required for tumbling mode")
+        if inertia_tensor is not None:
+            inertia_tensor = np.asarray(inertia_tensor, dtype=np.float64)
+            if inertia_tensor.shape != (3, 3):
+                raise ValueError(
+                    f"inertia_tensor must have shape (3, 3), got {inertia_tensor.shape}"
+                )
+
         # Store satellite model
         self.satellite = satellite
 
@@ -170,6 +190,10 @@ class ObjectiveFunction:
         # Dict mapping component names to (N, 4, 4) rotation matrices
         self.articulation_matrices = articulation_matrices if articulation_matrices else {}
 
+        # Attitude propagation mode and inertia tensor
+        self.mode = mode
+        self.inertia_tensor = inertia_tensor
+
         # Statistics and progress tracking
         self.n_evaluations = 0
         self._last_progress_print = 0
@@ -177,6 +201,7 @@ class ObjectiveFunction:
 
         logger.debug(
             f"ObjectiveFunction initialized: {n_obs} observations, "
+            f"mode={mode}, "
             f"shadows={'on' if compute_shadows_flag else 'off'}, "
             f"articulation_components={list(self.articulation_matrices.keys()) if self.articulation_matrices else 'none'}"
         )
@@ -319,12 +344,13 @@ class ObjectiveFunction:
         # Convert axis-angle to initial quaternion
         q0 = axis_angle_to_quaternion(axis_angle)
 
-        # Propagate attitude (principal axis mode - constant omega)
+        # Propagate attitude using configured mode
         quaternions, _ = propagate_attitude(
             q0=q0,
             omega0=omega,
             times=self.observation_times,
-            mode="principal_axis",
+            mode=self.mode,
+            inertia_tensor=self.inertia_tensor,
         )
 
         # Compute sun/observer vectors in body frame

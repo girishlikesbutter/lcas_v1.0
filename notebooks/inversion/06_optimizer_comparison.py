@@ -304,6 +304,8 @@ objective_temp = ObjectiveFunction(
     observer_distances=observer_distances,
     compute_shadows_flag=True,
     articulation_matrices=articulation_matrices,
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
 )
 
 # Get body-frame vectors from propagated attitude
@@ -367,7 +369,7 @@ objective_fn = ObjectiveFunction(
 )
 
 # Verify the objective value at true parameters
-obj_at_true = objective_fn(true_params)
+obj_at_true = objective_fn.evaluate(true_params)
 print(f"\nBase ObjectiveFunction created")
 print(f"  Objective value at true parameters: {obj_at_true:.6f}")
 
@@ -460,7 +462,7 @@ class CountedObjective:
         params_normalized = np.concatenate([axis_angle_norm, omega])
 
         # Evaluate objective
-        value = self.objective_fn(params_normalized)
+        value = self.objective_fn.evaluate(params_normalized)
 
         # Track best result
         if value < self.best_value:
@@ -619,7 +621,7 @@ def evaluate_success(
     omega_error_deg = np.rad2deg(omega_error_rad)
 
     # Compute RMS residual
-    obj_value = objective_fn(x_opt)
+    obj_value = objective_fn.evaluate(x_opt)
     n_obs = len(objective_fn.observed_lightcurve)
     rms_residual = np.sqrt(obj_value / n_obs)
 
