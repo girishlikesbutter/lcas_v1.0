@@ -1169,17 +1169,225 @@ print(f"  Overall success: {success_bh}")
 
 print("\nBasin-Hopping test completed!")
 
+# %% [markdown]
+# ---
+# ## 17. Optimizer Comparison Experiment
+#
+# Run a statistically meaningful comparison across all three optimization strategies
+# with a **fixed evaluation budget** of 5000 function evaluations. Each strategy
+# is run 10 times with different random seeds to capture variability.
+#
+# **Metrics recorded:**
+# - Best objective value achieved
+# - Parameter error (omega error in deg/s)
+# - Success (yes/no based on success criteria)
+# - Wall time in seconds
+
 # %%
-# Summary of key objects for downstream optimization
-print("\n" + "=" * 60)
-print("SETUP COMPLETE - Objects available for optimizer comparison:")
-print("=" * 60)
-print(f"\n  objective_fn: ObjectiveFunction instance")
-print(f"  CountedObjective: Budget-enforcing wrapper class")
-print(f"  multistart_local(): Multi-start local optimization with LHS")
-print(f"  run_de(): Differential Evolution baseline optimizer")
-print(f"  run_basinhopping(): Basin-Hopping hybrid optimizer")
-print(f"  true_params: {true_params}")
-print(f"  noise_sigma: {noise_sigma}")
-print(f"  n_observations: {n_observations}")
-print(f"\n  Parameter names: {param_names}")
+# ============================================================================
+# EXPERIMENT CONFIGURATION
+# ============================================================================
+COMPARISON_BUDGET = 5000  # Fixed evaluation budget for fair comparison
+N_TRIALS = 10  # Number of trials per strategy for statistical significance
+BASE_SEED = 1000  # Base seed for reproducibility
+
+# Multi-start specific settings
+MS_N_STARTS = 50  # Number of random starting points
+MS_EVALS_PER_START = COMPARISON_BUDGET // MS_N_STARTS  # ~100 evals per start
+
+print("=" * 70)
+print("OPTIMIZER COMPARISON EXPERIMENT")
+print("=" * 70)
+print(f"\nConfiguration:")
+print(f"  Evaluation budget: {COMPARISON_BUDGET} function evaluations")
+print(f"  Trials per strategy: {N_TRIALS}")
+print(f"  Base random seed: {BASE_SEED}")
+print(f"\nStrategies to compare:")
+print(f"  1. Multi-start local (n_starts={MS_N_STARTS}, evals_per_start={MS_EVALS_PER_START})")
+print(f"  2. Differential Evolution (scipy DE with budget enforcement)")
+print(f"  3. Basin Hopping (L-BFGS-B local minimizer)")
+
+# %%
+# Define the strategies and their runner functions
+STRATEGIES = ['Multi-start', 'DE', 'Basin-Hopping']
+
+
+def run_trial(
+    strategy: str,
+    seed: int,
+) -> dict:
+    """
+    Run a single trial of the specified optimization strategy.
+
+    Parameters
+    ----------
+    strategy : str
+        One of 'Multi-start', 'DE', 'Basin-Hopping'.
+    seed : int
+        Random seed for this trial.
+
+    Returns
+    -------
+    dict
+        Trial results with keys:
+        - 'strategy': Strategy name
+        - 'seed': Random seed used
+        - 'best_objective': Best objective value found
+        - 'omega_error': Angular velocity error in deg/s
+        - 'rms_residual': RMS of residuals
+        - 'success': Whether success criteria were met
+        - 'n_evals': Number of function evaluations used
+        - 'wall_time': Elapsed time in seconds
+    """
+    # Create a fresh counted objective for this trial
+    counted_obj = CountedObjective(objective_fn, budget=COMPARISON_BUDGET)
+
+    # Run the appropriate strategy
+    start_time = time.time()
+
+    if strategy == 'Multi-start':
+        result = multistart_local(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            n_starts=MS_N_STARTS,
+            max_evals_per_start=MS_EVALS_PER_START,
+            seed=seed,
+        )
+    elif strategy == 'DE':
+        result = run_de(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            max_evals=COMPARISON_BUDGET,
+            seed=seed,
+        )
+    elif strategy == 'Basin-Hopping':
+        result = run_basinhopping(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            max_evals=COMPARISON_BUDGET,
+            seed=seed,
+        )
+    else:
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+    wall_time = time.time() - start_time
+
+    # Evaluate success criteria
+    if result['x_best'] is not None:
+        success, omega_error, rms_residual = evaluate_success(
+            result['x_best'], true_params, objective_fn, noise_sigma
+        )
+    else:
+        success = False
+        omega_error = float('inf')
+        rms_residual = float('inf')
+
+    return {
+        'strategy': strategy,
+        'seed': seed,
+        'best_objective': result['f_best'],
+        'omega_error': omega_error,
+        'rms_residual': rms_residual,
+        'success': success,
+        'n_evals': result['n_evals'],
+        'wall_time': wall_time,
+    }
+
+
+# %%
+# Run the comparison experiment
+print("\n" + "-" * 70)
+print("Running comparison experiment...")
+print("-" * 70)
+
+# Store all results
+comparison_results: list[dict] = []
+
+# Run trials for each strategy
+for strategy in STRATEGIES:
+    print(f"\n{strategy}:")
+    for trial in range(N_TRIALS):
+        seed = BASE_SEED + trial * 100  # Different seed for each trial
+        print(f"  Trial {trial + 1}/{N_TRIALS} (seed={seed})...", end=" ", flush=True)
+
+        trial_result = run_trial(strategy, seed)
+        comparison_results.append(trial_result)
+
+        status = "SUCCESS" if trial_result['success'] else "FAIL"
+        print(f"{status}, f={trial_result['best_objective']:.4f}, "
+              f"omega_err={trial_result['omega_error']:.4f} deg/s, "
+              f"t={trial_result['wall_time']:.1f}s")
+
+print("\n" + "-" * 70)
+print("Experiment complete!")
+print("-" * 70)
+
+# %%
+# Organize results into structured arrays for analysis
+print("\n" + "=" * 70)
+print("RESULTS SUMMARY")
+print("=" * 70)
+
+# Create structured results per strategy
+strategy_results: dict[str, dict] = {}
+
+for strategy in STRATEGIES:
+    # Filter results for this strategy
+    strategy_trials = [r for r in comparison_results if r['strategy'] == strategy]
+
+    strategy_results[strategy] = {
+        'best_objectives': np.array([r['best_objective'] for r in strategy_trials]),
+        'omega_errors': np.array([r['omega_error'] for r in strategy_trials]),
+        'rms_residuals': np.array([r['rms_residual'] for r in strategy_trials]),
+        'successes': np.array([r['success'] for r in strategy_trials]),
+        'n_evals': np.array([r['n_evals'] for r in strategy_trials]),
+        'wall_times': np.array([r['wall_time'] for r in strategy_trials]),
+    }
+
+    # Compute summary statistics
+    n_success = strategy_results[strategy]['successes'].sum()
+    success_rate = n_success / N_TRIALS * 100
+    mean_obj = strategy_results[strategy]['best_objectives'].mean()
+    std_obj = strategy_results[strategy]['best_objectives'].std()
+    mean_omega_err = strategy_results[strategy]['omega_errors'].mean()
+    std_omega_err = strategy_results[strategy]['omega_errors'].std()
+    mean_time = strategy_results[strategy]['wall_times'].mean()
+    std_time = strategy_results[strategy]['wall_times'].std()
+
+    print(f"\n{strategy}:")
+    print(f"  Success rate: {n_success}/{N_TRIALS} ({success_rate:.0f}%)")
+    print(f"  Objective: {mean_obj:.4f} +/- {std_obj:.4f}")
+    print(f"  Omega error: {mean_omega_err:.4f} +/- {std_omega_err:.4f} deg/s")
+    print(f"  Wall time: {mean_time:.1f} +/- {std_time:.1f} s")
+
+# %%
+# Print detailed comparison table
+print("\n" + "=" * 70)
+print("DETAILED COMPARISON TABLE")
+print("=" * 70)
+
+print(f"\n{'Strategy':<15} {'Success':<10} {'Mean Obj':<12} {'Mean ω Err':<14} {'Mean Time':<12}")
+print(f"{'':_<15} {'Rate':_<10} {'Value':_<12} {'(deg/s)':_<14} {'(s)':_<12}")
+print("-" * 65)
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS * 100
+    mean_obj = sr['best_objectives'].mean()
+    mean_omega_err = sr['omega_errors'].mean()
+    mean_time = sr['wall_times'].mean()
+
+    print(f"{strategy:<15} {success_rate:>6.0f}%   {mean_obj:>10.4f}   {mean_omega_err:>10.4f}     {mean_time:>8.1f}")
+
+print("-" * 65)
+
+# %%
+# Store all results for downstream visualization (US-016)
+# This makes the data available to the visualization section
+print("\nResults stored in:")
+print("  comparison_results: List of all trial results")
+print("  strategy_results: Organized arrays per strategy")
+print(f"\nTotal trials: {len(comparison_results)}")
+print(f"Strategies: {STRATEGIES}")
+print(f"Trials per strategy: {N_TRIALS}")
+print(f"Budget per trial: {COMPARISON_BUDGET} evaluations")
