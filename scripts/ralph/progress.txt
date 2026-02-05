@@ -273,3 +273,99 @@ Started: Thu Feb 06 2026
   - Always disable polish=False when enforcing strict evaluation budgets
 ---
 
+## 2026-02-06 - US-014
+- Implemented run_basinhopping() function in notebook 06 (Section 15)
+- Configured scipy.optimize.basinhopping with evaluation budget enforcement:
+  - Uses L-BFGS-B as local minimizer with bounds
+  - Estimates niter from budget: niter = max_evals / 75 - 2 (conservative)
+  - Local minimizer limited to min(200, max_evals // 5) evals per hop
+- Set reasonable stepsize and temperature parameters:
+  - stepsize = 0.5 rad (reasonable for axis-angle exploration)
+  - T = 1.0 (moderate temperature for uphill acceptance)
+- Added callback function to stop early when budget exhausted
+- Uses CountedObjective.best_params tracking for accurate best result
+- Added test section (Section 16) demonstrating basin-hopping with 500 evaluation budget
+- Updated summary section to include run_basinhopping() in available objects
+- Typecheck passed with `python -m compileall src/ notebooks/inversion/06_optimizer_comparison.py -q`
+- Files changed: notebooks/inversion/06_optimizer_comparison.py (+186 lines)
+- **Learnings for future iterations:**
+  - Basin-hopping combines random perturbations with local minimization (hybrid approach)
+  - Use callback function returning True to stop basin-hopping early
+  - basinhopping result.message can be a list, need to extract first element
+  - Typical L-BFGS-B convergence takes 50-100 evals per local optimization
+  - stepsize controls how far basin-hopping "hops" between local searches
+---
+
+## 2026-02-06 - US-015
+- Implemented optimizer comparison experiment in notebook 06 (Section 17)
+- Configuration:
+  - Fixed budget: 5000 function evaluations for fair comparison
+  - 10 trials per strategy with different random seeds (BASE_SEED + trial * 100)
+  - Multi-start: 50 starts with ~100 evals per start
+- Implemented run_trial(strategy, seed) function that:
+  - Creates fresh CountedObjective for each trial
+  - Dispatches to multistart_local(), run_de(), or run_basinhopping()
+  - Records best objective, omega error, RMS residual, success, wall time
+- Results stored in two formats:
+  - comparison_results: List of all 30 trial dictionaries
+  - strategy_results: Dict with per-strategy numpy arrays for analysis
+- Added summary statistics and detailed comparison table output
+- Typecheck passed with `python -m compileall src/ notebooks/inversion/06_optimizer_comparison.py -q`
+- Files changed: notebooks/inversion/06_optimizer_comparison.py (+208 lines)
+- **Learnings for future iterations:**
+  - Use BASE_SEED + trial * 100 spacing for diverse random sequences per trial
+  - Create fresh CountedObjective per trial (not per strategy) for accurate budget tracking
+  - Store both raw results (list of dicts) and processed arrays (dict of arrays) for flexibility
+  - run_trial() pattern centralizes strategy dispatch and metric collection
+---
+
+## 2026-02-06 - US-016
+- Implemented optimizer comparison visualization and conclusions in notebook 06 (Sections 18-19)
+- Created three visualization plots:
+  - Box plot of final objective values by strategy (with jittered individual points)
+  - Box plot of parameter errors (omega error in deg/s) with log scale option
+  - Bar chart of success rates with 95% Wilson score confidence intervals
+- Added compute_binomial_ci() function using Wilson score interval for proper CI calculation
+- Created formatted summary table with Strategy | Success Rate | Mean Error | Mean Time | Median Obj
+- Implemented dynamic conclusions section that:
+  - Identifies best strategy based on success rate
+  - Calculates speedup relative to DE baseline
+  - Provides strategy-specific recommendations based on results
+- Saves all outputs to data/results/inversion_diagnostics/:
+  - optimizer_comparison_objectives.png
+  - optimizer_comparison_errors.png
+  - optimizer_comparison_success_rate.png
+  - optimizer_comparison_summary.txt
+- Added comprehensive Summary markdown cell documenting notebook outputs and available objects
+- Typecheck passed with `python -m compileall src/ notebooks/inversion/06_optimizer_comparison.py -q`
+- Files changed: notebooks/inversion/06_optimizer_comparison.py (+413 lines)
+- **Learnings for future iterations:**
+  - Wilson score interval is better than simple binomial CI for small sample sizes
+  - Use patch_artist=True for boxplot to enable coloring boxes
+  - Jitter x positions with np.random.normal(i+1, 0.04, len(data)) for scatter overlay on boxplots
+  - Set y-axis log scale conditionally based on data range (max/min > 100)
+  - Dynamic conclusions should reference computed metrics, not hardcoded values
+---
+
+## 2026-02-06 - US-017
+- Created notebooks/inversion/07_robustness_analysis.py as Jupytext percent format notebook
+- Copied minimal setup from notebook 04 (Intelsat 901 config, geometry, inertia tensor)
+- Computed full observation geometry and lightcurve for max_n_observations=100
+- Implemented generate_test_case(n_observations, noise_sigma, seed) function:
+  - Subsamples from pre-computed full observation set for efficiency
+  - Adds Gaussian noise with specified sigma
+  - Returns dict with lightcurve, geometry, and configured ObjectiveFunction
+  - Uses same true_params across all test cases for comparability
+- Added test case verification section with 3 different configurations
+- Added visualization section showing effect of noise and observation density
+- Reused evaluate_success() function from notebook 06 for consistent metrics
+- Saves test_case_examples.png to data/results/inversion_diagnostics/
+- Typecheck passed with `python -m compileall src/ notebooks/inversion/07_robustness_analysis.py -q`
+- Files changed: notebooks/inversion/07_robustness_analysis.py (new, 650 lines)
+- **Learnings for future iterations:**
+  - Pre-compute full geometry/lightcurve at max observations, then subsample for efficiency
+  - Use np.linspace(...).astype(int) for uniformly spaced subsampling indices
+  - Subsample articulation_matrices dict by iterating over items and indexing each array
+  - generate_test_case pattern: returns dict with all components needed for optimization
+---
+
