@@ -984,6 +984,191 @@ print(f"  Overall success: {success_de}")
 
 print("\nDifferential Evolution test completed!")
 
+# %% [markdown]
+# ---
+# ## 15. Basin-Hopping Strategy
+#
+# Basin-hopping is a hybrid global optimization algorithm that combines:
+#
+# 1. **Random perturbations** (global exploration) - "hops" to new basins
+# 2. **Local minimization** (local refinement) - finds basin minimum
+#
+# This makes it particularly effective for problems with multiple local minima
+# where we want to explore different basins while efficiently finding the
+# minimum within each basin. It's a middle-ground between purely local and
+# purely global approaches.
+#
+# Key parameters:
+# - **stepsize**: Size of random perturbations (controls exploration distance)
+# - **T**: Temperature parameter (controls acceptance of worse solutions)
+# - **minimizer_kwargs**: Settings for local minimizer (L-BFGS-B)
+
+# %%
+from scipy.optimize import basinhopping
+
+
+def run_basinhopping(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    max_evals: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Run Basin-Hopping global optimization with evaluation budget.
+
+    Basin-hopping combines random perturbations with local minimization to
+    explore multiple basins of attraction. This is a middle-ground approach
+    between pure local optimization and differential evolution.
+
+    Parameters
+    ----------
+    counted_objective : CountedObjective
+        Budget-enforcing objective wrapper. Should already be reset before calling.
+    bounds : list[tuple[float, float]]
+        List of (lower, upper) bounds for each parameter.
+    max_evals : int
+        Maximum number of function evaluations allowed.
+    seed : int | None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    dict
+        Results containing:
+        - 'x_best': Best solution found (from counted_objective tracking)
+        - 'f_best': Best objective value found
+        - 'n_evals': Total function evaluations used
+        - 'bh_result_x': Basin-hopping's reported best solution
+        - 'bh_result_fun': Basin-hopping's reported best objective value
+        - 'nit': Number of basin-hopping iterations completed
+        - 'message': Termination message
+
+    Notes
+    -----
+    The number of iterations (niter) is estimated based on the budget and
+    typical evaluations per iteration. L-BFGS-B is used as the local minimizer
+    with bounded constraints.
+
+    Stepsize and temperature are set based on the parameter scales:
+    - stepsize: 0.5 rad for axis-angle, scaled appropriately
+    - T: 1.0 (moderate acceptance of uphill moves)
+    """
+    n_params = len(bounds)
+    lower_bounds = np.array([b[0] for b in bounds])
+    upper_bounds = np.array([b[1] for b in bounds])
+
+    # Set random seed
+    if seed is not None:
+        np.random.seed(seed)
+
+    # Generate random starting point within bounds
+    x0 = lower_bounds + np.random.random(n_params) * (upper_bounds - lower_bounds)
+
+    # Estimate iterations: each basin-hop does ~50-100 function evals for L-BFGS-B
+    # Be conservative to stay within budget
+    evals_per_hop = 75  # rough estimate for L-BFGS-B convergence
+    niter = max(1, int(max_evals / evals_per_hop) - 2)
+
+    # Configure local minimizer (L-BFGS-B with bounds)
+    minimizer_kwargs = {
+        'method': 'L-BFGS-B',
+        'bounds': bounds,
+        'options': {
+            'ftol': 1e-8,
+            'gtol': 1e-6,
+            'maxfun': min(200, max_evals // 5),  # limit per local opt
+        },
+    }
+
+    # Stepsize: use a reasonable fraction of the parameter range
+    # axis-angle range is ~2*pi, omega range is ~2*omega_max
+    # Use 0.5 rad as base stepsize (scaled by optimizer internally)
+    stepsize = 0.5
+
+    # Temperature: moderate value allows some uphill moves
+    temperature = 1.0
+
+    # Custom callback to check budget
+    def callback(x: np.ndarray, f: float, accept: bool) -> bool:
+        """Return True to stop iteration if budget exhausted."""
+        return counted_objective.is_budget_exhausted()
+
+    # Run basin-hopping
+    result = basinhopping(
+        func=counted_objective,
+        x0=x0,
+        niter=niter,
+        T=temperature,
+        stepsize=stepsize,
+        minimizer_kwargs=minimizer_kwargs,
+        callback=callback,
+        seed=seed,
+    )
+
+    # Use the tracked best from CountedObjective (may be better than BH's final)
+    # because budget exhaustion returns penalty values
+    if counted_objective.best_params is not None:
+        x_best = counted_objective.best_params.copy()
+        f_best = counted_objective.best_value
+    else:
+        x_best = result.x.copy()
+        f_best = result.fun
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'bh_result_x': result.x.copy(),
+        'bh_result_fun': result.fun,
+        'nit': result.nit,
+        'message': result.message[0] if isinstance(result.message, list) else str(result.message),
+    }
+
+
+# %% [markdown]
+# ---
+# ## 16. Test Basin-Hopping Strategy
+
+# %%
+print("\nTesting Basin-Hopping strategy...")
+print("-" * 50)
+
+# Create a counted objective with test budget
+test_budget_bh = 500
+counted_obj_bh = CountedObjective(objective_fn, budget=test_budget_bh)
+
+print(f"Configuration:")
+print(f"  Total budget: {test_budget_bh} evaluations")
+print(f"  Expected iterations: ~{test_budget_bh // 75 - 2}")
+
+# Run basin-hopping optimization
+start_time = time.time()
+bh_result = run_basinhopping(
+    counted_objective=counted_obj_bh,
+    bounds=bounds,
+    max_evals=test_budget_bh,
+    seed=42,
+)
+elapsed_time_bh = time.time() - start_time
+
+print(f"\nResults:")
+print(f"  Total evaluations used: {bh_result['n_evals']}")
+print(f"  Iterations completed: {bh_result['nit']}")
+print(f"  Best objective value: {bh_result['f_best']:.6f}")
+print(f"  BH message: {bh_result['message']}")
+print(f"  Wall time: {elapsed_time_bh:.1f}s")
+
+# Check against success criteria
+success_bh, omega_err_bh, rms_bh = evaluate_success(
+    bh_result['x_best'], true_params, objective_fn, noise_sigma
+)
+print(f"\nSuccess evaluation:")
+print(f"  Omega error: {omega_err_bh:.4f} deg/s (threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S})")
+print(f"  RMS residual: {rms_bh:.4f} mag (threshold: {RMS_THRESHOLD_FACTOR * noise_sigma:.4f})")
+print(f"  Overall success: {success_bh}")
+
+print("\nBasin-Hopping test completed!")
+
 # %%
 # Summary of key objects for downstream optimization
 print("\n" + "=" * 60)
@@ -993,6 +1178,7 @@ print(f"\n  objective_fn: ObjectiveFunction instance")
 print(f"  CountedObjective: Budget-enforcing wrapper class")
 print(f"  multistart_local(): Multi-start local optimization with LHS")
 print(f"  run_de(): Differential Evolution baseline optimizer")
+print(f"  run_basinhopping(): Basin-Hopping hybrid optimizer")
 print(f"  true_params: {true_params}")
 print(f"  noise_sigma: {noise_sigma}")
 print(f"  n_observations: {n_observations}")
