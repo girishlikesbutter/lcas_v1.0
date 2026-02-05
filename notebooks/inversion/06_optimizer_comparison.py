@@ -827,6 +827,163 @@ print("\nMulti-start local optimization test completed!")
 # - Basin Hopping strategy
 # - Comparison experiment and visualization
 
+# %% [markdown]
+# ---
+# ## 13. Differential Evolution Baseline
+#
+# This function wraps scipy's `differential_evolution` to match the existing
+# codebase configuration from notebook 03 and the `src/inversion/optimizers.py`
+# module. Key settings:
+#
+# - **Strategy**: `'best1bin'` - uses best member for mutation
+# - **Mutation**: `(0.5, 1.0)` - dithered mutation factor
+# - **Recombination**: `0.7` - crossover probability
+# - **Polish**: Disabled to stay within evaluation budget
+#
+# The `maxiter` is calculated from the budget to approximately achieve
+# the target number of function evaluations.
+
+# %%
+from scipy.optimize import differential_evolution
+
+
+def run_de(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    max_evals: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Run Differential Evolution global optimization with evaluation budget.
+
+    Configures DE with the same settings as the existing LCAS inversion pipeline
+    (from src/inversion/optimizers.py) but respects a fixed evaluation budget.
+
+    Parameters
+    ----------
+    counted_objective : CountedObjective
+        Budget-enforcing objective wrapper. Should already be reset before calling.
+    bounds : list[tuple[float, float]]
+        List of (lower, upper) bounds for each parameter.
+    max_evals : int
+        Maximum number of function evaluations allowed.
+    seed : int | None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    dict
+        Results containing:
+        - 'x_best': Best solution found (from counted_objective tracking)
+        - 'f_best': Best objective value found
+        - 'n_evals': Total function evaluations used
+        - 'de_result_x': DE's reported best solution
+        - 'de_result_fun': DE's reported best objective value
+        - 'success': Whether DE converged
+        - 'message': DE termination message
+
+    Notes
+    -----
+    The maxiter parameter is calculated as: maxiter = max_evals / (popsize * n_params)
+    where popsize is scipy's default (15). This ensures we approximately stay within
+    the evaluation budget.
+
+    Polish is disabled to avoid additional evaluations beyond the budget.
+    The CountedObjective wrapper tracks the actual best solution found during
+    optimization, which may differ from DE's final reported best if budget
+    was exhausted mid-generation.
+    """
+    n_params = len(bounds)
+
+    # scipy DE defaults: popsize = 15 (multiplied by n_params for population)
+    # evaluations per generation ≈ popsize * n_params
+    # We use popsize=15 to match scipy default
+    popsize = 15
+    evals_per_generation = popsize * n_params
+
+    # Calculate maxiter to approximately achieve target evaluation count
+    # Add small buffer to account for initialization
+    maxiter = max(1, int(max_evals / evals_per_generation) - 1)
+
+    # Run differential evolution
+    result = differential_evolution(
+        func=counted_objective,
+        bounds=bounds,
+        seed=seed,
+        maxiter=maxiter,
+        tol=0.01,  # Same as optimizers.py
+        polish=False,  # Disable polish to stay within budget
+        strategy='best1bin',  # Same as optimizers.py
+        mutation=(0.5, 1.0),  # Same as optimizers.py
+        recombination=0.7,  # Same as optimizers.py
+        updating='deferred',  # Same as optimizers.py
+        workers=1,  # Serial for consistent budget enforcement
+    )
+
+    # Use the tracked best from CountedObjective (may be better than DE's final)
+    # because budget exhaustion returns penalty values
+    if counted_objective.best_params is not None:
+        x_best = counted_objective.best_params.copy()
+        f_best = counted_objective.best_value
+    else:
+        x_best = result.x.copy()
+        f_best = result.fun
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'de_result_x': result.x.copy(),
+        'de_result_fun': result.fun,
+        'success': result.success,
+        'message': result.message,
+    }
+
+
+# %% [markdown]
+# ---
+# ## 14. Test Differential Evolution Baseline
+
+# %%
+print("\nTesting Differential Evolution baseline...")
+print("-" * 50)
+
+# Create a counted objective with test budget
+test_budget_de = 500
+counted_obj_de = CountedObjective(objective_fn, budget=test_budget_de)
+
+print(f"Configuration:")
+print(f"  Total budget: {test_budget_de} evaluations")
+print(f"  Expected maxiter: ~{test_budget_de // (15 * 6) - 1} generations")
+
+# Run DE optimization
+start_time = time.time()
+de_result = run_de(
+    counted_objective=counted_obj_de,
+    bounds=bounds,
+    max_evals=test_budget_de,
+    seed=42,
+)
+elapsed_time_de = time.time() - start_time
+
+print(f"\nResults:")
+print(f"  Total evaluations used: {de_result['n_evals']}")
+print(f"  Best objective value: {de_result['f_best']:.6f}")
+print(f"  DE converged: {de_result['success']}")
+print(f"  DE message: {de_result['message']}")
+print(f"  Wall time: {elapsed_time_de:.1f}s")
+
+# Check against success criteria
+success_de, omega_err_de, rms_de = evaluate_success(
+    de_result['x_best'], true_params, objective_fn, noise_sigma
+)
+print(f"\nSuccess evaluation:")
+print(f"  Omega error: {omega_err_de:.4f} deg/s (threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S})")
+print(f"  RMS residual: {rms_de:.4f} mag (threshold: {RMS_THRESHOLD_FACTOR * noise_sigma:.4f})")
+print(f"  Overall success: {success_de}")
+
+print("\nDifferential Evolution test completed!")
+
 # %%
 # Summary of key objects for downstream optimization
 print("\n" + "=" * 60)
@@ -835,6 +992,7 @@ print("=" * 60)
 print(f"\n  objective_fn: ObjectiveFunction instance")
 print(f"  CountedObjective: Budget-enforcing wrapper class")
 print(f"  multistart_local(): Multi-start local optimization with LHS")
+print(f"  run_de(): Differential Evolution baseline optimizer")
 print(f"  true_params: {true_params}")
 print(f"  noise_sigma: {noise_sigma}")
 print(f"  n_observations: {n_observations}")

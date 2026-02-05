@@ -232,3 +232,44 @@ Started: Thu Feb 06 2026
   - Budget enforcement returns penalty early (before evaluation) to not waste compute
 ---
 
+## 2026-02-06 - US-012
+- Implemented multistart_local() function in notebook 06 (Section 11)
+- Uses scipy.stats.qmc.LatinHypercube for well-distributed initialization points
+- LHS provides better parameter space coverage than random sampling
+- Function signature: multistart_local(counted_objective, bounds, n_starts, max_evals_per_start, seed)
+- Runs L-BFGS-B from each LHS-sampled starting point with ftol=1e-8, gtol=1e-6
+- Tracks total evaluations via CountedObjective wrapper to respect budget
+- Returns dict with x_best, f_best, n_evals, n_successful_starts, all_results
+- Added test section (Section 12) demonstrating multi-start with 5 starts, 500 budget
+- Typecheck passed with `python -m compileall src/ notebooks/inversion/06_optimizer_comparison.py -q`
+- Files changed: notebooks/inversion/06_optimizer_comparison.py (+178 lines)
+- **Learnings for future iterations:**
+  - scipy.stats.qmc.LatinHypercube(d=n_params, seed=seed).random(n=n_starts) generates samples in [0,1]^n
+  - Scale LHS samples: initial_points = lower_bounds + samples_unit * (upper_bounds - lower_bounds)
+  - Track evals_before = counted_objective.n_evals before each local optimization to measure per-start cost
+  - n_successful_starts counts starts that completed without exhausting total budget
+---
+
+## 2026-02-06 - US-013
+- Implemented run_de() function for Differential Evolution baseline in notebook 06 (Section 13)
+- Matches settings from src/inversion/optimizers.py:
+  - strategy='best1bin'
+  - mutation=(0.5, 1.0)
+  - recombination=0.7
+  - updating='deferred'
+  - tol=0.01
+- Calculates maxiter from budget: maxiter = max_evals / (popsize * n_params) - 1
+- Uses scipy default popsize=15 for consistent evaluation count estimation
+- Polish disabled to stay within evaluation budget
+- Uses CountedObjective.best_params tracking since budget exhaustion returns penalty values
+- Added test section (Section 14) demonstrating DE with 500 evaluation budget
+- Updated summary section to include run_de() in available objects
+- Typecheck passed with `python -m compileall src/ notebooks/inversion/06_optimizer_comparison.py -q`
+- Files changed: notebooks/inversion/06_optimizer_comparison.py (+119 lines)
+- **Learnings for future iterations:**
+  - DE evaluations per generation ≈ popsize * n_params (for scipy.optimize.differential_evolution)
+  - scipy DE default popsize is 15 (multiplied by n_params internally)
+  - When budget exhausts mid-optimization, CountedObjective tracks best seen, which may differ from DE's final result
+  - Always disable polish=False when enforcing strict evaluation budgets
+---
+
