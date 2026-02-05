@@ -1,16 +1,15 @@
 {
   "project": "LCAS",
   "branchName": "ralph/lightcurve-inversion",
-  "description": "Lightcurve Inversion Tool - Estimate initial attitude and angular velocity from observed lightcurves using optimization, plus config-based inertia calculation",
+  "description": "Lightcurve Inversion Diagnostic Study - Systematic investigation of objective function landscape, basin of attraction, optimizer comparison, and robustness analysis",
   "userStories": [
     {
-      "id": "US-026",
-      "title": "Add emcee and corner to project dependencies",
-      "description": "As a developer, I need the new dependencies added to the project.",
+      "id": "US-001",
+      "title": "Create results output directory for diagnostic study",
+      "description": "As a scientist, I need the output directory structure for saving diagnostic plots and results.",
       "acceptanceCriteria": [
-        "Add emcee to requirements.txt or pyproject.toml",
-        "Add corner to requirements.txt or pyproject.toml",
-        "Dependencies are installable without conflicts",
+        "Create data/results/inversion_diagnostics/ directory if it doesn't exist",
+        "Add .gitkeep file to preserve directory in git",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -18,479 +17,307 @@
       "notes": ""
     },
     {
-      "id": "US-001",
-      "title": "Create dynamics module structure",
-      "description": "As a developer, I need the src/dynamics/ module scaffolding to organize attitude propagation code.",
+      "id": "US-002",
+      "title": "Create notebook 04 with setup and synthetic data generation",
+      "description": "As a scientist, I need the same test case as notebook 03 so results are comparable.",
       "acceptanceCriteria": [
-        "Create src/dynamics/__init__.py with module docstring",
-        "Create src/dynamics/attitude_propagator.py with placeholder functions",
-        "Placeholder functions: propagate_attitude(), propagate_principal_axis(), propagate_euler()",
+        "Create notebooks/inversion/04_landscape_analysis.py as Jupytext percent format",
+        "Reuse Intelsat 901 config loading from 03",
+        "Compute observation geometry using same parameters as 03",
+        "Generate synthetic lightcurve using forward model",
+        "Store true_params = np.concatenate([true_axis_angle, true_omega0]) for slicing",
+        "Create ObjectiveFunction instance for landscape analysis",
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-002",
-      "title": "Implement principal axis rotation propagation",
-      "description": "As a researcher, I want to propagate attitude assuming constant angular velocity in body frame.",
-      "acceptanceCriteria": [
-        "propagate_principal_axis(q0, omega, times) returns quaternion array shape (N, 4)",
-        "Uses closed-form solution: q(t) = q0 * quaternion_exp(0.5 * omega * dt)",
-        "Quaternions use scalar-first convention (w, x, y, z)",
-        "Output quaternions are normalized",
-        "Typecheck passes"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Copy minimal setup from 03, avoid code duplication"
     },
     {
       "id": "US-003",
-      "title": "Implement tumbling Euler dynamics propagation",
-      "description": "As a debris analyst, I want to propagate attitude with evolving angular velocity using Euler equations.",
+      "title": "Implement 1D objective slice computation and visualization",
+      "description": "As a scientist, I want to see how the objective varies when changing one parameter at a time.",
       "acceptanceCriteria": [
-        "propagate_euler(q0, omega0, inertia_tensor, times) returns (quaternions, omega_history)",
-        "Integrates coupled ODE: Euler equations + quaternion kinematics",
-        "Uses scipy.integrate.solve_ivp with RK45 or DOP853",
-        "Quaternions renormalized during integration",
+        "Add compute_1d_slice(objective_fn, true_params, param_index, delta_range, n_points) function to notebook 04",
+        "Compute slice for each of 6 parameters: axis_angle (x,y,z), omega (x,y,z)",
+        "Delta range: +/-0.5 rad for axis-angle, +/-0.01 rad/s for omega",
+        "Plot all 6 slices in 2x3 subplot figure",
+        "Mark true parameter location on each plot",
+        "Include log y-axis option to see structure near minimum",
+        "Save figure to data/results/inversion_diagnostics/1d_slices.png",
         "Typecheck passes"
       ],
-      "priority": 4,
-      "passes": true,
+      "priority": 3,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Create unified propagate_attitude interface",
-      "description": "As a user, I want a single function to choose between propagation modes.",
+      "title": "Implement 2D objective slice computation and visualization",
+      "description": "As a scientist, I want 2D heatmaps to see parameter correlations and identify ridges/valleys.",
       "acceptanceCriteria": [
-        "propagate_attitude(q0, omega0, times, mode, inertia_tensor=None) dispatches to correct propagator",
-        "mode='principal_axis' calls propagate_principal_axis",
-        "mode='tumbling' calls propagate_euler and requires inertia_tensor",
-        "Raises ValueError if tumbling mode without inertia_tensor",
-        "Returns (quaternions, omega_history) tuple",
+        "Add compute_2d_slice(objective_fn, true_params, param_i, param_j, delta_i, delta_j, n_points) function to notebook 04",
+        "Compute slices for pairs: (ax_x, ax_y), (ax_x, omega_z), (omega_x, omega_y), (omega_x, omega_z)",
+        "Plot as heatmaps with contour overlay in 2x2 subplot figure",
+        "Mark true parameter location on each plot",
+        "Save figure to data/results/inversion_diagnostics/2d_slices.png",
         "Typecheck passes"
       ],
-      "priority": 5,
-      "passes": true,
+      "priority": 4,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-005",
-      "title": "Add STL volume calculation utility",
-      "description": "As an engineer, I need to compute mesh volume using the signed tetrahedra method.",
+      "title": "Implement gradient and Hessian analysis at true solution",
+      "description": "As a scientist, I want to know the condition number and gradient magnitudes to assess optimization difficulty.",
       "acceptanceCriteria": [
-        "Create src/computation/inertia_calculator.py",
-        "compute_mesh_volume(mesh) returns float volume using divergence theorem",
-        "Uses signed tetrahedra method summing contributions from each face",
+        "Add numerical gradient computation at true parameters using finite differences",
+        "Add numerical Hessian computation at true parameters",
+        "Report eigenvalues of Hessian and condition number (max/min eigenvalue)",
+        "Add interpretation markdown cell: condition number > 1000 suggests ill-conditioning",
+        "Identify well-constrained vs poorly constrained parameters from eigenvalue analysis",
         "Typecheck passes"
       ],
-      "priority": 6,
-      "passes": true,
+      "priority": 5,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-006",
-      "title": "Add mesh watertight validation",
-      "description": "As a user, I want warnings if my STL mesh is not closed.",
+      "title": "Add landscape analysis summary and findings to notebook 04",
+      "description": "As a scientist, I need a clear summary of what the landscape analysis reveals.",
       "acceptanceCriteria": [
-        "is_mesh_watertight(mesh) returns bool",
-        "Checks that mesh is closed (each edge shared by exactly 2 faces)",
-        "compute_mesh_volume logs warning if mesh is not watertight",
+        "Add markdown cell summarizing: Is there a unique minimum? How sharp? Any flat directions?",
+        "Identify which parameters are well-constrained vs poorly constrained based on 1D/2D analysis",
+        "Add preliminary assessment: Is global search necessary, or would local suffice?",
+        "Save summary findings to data/results/inversion_diagnostics/landscape_summary.txt",
         "Typecheck passes"
       ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Implemented as part of US-005"
+      "priority": 6,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-007",
-      "title": "Implement component inertia tensor calculation",
-      "description": "As an engineer, I want to compute inertia tensor for a single STL component with given mass.",
+      "title": "Create notebook 05 with setup and local optimizer wrapper",
+      "description": "As a scientist, I need a simple local optimization function to test convergence from different starting points.",
       "acceptanceCriteria": [
-        "compute_component_inertia(mesh, mass) returns 3x3 inertia tensor about component center of mass",
-        "Assumes homogeneous mass distribution",
-        "Computes density from mass/volume",
-        "Returns (inertia_tensor, center_of_mass) tuple",
+        "Create notebooks/inversion/05_basin_size_study.py as Jupytext percent format",
+        "Copy minimal setup from notebook 04",
+        "Implement run_local_optimization(objective_fn, x0, bounds) returning (x_opt, f_opt, success, n_evals)",
+        "Use scipy L-BFGS-B with ftol=1e-8, gtol=1e-6",
+        "Track number of function evaluations",
+        "Define success criteria: omega error < 0.1 deg/s AND rms < 2x noise sigma",
         "Typecheck passes"
       ],
-      "priority": 8,
-      "passes": true,
+      "priority": 7,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-008",
-      "title": "Implement parallel axis theorem for inertia translation",
-      "description": "As an engineer, I need to translate component inertia tensors to body frame origin.",
+      "title": "Implement constrained random initialization sampler",
+      "description": "As a scientist, I need to generate random starting points within a specified radius of the true solution.",
       "acceptanceCriteria": [
-        "translate_inertia(I_cm, mass, displacement) applies parallel axis theorem",
-        "Formula: I_body = I_cm + m * (d^2 * I - outer(d, d))",
-        "displacement is vector from body origin to component center of mass",
-        "Returns 3x3 inertia tensor about body origin",
+        "Add sample_in_ball(true_params, radius, n_samples, param_scales) function to notebook 05",
+        "param_scales handles different units (radians vs rad/s) for proper scaling",
+        "Implement uniform sampling within hypersphere (not just per-axis box)",
+        "Add verification that samples are actually within specified radius",
         "Typecheck passes"
       ],
-      "priority": 9,
-      "passes": true,
+      "priority": 8,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-009",
-      "title": "Implement full satellite inertia computation from STL components",
-      "description": "As an engineer, I want to compute total satellite inertia from multiple STL components with masses.",
+      "title": "Implement basin size sweep experiment",
+      "description": "As a scientist, I want to systematically measure success rate vs constraint radius.",
       "acceptanceCriteria": [
-        "compute_inertia_from_stl(stl_components, masses) returns InertiaResult dataclass",
-        "InertiaResult contains: total_mass, center_of_mass, inertia_tensor, principal_moments, principal_axes",
-        "Handles same STL file used multiple times at different positions",
-        "Sums all component contributions using parallel axis theorem",
+        "Test radii: [0.01, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0] degrees",
+        "For each radius: run 20 random initializations, record success/failure",
+        "Track: success rate, mean final error, mean function evaluations",
+        "Total budget: ~200 local optimizations",
+        "Store results in structured array for visualization",
         "Typecheck passes"
       ],
-      "priority": 10,
-      "passes": true,
+      "priority": 9,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-010",
-      "title": "Create inversion module structure",
-      "description": "As a developer, I need the src/inversion/ module scaffolding for the inversion engine.",
+      "title": "Add basin size visualization and threshold identification",
+      "description": "As a scientist, I want to identify the critical radius where success rate drops.",
       "acceptanceCriteria": [
-        "Create src/inversion/__init__.py",
-        "Create src/inversion/quaternion_utils.py with placeholder functions",
-        "Create src/inversion/objective_function.py with placeholder",
-        "Create src/inversion/optimizers.py with placeholder",
-        "Create src/inversion/constraints.py with placeholder",
-        "Create src/inversion/uncertainty.py with placeholder",
-        "Create src/inversion/results.py with placeholder",
+        "Plot success rate vs radius with error bars from binomial uncertainty",
+        "Plot mean error vs radius",
+        "Identify critical radius where success rate drops below 80%",
+        "Add summary: 'Local optimization succeeds with >80% probability when initialized within X degrees'",
+        "Save figures to data/results/inversion_diagnostics/basin_size_*.png",
         "Typecheck passes"
       ],
-      "priority": 11,
-      "passes": true,
+      "priority": 10,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-011",
-      "title": "Implement quaternion utilities for optimization",
-      "description": "As a developer, I need quaternion helper functions for the optimization loop.",
+      "title": "Create notebook 06 with setup and evaluation-counted objective wrapper",
+      "description": "As a scientist, I need to track and limit function evaluations for fair optimizer comparison.",
       "acceptanceCriteria": [
-        "normalize_quaternion(q) returns unit quaternion",
-        "axis_angle_to_quaternion(axis_angle) converts 3-param representation to quaternion",
-        "quaternion_to_axis_angle(q) converts quaternion to 3-param representation",
-        "quaternion_multiply(q1, q2) returns product quaternion",
-        "All functions use scalar-first (w,x,y,z) convention",
+        "Create notebooks/inversion/06_optimizer_comparison.py as Jupytext percent format",
+        "Copy minimal setup from notebook 04",
+        "Implement CountedObjective class that wraps objective and counts calls",
+        "Add budget limit enforcement (returns penalty when exhausted)",
+        "Add reset() method for multiple trials",
         "Typecheck passes"
       ],
-      "priority": 12,
-      "passes": true,
+      "priority": 11,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-012",
-      "title": "Implement objective function wrapper",
-      "description": "As a developer, I need an objective function that wraps the forward model for optimization.",
+      "title": "Implement multi-start local optimization strategy",
+      "description": "As a scientist, I want to implement random starts + local refinement strategy.",
       "acceptanceCriteria": [
-        "ObjectiveFunction class wraps LCAS generate_lightcurves forward model",
-        "Constructor accepts: satellite_config, observer_config, observation_times",
-        "evaluate(params) returns chi-squared residual between predicted and observed lightcurve",
-        "params is array: [axis_angle(3), omega(3)] = 6 parameters",
-        "Internally propagates attitude and calls forward model",
+        "Add multistart_local(objective, bounds, n_starts, max_evals_per_start) function to notebook 06",
+        "Use Latin Hypercube Sampling (scipy.stats.qmc.LatinHypercube) for initialization",
+        "Run L-BFGS-B from each start, return best result",
+        "Track evaluations to stay within budget",
         "Typecheck passes"
       ],
-      "priority": 13,
-      "passes": true,
-      "notes": "Interface uses Satellite model and J2000 positions instead of abstract config objects for practical forward model integration"
+      "priority": 12,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-013",
-      "title": "Implement weighted residual calculation",
-      "description": "As a user, I want to weight observations by their uncertainties.",
+      "title": "Configure differential evolution baseline for comparison",
+      "description": "As a scientist, I need the current DE approach configured to use the same evaluation budget.",
       "acceptanceCriteria": [
-        "ObjectiveFunction accepts optional uncertainty array",
-        "If uncertainties provided: chi_sq = sum((obs - pred)^2 / sigma^2)",
-        "If no uncertainties: use uniform weights (MSE)",
-        "Observations with infinite magnitude (not visible) are excluded",
+        "Add run_de(objective, bounds, max_evals) function to notebook 06",
+        "Configure DE with maxiter set to achieve target evaluation count",
+        "Use same bounds and settings as current 03 notebook",
+        "Disable or limit polish step to stay within budget",
         "Typecheck passes"
       ],
-      "priority": 14,
-      "passes": true,
-      "notes": "Implemented as part of US-012"
+      "priority": 13,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-014",
-      "title": "Implement Differential Evolution global optimizer",
-      "description": "As a user, I want global optimization to avoid local minima.",
+      "title": "Implement basin-hopping strategy for comparison",
+      "description": "As a scientist, I want to test basin-hopping as a middle-ground approach.",
       "acceptanceCriteria": [
-        "global_optimize(objective, bounds) uses scipy.optimize.differential_evolution",
-        "bounds specify ranges for axis_angle and omega parameters",
-        "Default omega bounds: 0 to 30 deg/s magnitude",
-        "Returns OptimizationResult with best params and cost",
+        "Add run_basinhopping(objective, bounds, max_evals) function to notebook 06",
+        "Configure scipy.optimize.basinhopping with evaluation budget",
+        "Use L-BFGS-B as local minimizer",
+        "Set reasonable stepsize and temperature parameters",
         "Typecheck passes"
       ],
-      "priority": 15,
-      "passes": true,
-      "notes": "Also added get_default_bounds() helper function"
+      "priority": 14,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-015",
-      "title": "Implement local refinement optimizer",
-      "description": "As a user, I want local refinement to converge to precise optimum.",
+      "title": "Run optimizer comparison experiment",
+      "description": "As a scientist, I want statistically meaningful comparison across strategies.",
       "acceptanceCriteria": [
-        "local_refine(objective, x0, bounds) uses scipy.optimize.minimize with L-BFGS-B",
-        "x0 is initial guess from global optimization",
-        "Quaternion constraint enforced via normalization after each iteration",
-        "Returns refined OptimizationResult",
+        "Fixed budget: 5000 function evaluations",
+        "Run each strategy 10 times with different random seeds",
+        "Record: best objective value, parameter error, success (yes/no), wall time",
+        "Store results in structured format for analysis",
         "Typecheck passes"
       ],
-      "priority": 16,
-      "passes": true,
-      "notes": "Uses quaternion round-trip normalization at each objective evaluation to enforce unit quaternion constraint"
+      "priority": 15,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-016",
-      "title": "Implement multi-start optimization wrapper",
-      "description": "As a user, I want multiple random starts to improve robustness.",
+      "title": "Add optimizer comparison visualization and conclusions",
+      "description": "As a scientist, I want clear visualization of which strategy performs best.",
       "acceptanceCriteria": [
-        "multi_start_optimize(objective, bounds, n_starts) runs optimization n_starts times",
-        "Each start uses different random initialization",
-        "Returns list of results sorted by cost",
-        "Best result returned as primary output",
+        "Box plot of final objective values by strategy",
+        "Box plot of parameter errors by strategy",
+        "Bar chart of success rates with confidence intervals",
+        "Summary table: Strategy | Success Rate | Mean Error | Mean Time",
+        "Clear conclusion markdown: 'Strategy X achieves Y% success rate, Zx faster than baseline'",
+        "Save figures to data/results/inversion_diagnostics/optimizer_comparison_*.png",
         "Typecheck passes"
       ],
-      "priority": 17,
-      "passes": true,
-      "notes": "Uses base seed + index for reproducible different initializations"
+      "priority": 16,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-017",
-      "title": "Implement constraint modes",
-      "description": "As a user, I want to choose between free exploration and physics-informed constraints.",
+      "title": "Create notebook 07 with setup and parameterized synthetic data generation",
+      "description": "As a scientist, I need to generate test cases with varying noise and observation density.",
       "acceptanceCriteria": [
-        "ConstraintMode enum: FREE, PHYSICS_INFORMED",
-        "get_bounds(mode, omega_max) returns appropriate parameter bounds",
-        "FREE mode: minimal constraints (only omega magnitude bound)",
-        "PHYSICS_INFORMED mode: adds principal axis rotation constraint",
+        "Create notebooks/inversion/07_robustness_analysis.py as Jupytext percent format",
+        "Copy minimal setup from notebook 04",
+        "Implement generate_test_case(n_observations, noise_sigma, seed) returning lightcurve + geometry",
+        "Reuse forward model components from setup",
+        "Same true parameters across all test cases for comparability",
         "Typecheck passes"
       ],
-      "priority": 18,
-      "passes": true,
-      "notes": "PHYSICS_INFORMED uses tighter omega bounds (omega_max/sqrt(3) per component) to bias toward principal axis solutions"
+      "priority": 17,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-018",
-      "title": "Implement Fisher Information Matrix uncertainty estimation",
-      "description": "As a user, I want quick uncertainty estimates using Fisher Information.",
+      "title": "Implement robustness sweep experiment",
+      "description": "As a scientist, I want to map success rate across noise/observation space.",
       "acceptanceCriteria": [
-        "compute_fisher_uncertainty(objective, optimal_params) returns covariance matrix",
-        "Uses numerical approximation of Hessian at optimum",
-        "Covariance = inverse of Fisher Information Matrix",
-        "Returns standard deviations for each parameter",
+        "Noise levels: [0.01, 0.02, 0.05, 0.1, 0.2] mag",
+        "Observation counts: [20, 35, 50, 75, 100]",
+        "For each combination: run 5 trials with best optimizer from notebook 06",
+        "Record success rate for each cell (25 cells x 5 trials = 125 runs)",
+        "Store results in 2D array for heatmap visualization",
         "Typecheck passes"
       ],
-      "priority": 19,
-      "passes": true,
-      "notes": "Implemented with central finite differences for Hessian computation and regularization for non-positive-definite cases"
+      "priority": 18,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-019",
-      "title": "Implement MCMC uncertainty estimation with emcee",
-      "description": "As a researcher, I want full posterior characterization using MCMC sampling.",
+      "title": "Add robustness heatmap and requirements identification",
+      "description": "As a scientist, I want to identify minimum data quality for reliable inversion.",
       "acceptanceCriteria": [
-        "compute_mcmc_uncertainty(objective, optimal_params, n_samples) uses emcee",
-        "Returns posterior samples array",
-        "Returns parameter correlations (covariance matrix)",
-        "Includes convergence diagnostics",
+        "Create heatmap: x=n_observations, y=noise_sigma, color=success_rate",
+        "Annotate cells with success rate values",
+        "Draw contour line at 80% success rate",
+        "Add summary: 'Reliable inversion requires at least N observations with noise < X mag'",
+        "Save figure to data/results/inversion_diagnostics/robustness_heatmap.png",
         "Typecheck passes"
       ],
-      "priority": 20,
-      "passes": true,
-      "notes": "Returns dict with samples, covariance, std_devs, acceptance_fraction, autocorr_time, and converged flag"
+      "priority": 19,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-020",
-      "title": "Implement InversionResult container class",
-      "description": "As a user, I want a structured container for all inversion outputs.",
+      "title": "Add final recommendations and study conclusions",
+      "description": "As a scientist, I want actionable conclusions from the entire diagnostic study.",
       "acceptanceCriteria": [
-        "InversionResult dataclass with fields: q0, omega0, chi_squared, rms_residual, uncertainties, predicted_lightcurve",
-        "For tumbling mode: includes omega_history over observation window",
-        "Includes observed vs predicted data for plotting",
+        "Add summary markdown cell with key findings from all 4 notebooks",
+        "Recommended optimizer settings for operational use",
+        "Minimum data requirements for reliable inversion",
+        "Known limitations and failure modes",
+        "Save final recommendations to data/results/inversion_diagnostics/final_recommendations.md",
         "Typecheck passes"
       ],
-      "priority": 21,
-      "passes": true,
-      "notes": "Dataclass structure already implemented in US-010 scaffolding with all required fields"
-    },
-    {
-      "id": "US-021",
-      "title": "Implement result visualization methods",
-      "description": "As a user, I want to visualize inversion results.",
-      "acceptanceCriteria": [
-        "InversionResult.plot_lightcurve_comparison() shows observed vs predicted",
-        "InversionResult.plot_residuals() shows residual plot",
-        "InversionResult.plot_corner() shows parameter posterior (requires MCMC samples)",
-        "Uses matplotlib for all plots",
-        "Typecheck passes"
-      ],
-      "priority": 22,
-      "passes": true,
-      "notes": "All three visualization methods implemented. plot_corner uses corner package with lazy import."
-    },
-    {
-      "id": "US-022",
-      "title": "Create main inversion API function",
-      "description": "As a user, I want a single function to run the full inversion pipeline.",
-      "acceptanceCriteria": [
-        "invert_lightcurve(observed_lc, satellite_config, observer_config, ...) runs full pipeline",
-        "Accepts mode parameter: 'principal_axis' or 'tumbling'",
-        "Accepts uncertainty_mode parameter: 'quick' (Fisher) or 'full' (MCMC)",
-        "Runs global optimization, local refinement, uncertainty estimation",
-        "Returns InversionResult",
-        "Typecheck passes"
-      ],
-      "priority": 23,
-      "passes": true,
-      "notes": "Interface uses Satellite model and J2000 positions (like ObjectiveFunction) instead of abstract config objects"
-    },
-    {
-      "id": "US-023",
-      "title": "Create inertia calculation notebook",
-      "description": "As an engineer, I want a notebook demonstrating inertia calculation from STL files.",
-      "acceptanceCriteria": [
-        "Create notebooks/inversion/01_inertia_calculation.py as Jupytext percent format",
-        "Demonstrates loading STL components and assigning masses",
-        "Shows validation of mesh watertightness",
-        "Displays computed inertia tensor, principal moments, and principal axes",
-        "Includes comparison with analytical result for simple shape",
-        "Typecheck passes"
-      ],
-      "priority": 24,
-      "passes": true,
-      "notes": "Notebook demonstrates unit cube and asymmetric box validation against analytical formulas, plus symmetric two-cube parallel axis theorem verification"
-    },
-    {
-      "id": "US-024",
-      "title": "Create attitude propagation demo notebook",
-      "description": "As a researcher, I want a notebook demonstrating the attitude propagator.",
-      "acceptanceCriteria": [
-        "Create notebooks/inversion/02_attitude_propagation.py as Jupytext percent format",
-        "Demonstrates principal axis mode propagation",
-        "Demonstrates tumbling mode with Euler dynamics",
-        "Shows how to use propagator output with existing LCAS forward model",
-        "Visualizes quaternion and angular velocity evolution",
-        "Typecheck passes"
-      ],
-      "priority": 25,
-      "passes": true,
-      "notes": "Notebook includes principal axis and tumbling mode demos, conservation law verification, polhode visualization, body-frame vector transformation, and mode comparison"
-    },
-    {
-      "id": "US-025",
-      "title": "Create lightcurve inversion workflow notebook",
-      "description": "As an analyst, I want a notebook demonstrating the full inversion workflow.",
-      "acceptanceCriteria": [
-        "Create notebooks/inversion/03_lightcurve_inversion.py as Jupytext percent format",
-        "Shows round-trip validation: forward model -> inversion -> compare",
-        "Demonstrates both quick (Fisher) and full (MCMC) uncertainty modes",
-        "Includes visualization of results",
-        "Documents all configuration options",
-        "Typecheck passes"
-      ],
-      "priority": 26,
-      "passes": true,
-      "notes": "Notebook includes simple satellite creation, forward model generation, both uncertainty modes, comparison analysis, configuration reference, and API documentation"
-    },
-    {
-      "id": "US-027",
-      "title": "Create config-to-components loader function",
-      "description": "As a developer, I want a helper function that loads STL meshes and their positions from a satellite config file so that I don't have to manually specify component positions.",
-      "acceptanceCriteria": [
-        "Create load_components_from_config(config, config_manager, masses) function in src/computation/inertia_calculator.py",
-        "Function accepts RSO_Config, RSO_ConfigManager, and a masses dict mapping component names to masses (kg)",
-        "Returns list of STLComponent objects with mesh, position from config, and mass from dict",
-        "Raises ValueError if a component in masses dict is not found in config",
-        "Typecheck passes"
-      ],
-      "priority": 27,
-      "passes": true,
-      "notes": "Uses TYPE_CHECKING to avoid circular imports, follows STLLoader pattern for mesh loading"
-    },
-    {
-      "id": "US-028",
-      "title": "Create articulation rotation helper function",
-      "description": "As a developer, I need the articulation rotation applied to component meshes before computing their inertia contribution.",
-      "acceptanceCriteria": [
-        "Create helper function apply_articulation_to_mesh(mesh, position, angle, rotation_center, rotation_axis) in src/computation/inertia_calculator.py",
-        "Returns tuple of (rotated_mesh, updated_position) where position is the component CoM after rotation",
-        "Rotation is applied about the component's rotation_center along its rotation_axis",
-        "Uses axis-angle rotation matrix computation",
-        "Typecheck passes"
-      ],
-      "priority": 28,
-      "passes": true,
-      "notes": "Uses Rodrigues' formula for axis-angle rotation matrix, makes mesh copy to avoid modification"
-    },
-    {
-      "id": "US-029",
-      "title": "Add articulation angle support to compute_inertia_from_stl",
-      "description": "As an engineer, I want to compute the inertia tensor at specific articulation angles so that I can account for movable components in different orientations.",
-      "acceptanceCriteria": [
-        "Add articulation_angles optional parameter to compute_inertia_from_stl() function",
-        "Parameter is a dict mapping component names to angles in degrees (e.g., {'SP_North': 45.0})",
-        "Add articulation_capabilities optional parameter (dict with rotation_center, rotation_axis, limits per component)",
-        "If articulation_capabilities provided, validate angles are within config-specified limits (raise ValueError if out of range)",
-        "Components without articulation capability are unaffected by angles",
-        "Typecheck passes"
-      ],
-      "priority": 29,
-      "passes": true,
-      "notes": "Added ArticulationCapabilitySpec dataclass, articulation_angles, articulation_capabilities, and component_names parameters. Validates angles against limits and applies articulation via apply_articulation_to_mesh()."
-    },
-    {
-      "id": "US-030",
-      "title": "Create config-aware inertia function",
-      "description": "As a user, I want a single function that takes a config and masses and returns the satellite inertia tensor.",
-      "acceptanceCriteria": [
-        "Create compute_inertia_from_config(config, config_manager, masses, articulation_angles=None) function",
-        "Internally calls load_components_from_config() then compute_inertia_from_stl()",
-        "Passes articulation capabilities from config to enable angle-based computation",
-        "Default articulation angles: 0 degrees for solar panels, 15 degrees for antenna dishes (components with 'AD' prefix)",
-        "Log warning when using default angle for a component with articulation capability",
-        "Returns InertiaResult dataclass",
-        "Typecheck passes"
-      ],
-      "priority": 30,
-      "passes": true,
-      "notes": "Function loads components from config, extracts articulation capabilities, applies defaults (0° for solar panels, 15° for 'AD' prefix dishes), logs warnings for defaults used"
-    },
-    {
-      "id": "US-031",
-      "title": "Export new functions from computation module",
-      "description": "As a developer, I need the new functions exported from the computation module's __init__.py.",
-      "acceptanceCriteria": [
-        "Add load_components_from_config to src/computation/__init__.py exports",
-        "Add compute_inertia_from_config to src/computation/__init__.py exports",
-        "Add apply_articulation_to_mesh to src/computation/__init__.py exports",
-        "Typecheck passes"
-      ],
-      "priority": 31,
-      "passes": true,
-      "notes": "All three functions now exported in both import statement and __all__ list"
-    },
-    {
-      "id": "US-032",
-      "title": "Update inertia notebook to use config-based workflow",
-      "description": "As an engineer, I want the inertia calculation notebook to demonstrate loading component positions from config files.",
-      "acceptanceCriteria": [
-        "Update notebooks/inversion/01_inertia_calculation.py to use config-based workflow",
-        "Load Intelsat 901 config using RSO_ConfigManager",
-        "Define masses dict in notebook (not in config file)",
-        "Demonstrate default articulation angles and custom angles",
-        "Show comparison of inertia at different articulation states",
-        "Keep analytical validation section (unit cube, asymmetric box)",
-        "Typecheck passes"
-      ],
-      "priority": 32,
-      "passes": true,
-      "notes": "Notebook restructured with config-based workflow as Section 1 (recommended), low-level API in Section 2, and analytical validation in Section 3. Demonstrates RSO_ConfigManager loading, masses dict, default and custom articulation angles, and state comparison table."
+      "priority": 20,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

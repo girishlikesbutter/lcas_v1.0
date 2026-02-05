@@ -36,6 +36,9 @@ data/spice_kernels/generic/spk/de440.bsp
 
 # Results (generated, not tracked)
 data/results/*/
+# But keep the inversion_diagnostics directory structure
+!data/results/inversion_diagnostics/
+!data/results/inversion_diagnostics/.gitkeep
 
 # Type checking cache
 .mypy_cache/
