@@ -637,6 +637,181 @@ print(f"  RMS residual < {RMS_THRESHOLD_FACTOR} x noise_sigma = {RMS_THRESHOLD_F
 
 # %% [markdown]
 # ---
+# ## 11. Multi-Start Local Optimization Strategy
+#
+# This strategy uses Latin Hypercube Sampling (LHS) to generate well-distributed
+# initial points across the parameter space, then runs L-BFGS-B from each start.
+# LHS provides better coverage than random sampling for the same number of points.
+
+# %%
+from scipy.stats.qmc import LatinHypercube
+
+
+def multistart_local(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    n_starts: int,
+    max_evals_per_start: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Multi-start local optimization using Latin Hypercube Sampling.
+
+    Generates initial points using LHS for good coverage of the parameter space,
+    then runs L-BFGS-B from each start point. Tracks evaluations across all
+    local optimizations to respect the total budget.
+
+    Parameters
+    ----------
+    counted_objective : CountedObjective
+        Budget-enforcing objective wrapper. Should already be reset before calling.
+    bounds : list[tuple[float, float]]
+        List of (lower, upper) bounds for each parameter.
+    n_starts : int
+        Number of random starting points to try.
+    max_evals_per_start : int
+        Maximum function evaluations per local optimization.
+    seed : int | None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    dict
+        Results containing:
+        - 'x_best': Best solution found
+        - 'f_best': Best objective value
+        - 'n_evals': Total function evaluations used
+        - 'n_successful_starts': Number of starts that completed without hitting budget
+        - 'all_results': List of results from each local optimization
+    """
+    n_params = len(bounds)
+    lower_bounds = np.array([b[0] for b in bounds])
+    upper_bounds = np.array([b[1] for b in bounds])
+
+    # Generate Latin Hypercube samples in [0, 1]^n
+    lhs = LatinHypercube(d=n_params, seed=seed)
+    samples_unit = lhs.random(n=n_starts)
+
+    # Scale to parameter bounds
+    initial_points = lower_bounds + samples_unit * (upper_bounds - lower_bounds)
+
+    # Track results
+    all_results = []
+    x_best = None
+    f_best = float('inf')
+    n_successful_starts = 0
+
+    for i, x0 in enumerate(initial_points):
+        # Check if budget is already exhausted
+        if counted_objective.is_budget_exhausted():
+            break
+
+        # Record evaluations before this start
+        evals_before = counted_objective.n_evals
+
+        # Run L-BFGS-B from this starting point
+        result = minimize(
+            counted_objective,
+            x0,
+            method='L-BFGS-B',
+            bounds=bounds,
+            options={
+                'maxfun': max_evals_per_start,
+                'ftol': 1e-8,
+                'gtol': 1e-6,
+            },
+        )
+
+        # Record evaluations used for this start
+        evals_used = counted_objective.n_evals - evals_before
+
+        # Store result
+        local_result = {
+            'x0': x0.copy(),
+            'x_opt': result.x.copy(),
+            'f_opt': result.fun,
+            'n_evals': evals_used,
+            'success': result.success,
+            'message': result.message,
+        }
+        all_results.append(local_result)
+
+        # Update best if this is better
+        if result.fun < f_best:
+            f_best = result.fun
+            x_best = result.x.copy()
+
+        # Count successful completions (finished without budget exhaustion)
+        if not counted_objective.is_budget_exhausted():
+            n_successful_starts += 1
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'n_successful_starts': n_successful_starts,
+        'n_starts_attempted': len(all_results),
+        'all_results': all_results,
+    }
+
+
+# %% [markdown]
+# ---
+# ## 12. Test Multi-Start Local Optimization
+
+# %%
+print("\nTesting multi-start local optimization...")
+print("-" * 50)
+
+# Create a counted objective with test budget
+test_budget = 500
+test_n_starts = 5
+test_evals_per_start = 100
+
+counted_obj_test = CountedObjective(objective_fn, budget=test_budget)
+
+print(f"Configuration:")
+print(f"  Total budget: {test_budget} evaluations")
+print(f"  Number of starts: {test_n_starts}")
+print(f"  Max evals per start: {test_evals_per_start}")
+
+# Run multi-start optimization
+start_time = time.time()
+ms_result = multistart_local(
+    counted_objective=counted_obj_test,
+    bounds=bounds,
+    n_starts=test_n_starts,
+    max_evals_per_start=test_evals_per_start,
+    seed=42,
+)
+elapsed_time = time.time() - start_time
+
+print(f"\nResults:")
+print(f"  Total evaluations used: {ms_result['n_evals']}")
+print(f"  Starts attempted: {ms_result['n_starts_attempted']}")
+print(f"  Successful starts: {ms_result['n_successful_starts']}")
+print(f"  Best objective value: {ms_result['f_best']:.6f}")
+print(f"  Wall time: {elapsed_time:.1f}s")
+
+# Show individual start results
+print(f"\nPer-start breakdown:")
+for i, r in enumerate(ms_result['all_results']):
+    print(f"  Start {i+1}: f={r['f_opt']:.4f}, evals={r['n_evals']}, success={r['success']}")
+
+# Check against success criteria
+if ms_result['x_best'] is not None:
+    success, omega_err, rms = evaluate_success(
+        ms_result['x_best'], true_params, objective_fn, noise_sigma
+    )
+    print(f"\nSuccess evaluation:")
+    print(f"  Omega error: {omega_err:.4f} deg/s (threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S})")
+    print(f"  RMS residual: {rms:.4f} mag (threshold: {RMS_THRESHOLD_FACTOR * noise_sigma:.4f})")
+    print(f"  Overall success: {success}")
+
+print("\nMulti-start local optimization test completed!")
+
+# %% [markdown]
+# ---
 # ## Setup Complete
 #
 # We now have:
@@ -645,9 +820,9 @@ print(f"  RMS residual < {RMS_THRESHOLD_FACTOR} x noise_sigma = {RMS_THRESHOLD_F
 # - `true_params`: The 6-parameter vector for validation
 # - `bounds`: Parameter bounds for optimization
 # - `evaluate_success()`: Function to check if optimization succeeded
+# - `multistart_local()`: Multi-start local optimization with LHS initialization
 #
-# The next sections (US-012 onwards) will implement:
-# - Multi-start local optimization strategy
+# The next sections (US-013 onwards) will implement:
 # - Differential Evolution baseline
 # - Basin Hopping strategy
 # - Comparison experiment and visualization
@@ -659,6 +834,7 @@ print("SETUP COMPLETE - Objects available for optimizer comparison:")
 print("=" * 60)
 print(f"\n  objective_fn: ObjectiveFunction instance")
 print(f"  CountedObjective: Budget-enforcing wrapper class")
+print(f"  multistart_local(): Multi-start local optimization with LHS")
 print(f"  true_params: {true_params}")
 print(f"  noise_sigma: {noise_sigma}")
 print(f"  n_observations: {n_observations}")
