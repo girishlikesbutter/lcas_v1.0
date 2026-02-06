@@ -138,7 +138,7 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Reuse optimizer implementations from notebook 06. All strategies get 5000 total evals."
     },
     {
@@ -154,7 +154,7 @@
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Reuse Wilson CI calculation from notebook 06."
     },
     {

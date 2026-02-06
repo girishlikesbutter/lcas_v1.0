@@ -135,3 +135,36 @@ Started: Fri Feb  6 05:19:30 PM NZDT 2026
   - Per-candidate info (n_evals, converged) is accessible via pipeline_result['candidates'][i]
   - Validation run is a single execution to confirm pipeline mechanics before statistical comparisons in later experiments
 ---
+
+## 2026-02-06 - US-008
+- Implemented Experiment 4: Evaluation-count matched baseline comparison
+  - Defined multistart_local(), run_de(), run_basinhopping_strategy() reusing notebook 06 implementations
+  - Implemented run_trial() dispatcher for 4 strategies: Multi-start, DE, Basin-Hopping, Mixed-Fidelity
+  - Mixed-fidelity budget split: lofi_budget=4400, hifi_budget=600 (3×200), total=5000
+  - 10 trials per strategy with seeds = BASE_SEED + trial * 100
+  - Records per-trial: strategy, seed, best_objective, omega_error, rms_residual, success, n_evals, wall_time
+  - Prints formatted comparison table and per-strategy detail statistics
+  - Added markdown summary cell interpreting evaluation-count comparison
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - Baseline strategies (multistart, DE, basin-hopping) all use obj_hifi with CountedObjective for fair comparison
+  - Mixed-fidelity uses run_mixed_fidelity() which handles its own CountedObjective internally
+  - run_basinhopping_strategy() renamed from run_basinhopping() to avoid collision with scipy's basinhopping import
+  - evaluate_success() must use obj_hifi (not obj_lofi) for all strategies for fair comparison
+  - scipy.stats.qmc.LatinHypercube is needed for multistart_local's LHS initialization
+---
+
+## 2026-02-06 - US-009
+- Implemented Experiment 4c: Evaluation-count comparison visualization
+  - Box plot of final objective values per strategy (4 strategies) with colored patches and mean markers
+  - Bar chart of success rates with 95% Wilson score confidence intervals and count annotations
+  - compute_binomial_ci() function reused from notebook 06 pattern
+  - Both figures saved to data/results/inversion_diagnostics/
+- Added markdown summary cell interpreting box plot and bar chart results
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - Wilson score CI: import scipy.stats as sp_stats (not just stats) to avoid name collision with spearmanr import earlier in notebook
+  - Box plot colors: use patch_artist=True with set_facecolor() on bp['boxes'] patches
+  - For error bars on bar charts, compute asymmetric errors as (rate - lower, upper - rate) for yerr=[lower_err, upper_err]
+  - box_colors array defined once and reused across both box plot and bar chart for visual consistency
+---

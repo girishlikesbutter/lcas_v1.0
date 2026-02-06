@@ -1981,6 +1981,126 @@ for strategy in STRATEGIES:
     print(f"  Evals used: {sr['n_evals'].mean():.0f} ± {sr['n_evals'].std():.0f}")
 
 # %% [markdown]
+# ### Experiment 4c: Evaluation-Count Comparison Visualization
+
+# %%
+# --- Box plot of final objective values per strategy ---
+
+fig_box, ax_box = plt.subplots(figsize=(10, 6))
+
+box_data = [strategy_results[s]['best_objectives'] for s in STRATEGIES]
+bp = ax_box.boxplot(
+    box_data,
+    labels=STRATEGIES,
+    patch_artist=True,
+    widths=0.5,
+    showmeans=True,
+    meanprops=dict(marker='D', markerfacecolor='black', markersize=6),
+)
+
+# Color each box
+box_colors = ['#4C72B0', '#55A868', '#C44E52', '#8172B2']
+for patch, color in zip(bp['boxes'], box_colors):
+    patch.set_facecolor(color)
+    patch.set_alpha(0.7)
+
+ax_box.set_ylabel('Best Objective Value')
+ax_box.set_title(f'Experiment 4: Objective Values by Strategy\n'
+                 f'(budget={COMPARISON_BUDGET} evals, {N_COMPARISON_TRIALS} trials each)')
+ax_box.grid(True, alpha=0.3, axis='y')
+
+plt.tight_layout()
+
+# Save figure
+box_path = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics" / "evalcount_comparison_objectives.png"
+fig_box.savefig(box_path, dpi=150, bbox_inches='tight')
+print(f"Box plot saved: {box_path}")
+plt.show()
+
+# %%
+# --- Bar chart of success rates with 95% Wilson score confidence intervals ---
+
+
+def compute_binomial_ci(
+    n_success: int,
+    n_trials: int,
+    confidence: float = 0.95,
+) -> tuple[float, float, float]:
+    """
+    Compute success rate and Wilson score confidence interval.
+
+    Returns (success_rate, lower_bound, upper_bound).
+    """
+    from scipy import stats as sp_stats
+
+    p = n_success / n_trials
+    z = sp_stats.norm.ppf((1 + confidence) / 2)
+
+    # Wilson score interval
+    denominator = 1 + z**2 / n_trials
+    center = (p + z**2 / (2 * n_trials)) / denominator
+    margin = z * np.sqrt((p * (1 - p) + z**2 / (4 * n_trials)) / n_trials) / denominator
+
+    lower = max(0, center - margin)
+    upper = min(1, center + margin)
+
+    return p, lower, upper
+
+
+fig_sr, ax_sr = plt.subplots(figsize=(10, 6))
+
+success_rates = []
+ci_lower_err = []
+ci_upper_err = []
+
+for strategy in STRATEGIES:
+    n_success = int(strategy_results[strategy]['successes'].sum())
+    rate, lower, upper = compute_binomial_ci(n_success, N_COMPARISON_TRIALS)
+    success_rates.append(rate * 100)
+    ci_lower_err.append(rate * 100 - lower * 100)
+    ci_upper_err.append(upper * 100 - rate * 100)
+
+x_pos = np.arange(len(STRATEGIES))
+bars = ax_sr.bar(
+    x_pos, success_rates,
+    color=box_colors, alpha=0.7,
+    edgecolor='black', linewidth=1.5,
+)
+
+# Add error bars for confidence intervals
+ax_sr.errorbar(
+    x_pos, success_rates,
+    yerr=[ci_lower_err, ci_upper_err],
+    fmt='none', ecolor='black', capsize=6, capthick=2, linewidth=2,
+)
+
+# Annotate bars with success count
+for i, (bar, strategy) in enumerate(zip(bars, STRATEGIES)):
+    n_success = int(strategy_results[strategy]['successes'].sum())
+    ax_sr.text(
+        bar.get_x() + bar.get_width() / 2,
+        bar.get_height() + ci_upper_err[i] + 2,
+        f'{n_success}/{N_COMPARISON_TRIALS}',
+        ha='center', va='bottom', fontsize=10, fontweight='bold',
+    )
+
+ax_sr.set_xticks(x_pos)
+ax_sr.set_xticklabels(STRATEGIES)
+ax_sr.set_ylabel('Success Rate (%)')
+ax_sr.set_ylim(0, 110)
+ax_sr.set_title(f'Experiment 4: Success Rates with 95% Wilson Score CI\n'
+                f'(budget={COMPARISON_BUDGET} evals, {N_COMPARISON_TRIALS} trials each)')
+ax_sr.grid(True, alpha=0.3, axis='y')
+
+plt.tight_layout()
+
+# Save figure
+sr_path = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics" / "evalcount_comparison_success.png"
+fig_sr.savefig(sr_path, dpi=150, bbox_inches='tight')
+print(f"Success rate chart saved: {sr_path}")
+plt.show()
+
+# %% [markdown]
 # ### Experiment 4 Summary
 #
 # **Evaluation-Count Matched Comparison Results:**
@@ -1990,13 +2110,23 @@ for strategy in STRATEGIES:
 # 1. **Multi-start local**: 50 random starts with LHS, 100 L-BFGS-B evals each
 # 2. **Differential Evolution**: Full hi-fi DE with budget enforcement
 # 3. **Basin-Hopping**: L-BFGS-B local minimizer with random perturbations
-# 4. **Mixed-Fidelity**: Lo-fi DE (4400 evals) + hi-fi L-BFGS-B refinement (3×200 evals)
+# 4. **Mixed-Fidelity**: Lo-fi DE (4400 evals) + hi-fi L-BFGS-B refinement (3x200 evals)
+#
+# **Box plot (objective values):**
+# - Shows the distribution of best objective values achieved across 10 trials per strategy.
+# - Lower and tighter distributions indicate more reliable convergence.
+# - Mixed-fidelity's distribution reveals whether lo-fi exploration + hi-fi refinement
+#   produces competitive final objective values.
+#
+# **Bar chart (success rates):**
+# - Wilson score confidence intervals account for small sample sizes (n=10).
+# - Overlapping CIs indicate statistically indistinguishable success rates.
+# - A mixed-fidelity success rate within 5 percentage points of the best full-fidelity
+#   strategy would validate the approach.
 #
 # **Key observations:**
 # - All strategies use the same total evaluation budget (5000) for fair comparison.
 # - Mixed-fidelity splits the budget: the lo-fi stage explores broadly (fast),
 #   then the hi-fi stage refines the top 3 candidates (accurate).
-# - The comparison reveals whether the mixed-fidelity approach achieves competitive
-#   success rates and parameter accuracy despite using fewer hi-fi evaluations.
 # - Wall-clock time differences reflect the computational advantage of lo-fi
 #   evaluations in the mixed-fidelity pipeline.
