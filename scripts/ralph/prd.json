@@ -175,7 +175,7 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "This is the primary practical comparison. Must re-measure baseline times for fair comparison (FR-11)."
     },
     {

@@ -168,3 +168,27 @@ Started: Fri Feb  6 05:19:30 PM NZDT 2026
   - For error bars on bar charts, compute asymmetric errors as (rate - lower, upper - rate) for yerr=[lower_err, upper_err]
   - box_colors array defined once and reused across both box plot and bar chart for visual consistency
 ---
+
+## 2026-02-06 - US-010
+- Implemented Experiment 5: Wall-clock matched comparison
+  - Experiment 5a: Full-fidelity DE baseline timing (10 trials, budget=5000, base_seed=2000)
+  - Experiment 5b: Budget calculation using Experiment 1 timing data to match wall-clock time
+    - Wall time model: T_mixed ≈ lofi_budget * t_lofi + hifi_budget * t_hifi
+    - Solves for lofi_budget given T_ref, prints effective evaluation comparison
+  - Experiment 5c: Mixed-fidelity trials with adjusted lo-fi budget, same seeds as DE baseline
+    - Prints detailed comparison table with wall-clock column showing near-equal times
+    - Prints per-trial detail with wall times and success status
+  - Experiment 5d: Visualization
+    - Grouped bar chart: success rate and omega error with wall time annotations
+    - Scatter plot: (wall_time, omega_error) for all trials with Pareto front
+    - Pareto front computed by sorting by wall_time and tracking minimum omega_error
+  - Added markdown summary cell interpreting wall-clock comparison
+- Saves: wallclock_comparison.png, wallclock_pareto.png to data/results/inversion_diagnostics/
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb, scripts/ralph/prd.json
+- **Learnings for future iterations:**
+  - Use different base seed (2000) from Experiment 4 (1000) to get independent trial results
+  - Wall time model uses per-eval timing from Experiment 1 (mean_hifi, mean_lofi) to estimate budget
+  - Pareto front: sort by one axis, then track running minimum of the other axis
+  - Use log scale for omega_error y-axis in scatter plot when range exceeds 100x
+  - compute_binomial_ci() reused from Experiment 4 for Wilson score CI on success rates
+---

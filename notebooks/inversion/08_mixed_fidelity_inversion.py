@@ -2130,3 +2130,431 @@ plt.show()
 #   then the hi-fi stage refines the top 3 candidates (accurate).
 # - Wall-clock time differences reflect the computational advantage of lo-fi
 #   evaluations in the mixed-fidelity pipeline.
+
+# %% [markdown]
+# ---
+# ## Experiment 5: Wall-Clock Matched Comparison
+#
+# Compare mixed-fidelity against full-fidelity DE under the **same wall-clock budget**.
+# This is the primary practical comparison: given the same amount of time, does the
+# mixed-fidelity approach produce better results?
+
+# %% [markdown]
+# ### Experiment 5a: Establish Full-Fidelity DE Baseline Time
+
+# %%
+# Run full-fidelity DE (10 trials) to establish mean wall-clock time T_ref
+# Reuse run_trial() dispatcher from Experiment 4
+
+print("=" * 70)
+print("EXPERIMENT 5a: FULL-FIDELITY DE BASELINE TIMING")
+print("=" * 70)
+
+N_WALLCLOCK_TRIALS = 10
+WALLCLOCK_DE_BUDGET = 5000  # Same budget as Experiment 4
+WALLCLOCK_BASE_SEED = 2000  # Different base seed from Experiment 4
+
+print(f"\nConfiguration:")
+print(f"  DE evaluation budget: {WALLCLOCK_DE_BUDGET}")
+print(f"  Trials: {N_WALLCLOCK_TRIALS}")
+print(f"  Base seed: {WALLCLOCK_BASE_SEED}")
+
+de_baseline_results: list[dict] = []
+
+print("\nRunning full-fidelity DE baseline...")
+for trial in range(N_WALLCLOCK_TRIALS):
+    seed = WALLCLOCK_BASE_SEED + trial * 100
+    print(f"  Trial {trial + 1}/{N_WALLCLOCK_TRIALS} (seed={seed})...", end=" ", flush=True)
+
+    # Run full-fidelity DE
+    t0 = time.perf_counter()
+    counted_obj = CountedObjective(obj_hifi, budget=WALLCLOCK_DE_BUDGET)
+    result = run_de(
+        counted_objective=counted_obj,
+        bounds=bounds,
+        max_evals=WALLCLOCK_DE_BUDGET,
+        seed=seed,
+    )
+    wall_time = time.perf_counter() - t0
+
+    # Evaluate success
+    x_best = result.get('x_best')
+    if x_best is not None:
+        success, omega_error, rms_residual = evaluate_success(
+            x_best, true_params, obj_hifi, noise_sigma
+        )
+    else:
+        success = False
+        omega_error = float('inf')
+        rms_residual = float('inf')
+
+    trial_result = {
+        'strategy': 'Full-Fidelity DE',
+        'seed': seed,
+        'best_objective': result.get('f_best', float('inf')),
+        'omega_error': omega_error,
+        'rms_residual': rms_residual,
+        'success': success,
+        'n_evals': result['n_evals'],
+        'wall_time': wall_time,
+    }
+    de_baseline_results.append(trial_result)
+
+    status = "SUCCESS" if success else "FAIL"
+    print(f"{status}, f={trial_result['best_objective']:.4f}, "
+          f"omega_err={omega_error:.4f} deg/s, t={wall_time:.1f}s")
+
+# Compute T_ref
+de_wall_times = np.array([r['wall_time'] for r in de_baseline_results])
+T_ref = de_wall_times.mean()
+
+print(f"\n{'─' * 50}")
+print(f"Full-Fidelity DE wall-clock statistics:")
+print(f"  Mean (T_ref): {T_ref:.2f} s")
+print(f"  Std:          {de_wall_times.std():.2f} s")
+print(f"  Range:        [{de_wall_times.min():.2f}, {de_wall_times.max():.2f}] s")
+
+# %% [markdown]
+# ### Experiment 5b: Calculate Adjusted Lo-Fi Budget for Mixed-Fidelity
+#
+# Using Experiment 1 timing data, calculate the lo-fi budget so that the mixed-fidelity
+# pipeline's total wall-clock time approximately equals T_ref.
+
+# %%
+print("=" * 70)
+print("EXPERIMENT 5b: BUDGET CALCULATION FOR WALL-CLOCK MATCHING")
+print("=" * 70)
+
+# Use timing from Experiment 1
+t_hifi_per_eval = mean_hifi  # seconds per hi-fi evaluation
+t_lofi_per_eval = mean_lofi  # seconds per lo-fi evaluation
+
+print(f"\nTiming from Experiment 1:")
+print(f"  Hi-fi eval time: {t_hifi_per_eval:.4f} s")
+print(f"  Lo-fi eval time: {t_lofi_per_eval:.4f} s")
+print(f"  Speedup factor:  {speedup:.1f}x")
+
+# Mixed-fidelity wall time model:
+#   T_mixed ≈ lofi_budget * t_lofi + (N * hifi_evals_per_candidate) * t_hifi
+# Set T_mixed = T_ref and solve for lofi_budget:
+#   lofi_budget = (T_ref - N * hifi_evals_per_candidate * t_hifi) / t_lofi
+
+WC_MF_TOP_N = 3
+WC_MF_HIFI_EVALS_PER_CANDIDATE = 200
+wc_hifi_budget = WC_MF_TOP_N * WC_MF_HIFI_EVALS_PER_CANDIDATE
+wc_hifi_time = wc_hifi_budget * t_hifi_per_eval
+
+# Time remaining for lo-fi stage
+time_for_lofi = T_ref - wc_hifi_time
+
+if time_for_lofi <= 0:
+    print(f"\nWARNING: T_ref ({T_ref:.2f}s) is less than hi-fi stage time ({wc_hifi_time:.2f}s)")
+    print(f"  Using minimum lofi_budget of 1000")
+    wc_lofi_budget = 1000
+else:
+    wc_lofi_budget = int(time_for_lofi / t_lofi_per_eval)
+
+print(f"\nTarget wall-clock time (T_ref): {T_ref:.2f} s")
+print(f"Hi-fi Stage 2 time (estimated): {wc_hifi_time:.2f} s ({wc_hifi_budget} evals)")
+print(f"Time remaining for lo-fi:       {max(0, time_for_lofi):.2f} s")
+print(f"Adjusted lo-fi budget:          {wc_lofi_budget} evals")
+print(f"Expected lo-fi time:            {wc_lofi_budget * t_lofi_per_eval:.2f} s")
+print(f"Expected total time:            {wc_lofi_budget * t_lofi_per_eval + wc_hifi_time:.2f} s ≈ T_ref")
+
+# Effective evaluations comparison
+effective_hifi_evals = int(T_ref / t_hifi_per_eval)
+print(f"\nEffective evaluations in T_ref budget:")
+print(f"  Full-fidelity DE:  {effective_hifi_evals} hi-fi evals")
+print(f"  Mixed-fidelity:    {wc_lofi_budget} lo-fi + {wc_hifi_budget} hi-fi = {wc_lofi_budget + wc_hifi_budget} total evals")
+print(f"  Evaluation ratio:  {(wc_lofi_budget + wc_hifi_budget) / effective_hifi_evals:.1f}x more evaluations via mixed-fidelity")
+
+# %% [markdown]
+# ### Experiment 5c: Run Mixed-Fidelity with Adjusted Budget
+
+# %%
+print("=" * 70)
+print("EXPERIMENT 5c: WALL-CLOCK MATCHED MIXED-FIDELITY TRIALS")
+print("=" * 70)
+
+print(f"\nConfiguration:")
+print(f"  Lo-fi budget (adjusted): {wc_lofi_budget}")
+print(f"  Hi-fi budget:            {wc_hifi_budget} ({WC_MF_TOP_N} × {WC_MF_HIFI_EVALS_PER_CANDIDATE})")
+print(f"  Target wall time:        {T_ref:.2f} s")
+print(f"  Trials: {N_WALLCLOCK_TRIALS}")
+
+mf_wallclock_results: list[dict] = []
+
+print("\nRunning wall-clock matched mixed-fidelity...")
+for trial in range(N_WALLCLOCK_TRIALS):
+    seed = WALLCLOCK_BASE_SEED + trial * 100  # Same seeds as DE baseline
+    print(f"  Trial {trial + 1}/{N_WALLCLOCK_TRIALS} (seed={seed})...", end=" ", flush=True)
+
+    t0 = time.perf_counter()
+    result = run_mixed_fidelity(
+        obj_lofi=obj_lofi,
+        obj_hifi=obj_hifi,
+        bounds=bounds,
+        lofi_budget=wc_lofi_budget,
+        top_n=WC_MF_TOP_N,
+        hifi_evals_per_candidate=WC_MF_HIFI_EVALS_PER_CANDIDATE,
+        seed=seed,
+    )
+    wall_time = time.perf_counter() - t0
+
+    x_best = result.get('x_best')
+    if x_best is not None:
+        success, omega_error, rms_residual = evaluate_success(
+            x_best, true_params, obj_hifi, noise_sigma
+        )
+    else:
+        success = False
+        omega_error = float('inf')
+        rms_residual = float('inf')
+
+    trial_result = {
+        'strategy': 'Mixed-Fidelity',
+        'seed': seed,
+        'best_objective': result.get('f_best', float('inf')),
+        'omega_error': omega_error,
+        'rms_residual': rms_residual,
+        'success': success,
+        'n_evals': result['n_evals'],
+        'n_evals_lofi': result['n_evals_lofi'],
+        'n_evals_hifi': result['n_evals_hifi'],
+        'wall_time': wall_time,
+        'stage1_time': result['stage1_time'],
+        'stage2_time': result['stage2_time'],
+    }
+    mf_wallclock_results.append(trial_result)
+
+    status = "SUCCESS" if success else "FAIL"
+    print(f"{status}, f={trial_result['best_objective']:.4f}, "
+          f"omega_err={omega_error:.4f} deg/s, t={wall_time:.1f}s")
+
+print("\nAll trials complete!")
+
+# %%
+# Print comparison table
+print("\n" + "=" * 70)
+print("EXPERIMENT 5: WALL-CLOCK MATCHED COMPARISON TABLE")
+print("=" * 70)
+
+# Aggregate DE results
+de_successes = np.array([r['success'] for r in de_baseline_results])
+de_objectives = np.array([r['best_objective'] for r in de_baseline_results])
+de_omega_errors = np.array([r['omega_error'] for r in de_baseline_results])
+de_rms = np.array([r['rms_residual'] for r in de_baseline_results])
+de_n_evals = np.array([r['n_evals'] for r in de_baseline_results])
+
+# Aggregate MF results
+mf_successes = np.array([r['success'] for r in mf_wallclock_results])
+mf_objectives = np.array([r['best_objective'] for r in mf_wallclock_results])
+mf_omega_errors = np.array([r['omega_error'] for r in mf_wallclock_results])
+mf_rms = np.array([r['rms_residual'] for r in mf_wallclock_results])
+mf_wall_times = np.array([r['wall_time'] for r in mf_wallclock_results])
+mf_n_evals_total = np.array([r['n_evals'] for r in mf_wallclock_results])
+mf_n_evals_lofi = np.array([r['n_evals_lofi'] for r in mf_wallclock_results])
+mf_n_evals_hifi = np.array([r['n_evals_hifi'] for r in mf_wallclock_results])
+
+de_success_rate = de_successes.sum() / N_WALLCLOCK_TRIALS * 100
+mf_success_rate = mf_successes.sum() / N_WALLCLOCK_TRIALS * 100
+
+print(f"\n{'Metric':<30} | {'Full-Fidelity DE':>18} | {'Mixed-Fidelity':>18}")
+print("-" * 72)
+print(f"{'Success rate':<30} | {de_success_rate:>16.0f}% | {mf_success_rate:>16.0f}%")
+print(f"{'Mean objective':<30} | {de_objectives.mean():>18.4f} | {mf_objectives.mean():>18.4f}")
+print(f"{'Mean omega error (deg/s)':<30} | {de_omega_errors.mean():>18.4f} | {mf_omega_errors.mean():>18.4f}")
+print(f"{'Mean RMS residual (mag)':<30} | {de_rms.mean():>18.4f} | {mf_rms.mean():>18.4f}")
+print(f"{'Mean wall time (s)':<30} | {de_wall_times.mean():>18.2f} | {mf_wall_times.mean():>18.2f}")
+print(f"{'Mean total evals':<30} | {de_n_evals.mean():>18.0f} | {mf_n_evals_total.mean():>18.0f}")
+print("-" * 72)
+
+print(f"\nEffective evaluations in wall-clock budget:")
+print(f"  Full-fidelity DE:   {de_n_evals.mean():.0f} hi-fi evals in {de_wall_times.mean():.1f}s")
+print(f"  Mixed-fidelity:     {mf_n_evals_lofi.mean():.0f} lo-fi + {mf_n_evals_hifi.mean():.0f} hi-fi "
+      f"= {mf_n_evals_total.mean():.0f} total evals in {mf_wall_times.mean():.1f}s")
+
+# Per-trial detail
+print(f"\nPer-trial wall-clock times:")
+print(f"  {'Trial':<8} {'DE Time (s)':>12} {'MF Time (s)':>12} {'DE Success':>12} {'MF Success':>12}")
+print(f"  {'-' * 56}")
+for i in range(N_WALLCLOCK_TRIALS):
+    de_t = de_baseline_results[i]['wall_time']
+    mf_t = mf_wallclock_results[i]['wall_time']
+    de_s = "YES" if de_baseline_results[i]['success'] else "no"
+    mf_s = "YES" if mf_wallclock_results[i]['success'] else "no"
+    print(f"  {i + 1:<8} {de_t:>12.1f} {mf_t:>12.1f} {de_s:>12} {mf_s:>12}")
+
+# %% [markdown]
+# ### Experiment 5d: Wall-Clock Comparison Visualization
+
+# %%
+# --- Grouped bar chart: success rate and mean omega error ---
+
+fig_wc, axes_wc = plt.subplots(1, 2, figsize=(12, 5))
+
+wc_strategies = ['Full-Fidelity DE', 'Mixed-Fidelity']
+wc_colors = ['#4C72B0', '#8172B2']
+
+# Panel 1: Success rate bars
+ax1 = axes_wc[0]
+
+de_n_success = int(de_successes.sum())
+mf_n_success = int(mf_successes.sum())
+
+de_rate, de_ci_lo, de_ci_hi = compute_binomial_ci(de_n_success, N_WALLCLOCK_TRIALS)
+mf_rate, mf_ci_lo, mf_ci_hi = compute_binomial_ci(mf_n_success, N_WALLCLOCK_TRIALS)
+
+rates = [de_rate * 100, mf_rate * 100]
+ci_lo_err = [de_rate * 100 - de_ci_lo * 100, mf_rate * 100 - mf_ci_lo * 100]
+ci_hi_err = [de_ci_hi * 100 - de_rate * 100, mf_ci_hi * 100 - mf_rate * 100]
+
+x_pos_wc = np.arange(len(wc_strategies))
+bars1 = ax1.bar(x_pos_wc, rates, color=wc_colors, alpha=0.7, edgecolor='black', linewidth=1.5)
+ax1.errorbar(x_pos_wc, rates, yerr=[ci_lo_err, ci_hi_err],
+             fmt='none', ecolor='black', capsize=6, capthick=2, linewidth=2)
+
+# Annotate with success count and wall time
+for i, (bar, strat) in enumerate(zip(bars1, wc_strategies)):
+    n_succ = de_n_success if i == 0 else mf_n_success
+    mean_t = de_wall_times.mean() if i == 0 else mf_wall_times.mean()
+    ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + ci_hi_err[i] + 2,
+             f'{n_succ}/{N_WALLCLOCK_TRIALS}\n({mean_t:.1f}s)',
+             ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+ax1.set_xticks(x_pos_wc)
+ax1.set_xticklabels(wc_strategies, fontsize=9)
+ax1.set_ylabel('Success Rate (%)')
+ax1.set_ylim(0, 120)
+ax1.set_title('Success Rate\n(wall-clock matched)')
+ax1.grid(True, alpha=0.3, axis='y')
+
+# Panel 2: Mean omega error bars
+ax2 = axes_wc[1]
+
+mean_omega_errs = [de_omega_errors.mean(), mf_omega_errors.mean()]
+std_omega_errs = [de_omega_errors.std(), mf_omega_errors.std()]
+
+bars2 = ax2.bar(x_pos_wc, mean_omega_errs, color=wc_colors, alpha=0.7,
+                edgecolor='black', linewidth=1.5)
+ax2.errorbar(x_pos_wc, mean_omega_errs, yerr=std_omega_errs,
+             fmt='none', ecolor='black', capsize=6, capthick=2, linewidth=2)
+
+# Annotate with wall time
+for i, (bar, strat) in enumerate(zip(bars2, wc_strategies)):
+    mean_t = de_wall_times.mean() if i == 0 else mf_wall_times.mean()
+    ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + std_omega_errs[i] + 0.01,
+             f'({mean_t:.1f}s)',
+             ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+ax2.set_xticks(x_pos_wc)
+ax2.set_xticklabels(wc_strategies, fontsize=9)
+ax2.set_ylabel('Mean Omega Error (deg/s)')
+ax2.axhline(y=OMEGA_ERROR_THRESHOLD_DEG_PER_S, color='red', linestyle='--', alpha=0.7,
+            label=f'Threshold ({OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s)')
+ax2.legend(fontsize=8)
+ax2.set_title('Mean Angular Velocity Error\n(wall-clock matched)')
+ax2.grid(True, alpha=0.3, axis='y')
+
+plt.suptitle('Experiment 5: Wall-Clock Matched Comparison', fontsize=13, fontweight='bold', y=1.02)
+plt.tight_layout()
+
+# Save figure
+wc_path = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics" / "wallclock_comparison.png"
+fig_wc.savefig(wc_path, dpi=150, bbox_inches='tight')
+print(f"Wall-clock comparison saved: {wc_path}")
+plt.show()
+
+# %%
+# --- Scatter plot of (wall_time, omega_error) for all trials with Pareto front ---
+
+fig_pareto, ax_pareto = plt.subplots(figsize=(10, 7))
+
+# Plot all trial points
+de_wt = np.array([r['wall_time'] for r in de_baseline_results])
+de_oe = np.array([r['omega_error'] for r in de_baseline_results])
+mf_wt = np.array([r['wall_time'] for r in mf_wallclock_results])
+mf_oe = np.array([r['omega_error'] for r in mf_wallclock_results])
+
+ax_pareto.scatter(de_wt, de_oe, s=80, color='#4C72B0', alpha=0.7,
+                  edgecolors='navy', linewidth=1, label='Full-Fidelity DE', zorder=5)
+ax_pareto.scatter(mf_wt, mf_oe, s=80, color='#8172B2', alpha=0.7,
+                  edgecolors='purple', linewidth=1, label='Mixed-Fidelity', zorder=5,
+                  marker='s')
+
+# Compute Pareto front (minimize both wall_time and omega_error)
+all_wt = np.concatenate([de_wt, mf_wt])
+all_oe = np.concatenate([de_oe, mf_oe])
+
+# Sort by wall_time
+sorted_idx = np.argsort(all_wt)
+pareto_wt = []
+pareto_oe = []
+min_oe_so_far = float('inf')
+
+for idx in sorted_idx:
+    if all_oe[idx] < min_oe_so_far:
+        pareto_wt.append(all_wt[idx])
+        pareto_oe.append(all_oe[idx])
+        min_oe_so_far = all_oe[idx]
+
+if len(pareto_wt) > 1:
+    ax_pareto.plot(pareto_wt, pareto_oe, 'k--', alpha=0.5, linewidth=1.5,
+                   label='Pareto front', zorder=4)
+    ax_pareto.scatter(pareto_wt, pareto_oe, s=120, facecolors='none',
+                      edgecolors='black', linewidth=2, zorder=6)
+
+# Reference lines
+ax_pareto.axhline(y=OMEGA_ERROR_THRESHOLD_DEG_PER_S, color='red', linestyle=':',
+                  alpha=0.6, label=f'Success threshold ({OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s)')
+
+ax_pareto.set_xlabel('Wall-Clock Time (s)')
+ax_pareto.set_ylabel('Omega Error (deg/s)')
+ax_pareto.set_title('Experiment 5: Wall-Clock vs Accuracy Trade-off\n'
+                     f'(Full-Fidelity DE: {WALLCLOCK_DE_BUDGET} evals, '
+                     f'Mixed-Fidelity: {wc_lofi_budget} lo-fi + {wc_hifi_budget} hi-fi)')
+ax_pareto.legend(fontsize=9)
+ax_pareto.grid(True, alpha=0.3)
+
+# Use log scale for omega error if range is large
+if all_oe.max() / max(all_oe.min(), 1e-6) > 100:
+    ax_pareto.set_yscale('log')
+
+plt.tight_layout()
+
+# Save figure
+pareto_path = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics" / "wallclock_pareto.png"
+fig_pareto.savefig(pareto_path, dpi=150, bbox_inches='tight')
+print(f"Pareto plot saved: {pareto_path}")
+plt.show()
+
+# %% [markdown]
+# ### Experiment 5 Summary
+#
+# **Wall-Clock Matched Comparison Results:**
+#
+# This experiment is the primary practical comparison, testing whether mixed-fidelity
+# achieves better results than full-fidelity DE given the **same amount of time**.
+#
+# **Methodology:**
+# - Full-fidelity DE was run for 10 trials to establish the reference wall-clock
+#   time T_ref.
+# - The mixed-fidelity lo-fi budget was adjusted so that its expected total time
+#   (lo-fi Stage 1 + hi-fi Stage 2) approximately equals T_ref.
+# - Both strategies used the same random seeds for comparable starting conditions.
+#
+# **Key observations:**
+# - **Effective evaluations**: In the same wall-clock budget, mixed-fidelity can
+#   perform significantly more total evaluations due to the lo-fi speedup. This
+#   enables broader exploration of the parameter space.
+# - **Success rate comparison**: A higher mixed-fidelity success rate at matched
+#   wall time would demonstrate practical superiority.
+# - **Pareto front**: Points on the Pareto front represent the best trade-off between
+#   speed (wall time) and accuracy (omega error). Mixed-fidelity points dominating
+#   the Pareto front confirm the approach's practical advantage.
+# - **Wall-clock parity**: The comparison table shows actual measured wall times
+#   confirming that the budget adjustment achieves approximate time-matching.
+#
+# A successful outcome is a mixed-fidelity success rate and omega error comparable
+# to or better than full-fidelity DE at matched wall-clock time, validating the
+# 3x speedup target from the PRD success criteria.
