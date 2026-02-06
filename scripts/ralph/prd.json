@@ -1,323 +1,233 @@
 {
   "project": "LCAS",
-  "branchName": "ralph/lightcurve-inversion",
-  "description": "Lightcurve Inversion Diagnostic Study - Systematic investigation of objective function landscape, basin of attraction, optimizer comparison, and robustness analysis",
+  "branchName": "ralph/mixed-fidelity-inversion",
+  "description": "Mixed-Fidelity Hierarchical Inversion - Two-stage optimization strategy using shadow-free global search and shadow-enabled local refinement for faster lightcurve inversion",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Create results output directory for diagnostic study",
-      "description": "As a scientist, I need the output directory structure for saving diagnostic plots and results.",
+      "title": "Create notebook 08 with setup and dual-fidelity objective functions",
+      "description": "As a scientist, I need the same Intelsat 901 test case as notebooks 04-07 with two ObjectiveFunction instances differing only in compute_shadows_flag.",
       "acceptanceCriteria": [
-        "Create data/results/inversion_diagnostics/ directory if it doesn't exist",
-        "Add .gitkeep file to preserve directory in git",
+        "Create notebooks/inversion/08_mixed_fidelity_inversion.py as Jupytext percent format",
+        "Reuse Intelsat 901 config loading, geometry, articulation, and inertia tensor from notebooks 04-07",
+        "Use tumbling mode with n_observations=50, noise_sigma=0.05 mag",
+        "Generate synthetic lightcurve with shadows enabled (same as notebooks 04-07)",
+        "Create obj_hifi = ObjectiveFunction with compute_shadows_flag=True",
+        "Create obj_lofi = ObjectiveFunction with compute_shadows_flag=False",
+        "Verify both objective functions evaluate correctly at true_params",
+        "Store true_params, param_names, bounds matching notebook 06 format",
+        "Reuse evaluate_success() function (omega error < 0.1 deg/s AND rms < 2x noise_sigma)",
         "Typecheck passes"
       ],
       "priority": 1,
       "passes": true,
-      "notes": ""
+      "notes": "Copy minimal setup from notebook 06/07. Both objectives must use identical observation data."
     },
     {
       "id": "US-002",
-      "title": "Create notebook 04 with setup and synthetic data generation",
-      "description": "As a scientist, I need the same test case as notebook 03 so results are comparable.",
+      "title": "Implement Experiment 1: Fidelity benchmarking timing and lightcurve comparison",
+      "description": "As a scientist, I want to quantify the speedup factor and lightcurve discrepancy between shadow-enabled and shadow-disabled evaluation.",
       "acceptanceCriteria": [
-        "Create notebooks/inversion/04_landscape_analysis.py as Jupytext percent format",
-        "Reuse Intelsat 901 config loading from 03",
-        "Compute observation geometry using same parameters as 03",
-        "Generate synthetic lightcurve using forward model",
-        "Store true_params = np.concatenate([true_axis_angle, true_omega0]) for slicing",
-        "Create ObjectiveFunction instance for landscape analysis",
+        "Time N=20 evaluations of obj_hifi and obj_lofi at true_params using time.perf_counter()",
+        "Print mean and std evaluation time for each fidelity level",
+        "Print speedup factor: t_hifi / t_lofi",
+        "Generate predicted lightcurves at true_params for both fidelity levels",
+        "Compute magnitude residual: mag_hifi - mag_lofi",
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Copy minimal setup from 03, avoid code duplication"
+      "passes": false,
+      "notes": "Uses time.perf_counter() not time.time() per FR-3."
     },
     {
       "id": "US-003",
-      "title": "Implement 1D objective slice computation and visualization",
-      "description": "As a scientist, I want to see how the objective varies when changing one parameter at a time.",
+      "title": "Implement Experiment 1: Rank correlation and benchmark figure",
+      "description": "As a scientist, I want to assess whether the low-fidelity landscape preserves the ranking of solutions via Spearman correlation.",
       "acceptanceCriteria": [
-        "Add compute_1d_slice(objective_fn, true_params, param_index, delta_range, n_points) function to notebook 04",
-        "Compute slice for each of 6 parameters: axis_angle (x,y,z), omega (x,y,z)",
-        "Delta range: +/-0.5 rad for axis-angle, +/-0.01 rad/s for omega",
-        "Plot all 6 slices in 2x3 subplot figure",
-        "Mark true parameter location on each plot",
-        "Include log y-axis option to see structure near minimum",
-        "Save figure to data/results/inversion_diagnostics/1d_slices.png",
+        "Evaluate both objectives on 100 random parameter samples within bounds",
+        "Compute Spearman rank correlation between lofi and hifi objective values",
+        "Print Spearman rho value",
+        "Create 3-panel figure mixed_fidelity_benchmark.png: (a) lightcurve overlay, (b) magnitude residual vs time, (c) scatter of lofi vs hifi objectives with correlation annotation",
+        "Save figure to data/results/inversion_diagnostics/mixed_fidelity_benchmark.png at 150 DPI with bbox_inches='tight'",
+        "Add markdown summary cell with expected range assessment (5-20x speedup, rho > 0.9 good proxy)",
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Uses scipy.stats.spearmanr for rank correlation."
     },
     {
       "id": "US-004",
-      "title": "Implement 2D objective slice computation and visualization",
-      "description": "As a scientist, I want 2D heatmaps to see parameter correlations and identify ridges/valleys.",
+      "title": "Implement Experiment 2: Basin shift analysis from true parameters",
+      "description": "As a scientist, I want to determine whether the global minimum shifts when shadows are disabled.",
       "acceptanceCriteria": [
-        "Add compute_2d_slice(objective_fn, true_params, param_i, param_j, delta_i, delta_j, n_points) function to notebook 04",
-        "Compute slices for pairs: (ax_x, ax_y), (ax_x, omega_z), (omega_x, omega_y), (omega_x, omega_z)",
-        "Plot as heatmaps with contour overlay in 2x2 subplot figure",
-        "Mark true parameter location on each plot",
-        "Save figure to data/results/inversion_diagnostics/2d_slices.png",
+        "Run L-BFGS-B from true_params on both obj_hifi and obj_lofi",
+        "Compare converged solutions: compute Euclidean distance, axis-angle displacement (degrees), and omega displacement (deg/s)",
+        "Run L-BFGS-B from 20 perturbed starting points (within basin radius from notebook 05) on both fidelity levels",
+        "Compute pairwise displacement for each start between hifi and lofi converged solutions",
+        "Report displacement statistics: mean, std, max across 20 starts",
+        "Print qualitative assessment: negligible (<1% basin width), moderate (1-10%), or significant (>10%)",
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Reuse sample_in_ball pattern from notebook 05 for perturbed starts."
     },
     {
       "id": "US-005",
-      "title": "Implement gradient and Hessian analysis at true solution",
-      "description": "As a scientist, I want to know the condition number and gradient magnitudes to assess optimization difficulty.",
+      "title": "Implement Experiment 2: Basin shift visualization",
+      "description": "As a scientist, I want contour overlays and scatter plots showing how basin locations compare between fidelity levels.",
       "acceptanceCriteria": [
-        "Add numerical gradient computation at true parameters using finite differences",
-        "Add numerical Hessian computation at true parameters",
-        "Report eigenvalues of Hessian and condition number (max/min eigenvalue)",
-        "Add interpretation markdown cell: condition number > 1000 suggests ill-conditioning",
-        "Identify well-constrained vs poorly constrained parameters from eigenvalue analysis",
+        "Create 2D contour overlay: pick 2 most sensitive parameter dimensions, plot objective contours for both fidelity levels overlaid, mark minima locations",
+        "Save as data/results/inversion_diagnostics/basin_shift_contours.png at 150 DPI",
+        "Create scatter plot of converged hifi vs lofi parameter values across 20 starts",
+        "Save as data/results/inversion_diagnostics/basin_shift_scatter.png at 150 DPI",
+        "Add markdown summary cell interpreting basin shift results",
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Use compute_2d_slice pattern from notebook 04. Overlay contours with different colormaps/linestyles."
     },
     {
       "id": "US-006",
-      "title": "Add landscape analysis summary and findings to notebook 04",
-      "description": "As a scientist, I need a clear summary of what the landscape analysis reveals.",
+      "title": "Implement Experiment 3: Mixed-fidelity pipeline function",
+      "description": "As a scientist, I need the core two-stage pipeline: low-fidelity DE global search followed by high-fidelity L-BFGS-B local refinement.",
       "acceptanceCriteria": [
-        "Add markdown cell summarizing: Is there a unique minimum? How sharp? Any flat directions?",
-        "Identify which parameters are well-constrained vs poorly constrained based on 1D/2D analysis",
-        "Add preliminary assessment: Is global search necessary, or would local suffice?",
-        "Save summary findings to data/results/inversion_diagnostics/landscape_summary.txt",
+        "Implement run_mixed_fidelity(obj_lofi, obj_hifi, bounds, lofi_budget, top_n, hifi_evals_per_candidate, seed) function",
+        "Stage 1: Run DE with polish=False on obj_lofi, extract top N candidates from .population/.population_energies",
+        "Stage 2: Run L-BFGS-B on obj_hifi for each of N candidates, select overall best",
+        "Return results dict with keys: x_best, f_best, n_evals, n_evals_lofi, n_evals_hifi, stage1_time, stage2_time, candidates (list of per-candidate results)",
+        "DE config: strategy='best1bin', mutation=(0.5, 1.0), recombination=0.7, popsize=15, polish=False",
+        "Use CountedObjective wrapper for budget enforcement on both stages",
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Access DE population via result.population and result.population_energies (scipy >= 1.7). CountedObjective pattern from notebook 06."
     },
     {
       "id": "US-007",
-      "title": "Create notebook 05 with setup and local optimizer wrapper",
-      "description": "As a scientist, I need a simple local optimization function to test convergence from different starting points.",
+      "title": "Implement Experiment 3: Pipeline validation on standard test case",
+      "description": "As a scientist, I want to validate the mixed-fidelity pipeline produces correct results on the standard test case.",
       "acceptanceCriteria": [
-        "Create notebooks/inversion/05_basin_size_study.py as Jupytext percent format",
-        "Copy minimal setup from notebook 04",
-        "Implement run_local_optimization(objective_fn, x0, bounds) returning (x_opt, f_opt, success, n_evals)",
-        "Use scipy L-BFGS-B with ftol=1e-8, gtol=1e-6",
-        "Track number of function evaluations",
-        "Define success criteria: omega error < 0.1 deg/s AND rms < 2x noise sigma",
+        "Run pipeline once with N=3, lofi_budget=5000, hifi_evals_per_candidate=200",
+        "Print: Stage 1 time, Stage 2 time (per candidate and total), total time",
+        "Print: evaluation counts (lofi evals, hifi evals, total)",
+        "Print: final parameter error (omega error in deg/s) and RMS residual",
+        "Evaluate success using evaluate_success() function",
+        "Print success/fail with parameter errors",
+        "Add markdown summary cell interpreting pipeline validation results",
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Single validation run, not a statistical comparison yet."
     },
     {
       "id": "US-008",
-      "title": "Implement constrained random initialization sampler",
-      "description": "As a scientist, I need to generate random starting points within a specified radius of the true solution.",
+      "title": "Implement Experiment 4: Evaluation-count matched baseline comparison",
+      "description": "As a scientist, I want to compare mixed-fidelity against notebook 06 baselines with the same total evaluation budget (5000).",
       "acceptanceCriteria": [
-        "Add sample_in_ball(true_params, radius, n_samples, param_scales) function to notebook 05",
-        "param_scales handles different units (radians vs rad/s) for proper scaling",
-        "Implement uniform sampling within hypersphere (not just per-axis box)",
-        "Add verification that samples are actually within specified radius",
+        "Implement run_trial() function dispatching to multistart, DE, basinhopping, and mixed-fidelity strategies",
+        "Reuse multistart_local, run_de, run_basinhopping implementations from notebook 06",
+        "Mixed-fidelity budget: lofi_budget = total_budget - hifi_budget, hifi_budget = N * 200",
+        "Run 10 trials per strategy, seeds = BASE_SEED + trial * 100",
+        "Record per-trial: strategy, seed, best_objective, omega_error, rms_residual, success, n_evals, wall_time",
+        "Print comparison table: strategy, success rate, mean objective, mean omega error, mean wall time",
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Reuse optimizer implementations from notebook 06. All strategies get 5000 total evals."
     },
     {
       "id": "US-009",
-      "title": "Implement basin size sweep experiment",
-      "description": "As a scientist, I want to systematically measure success rate vs constraint radius.",
+      "title": "Implement Experiment 4: Evaluation-count comparison visualization",
+      "description": "As a scientist, I want box plots and bar charts comparing strategy performance at matched evaluation counts.",
       "acceptanceCriteria": [
-        "Test radii: [0.01, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0] degrees",
-        "For each radius: run 20 random initializations, record success/failure",
-        "Track: success rate, mean final error, mean function evaluations",
-        "Total budget: ~200 local optimizations",
-        "Store results in structured array for visualization",
+        "Create box plot of final objective values per strategy (4 strategies)",
+        "Save as data/results/inversion_diagnostics/evalcount_comparison_objectives.png at 150 DPI",
+        "Create bar chart of success rates with 95% Wilson score confidence intervals",
+        "Save as data/results/inversion_diagnostics/evalcount_comparison_success.png at 150 DPI",
+        "Add markdown summary cell interpreting evaluation-count comparison",
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Reuse Wilson CI calculation from notebook 06."
     },
     {
       "id": "US-010",
-      "title": "Add basin size visualization and threshold identification",
-      "description": "As a scientist, I want to identify the critical radius where success rate drops.",
+      "title": "Implement Experiment 5: Wall-clock matched comparison",
+      "description": "As a scientist, I want to compare mixed-fidelity against full-fidelity DE under the same wall-clock budget.",
       "acceptanceCriteria": [
-        "Plot success rate vs radius with error bars from binomial uncertainty",
-        "Plot mean error vs radius",
-        "Identify critical radius where success rate drops below 80%",
-        "Add summary: 'Local optimization succeeds with >80% probability when initialized within X degrees'",
-        "Save figures to data/results/inversion_diagnostics/basin_size_*.png",
+        "Run full-fidelity DE (10 trials) to establish mean wall-clock time per trial T_ref",
+        "Calculate lofi_budget so mixed-fidelity total wall time approx equals T_ref using Experiment 1 timing",
+        "Run mixed-fidelity (10 trials) with adjusted lofi budget, same seeds",
+        "Print comparison table with wall-clock column showing near-equal times",
+        "Print effective evaluations: how many lofi evals fit in the time budget vs hifi evals",
+        "Create grouped bar chart: success rate and mean omega error for Full-Fidelity DE vs Mixed-Fidelity with wall time annotations",
+        "Save as data/results/inversion_diagnostics/wallclock_comparison.png at 150 DPI",
+        "Create scatter plot of (wall_time, omega_error) for all trials with Pareto front",
+        "Save as data/results/inversion_diagnostics/wallclock_pareto.png at 150 DPI",
+        "Add markdown summary cell interpreting wall-clock comparison",
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "This is the primary practical comparison. Must re-measure baseline times for fair comparison (FR-11)."
     },
     {
       "id": "US-011",
-      "title": "Create notebook 06 with setup and evaluation-counted objective wrapper",
-      "description": "As a scientist, I need to track and limit function evaluations for fair optimizer comparison.",
+      "title": "Implement Experiment 6: Handoff parameter ablation",
+      "description": "As a scientist, I want to determine the optimal number of candidates (N) to pass from Stage 1 to Stage 2.",
       "acceptanceCriteria": [
-        "Create notebooks/inversion/06_optimizer_comparison.py as Jupytext percent format",
-        "Copy minimal setup from notebook 04",
-        "Implement CountedObjective class that wraps objective and counts calls",
-        "Add budget limit enforcement (returns penalty when exhausted)",
-        "Add reset() method for multiple trials",
+        "Sweep N in {1, 3, 5, 10}",
+        "For each N: run 10 trials with fixed lofi budget (5000 evals), hifi budget = N * 200",
+        "Record success rate, mean omega error, mean total time, mean Stage 2 time per N",
+        "Print table: N vs (success rate, mean omega error, mean total time, stage2 time fraction)",
+        "Create 2-panel figure: (a) success rate vs N with 95% CI error bars, (b) mean total wall time vs N with Stage 1 + Stage 2 stacked breakdown",
+        "Save as data/results/inversion_diagnostics/handoff_ablation.png at 150 DPI",
+        "Add markdown summary cell with recommended N value",
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Stage 1 lofi budget is fixed while N and Stage 2 hifi budget vary (FR-12)."
     },
     {
       "id": "US-012",
-      "title": "Implement multi-start local optimization strategy",
-      "description": "As a scientist, I want to implement random starts + local refinement strategy.",
+      "title": "Implement Experiment 7: Phase angle failure regime identification",
+      "description": "As a scientist, I want to identify phase angle ranges where the low-fidelity approximation fails.",
       "acceptanceCriteria": [
-        "Add multistart_local(objective, bounds, n_starts, max_evals_per_start) function to notebook 06",
-        "Use Latin Hypercube Sampling (scipy.stats.qmc.LatinHypercube) for initialization",
-        "Run L-BFGS-B from each start, return best result",
-        "Track evaluations to stay within budget",
+        "Generate synthetic test cases at phase angles spanning [10, 170] degrees in 10-degree steps (17 cases)",
+        "For each phase angle: compute lightcurve discrepancy RMS(mag_hifi - mag_lofi) at true params",
+        "For each phase angle: run mixed-fidelity (5 trials) and full-fidelity DE (5 trials)",
+        "Record success rate and omega error for both strategies per phase angle",
+        "Identify crossover phase angle where mixed-fidelity success drops below full-fidelity DE",
+        "Print table: phase angle vs (discrepancy, mixed-fidelity success rate, full-fidelity success rate)",
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Phase angle = arccos(dot(sun_vec, obs_vec)). Prefer searching existing epoch range for target angles. If unavailable, rotate observer position analytically."
     },
     {
       "id": "US-013",
-      "title": "Configure differential evolution baseline for comparison",
-      "description": "As a scientist, I need the current DE approach configured to use the same evaluation budget.",
+      "title": "Implement Experiment 7: Phase angle failure visualization and study summary",
+      "description": "As a scientist, I want visualization of failure regimes and a comprehensive study summary with recommendations.",
       "acceptanceCriteria": [
-        "Add run_de(objective, bounds, max_evals) function to notebook 06",
-        "Configure DE with maxiter set to achieve target evaluation count",
-        "Use same bounds and settings as current 03 notebook",
-        "Disable or limit polish step to stay within budget",
+        "Create 3-panel figure: (a) lightcurve fidelity discrepancy vs phase angle, (b) success rate vs phase angle for both strategies with error bars, (c) mean omega error vs phase angle for both strategies",
+        "Save as data/results/inversion_diagnostics/phase_angle_failure.png at 150 DPI",
+        "Print recommended phase angle range where mixed-fidelity is viable",
+        "Save mixed_fidelity_summary.txt to data/results/inversion_diagnostics/ with all key numerical results from Experiments 1-7",
+        "Add final markdown summary section covering viability assessment against success criteria (3x speedup, success rate within 5pp, accuracy within 5%)",
         "Typecheck passes"
       ],
       "priority": 13,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-014",
-      "title": "Implement basin-hopping strategy for comparison",
-      "description": "As a scientist, I want to test basin-hopping as a middle-ground approach.",
-      "acceptanceCriteria": [
-        "Add run_basinhopping(objective, bounds, max_evals) function to notebook 06",
-        "Configure scipy.optimize.basinhopping with evaluation budget",
-        "Use L-BFGS-B as local minimizer",
-        "Set reasonable stepsize and temperature parameters",
-        "Typecheck passes"
-      ],
-      "priority": 14,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-015",
-      "title": "Run optimizer comparison experiment",
-      "description": "As a scientist, I want statistically meaningful comparison across strategies.",
-      "acceptanceCriteria": [
-        "Fixed budget: 5000 function evaluations",
-        "Run each strategy 10 times with different random seeds",
-        "Record: best objective value, parameter error, success (yes/no), wall time",
-        "Store results in structured format for analysis",
-        "Typecheck passes"
-      ],
-      "priority": 15,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-016",
-      "title": "Add optimizer comparison visualization and conclusions",
-      "description": "As a scientist, I want clear visualization of which strategy performs best.",
-      "acceptanceCriteria": [
-        "Box plot of final objective values by strategy",
-        "Box plot of parameter errors by strategy",
-        "Bar chart of success rates with confidence intervals",
-        "Summary table: Strategy | Success Rate | Mean Error | Mean Time",
-        "Clear conclusion markdown: 'Strategy X achieves Y% success rate, Zx faster than baseline'",
-        "Save figures to data/results/inversion_diagnostics/optimizer_comparison_*.png",
-        "Typecheck passes"
-      ],
-      "priority": 16,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-017",
-      "title": "Create notebook 07 with setup and parameterized synthetic data generation",
-      "description": "As a scientist, I need to generate test cases with varying noise and observation density.",
-      "acceptanceCriteria": [
-        "Create notebooks/inversion/07_robustness_analysis.py as Jupytext percent format",
-        "Copy minimal setup from notebook 04",
-        "Implement generate_test_case(n_observations, noise_sigma, seed) returning lightcurve + geometry",
-        "Reuse forward model components from setup",
-        "Same true parameters across all test cases for comparability",
-        "Typecheck passes"
-      ],
-      "priority": 17,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-018",
-      "title": "Implement robustness sweep experiment",
-      "description": "As a scientist, I want to map success rate across noise/observation space.",
-      "acceptanceCriteria": [
-        "Noise levels: [0.01, 0.02, 0.05, 0.1, 0.2] mag",
-        "Observation counts: [20, 35, 50, 75, 100]",
-        "For each combination: run 5 trials with best optimizer from notebook 06",
-        "Record success rate for each cell (25 cells x 5 trials = 125 runs)",
-        "Store results in 2D array for heatmap visualization",
-        "Typecheck passes"
-      ],
-      "priority": 18,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-019",
-      "title": "Add robustness heatmap and requirements identification",
-      "description": "As a scientist, I want to identify minimum data quality for reliable inversion.",
-      "acceptanceCriteria": [
-        "Create heatmap: x=n_observations, y=noise_sigma, color=success_rate",
-        "Annotate cells with success rate values",
-        "Draw contour line at 80% success rate",
-        "Add summary: 'Reliable inversion requires at least N observations with noise < X mag'",
-        "Save figure to data/results/inversion_diagnostics/robustness_heatmap.png",
-        "Typecheck passes"
-      ],
-      "priority": 19,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-020",
-      "title": "Add final recommendations and study conclusions",
-      "description": "As a scientist, I want actionable conclusions from the entire diagnostic study.",
-      "acceptanceCriteria": [
-        "Add summary markdown cell with key findings from all 4 notebooks",
-        "Recommended optimizer settings for operational use",
-        "Minimum data requirements for reliable inversion",
-        "Known limitations and failure modes",
-        "Save final recommendations to data/results/inversion_diagnostics/final_recommendations.md",
-        "Typecheck passes"
-      ],
-      "priority": 20,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Summary must reference all success metrics from the PRD Success Metrics table."
     }
   ]
 }
