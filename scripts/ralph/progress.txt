@@ -46,3 +46,39 @@ Started: Fri Feb  6 05:19:30 PM NZDT 2026
   - Body-frame vectors (k1, k2) are identical for both objectives since geometry/attitude are the same; only the shadow computation differs in _generate_predicted_lightcurve
   - ObjectiveFunction._compute_chi_squared returns MSE (sum(residuals^2)/n_valid) when no uncertainties are provided
 ---
+
+## 2026-02-06 - US-003
+- Implemented Experiment 1c: Rank correlation (Spearman) between lo-fi and hi-fi objectives
+- Evaluates 100 random parameter samples on both objectives within bounds
+- Computes Spearman rank correlation using scipy.stats.spearmanr
+- Created 3-panel benchmark figure (mixed_fidelity_benchmark.png):
+  - (a) Lightcurve overlay (hi-fi vs lo-fi at true params)
+  - (b) Magnitude residual vs time with noise_sigma band
+  - (c) Scatter of lo-fi vs hi-fi objective values with Spearman rho annotation
+- Added markdown summary cell with expected range assessment
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py (appended cells)
+- **Learnings for future iterations:**
+  - scipy.stats.spearmanr returns (rho, p_value) tuple
+  - Use np.random.uniform(lower, upper, size=(n, dim)) for batch random sampling within bounds
+  - Figure saving pattern: PROJECT_ROOT / "data" / "results" / "inversion_diagnostics" / "filename.png" at 150 DPI with bbox_inches='tight'
+  - Jupytext may update its version number in the header during sync (1.19.0 → 1.19.1) - this is normal
+---
+
+## 2026-02-06 - US-004
+- Implemented Experiment 2a: Basin shift from true parameters
+  - Runs L-BFGS-B from true_params on both obj_hifi and obj_lofi
+  - Compares converged solutions: Euclidean distance, axis-angle displacement (degrees), omega displacement (deg/s)
+- Implemented Experiment 2b: Perturbed starts basin shift analysis
+  - Defined run_local_optimization() wrapper with axis-angle quaternion normalization
+  - Reused sample_in_ball() pattern from notebook 05 with param_scales (1 degree units)
+  - Runs 20 perturbed starts within 2-degree basin radius on both fidelity levels
+  - Computes pairwise displacement statistics: mean, std, max
+  - Qualitative assessment: negligible (<1% basin width), moderate (1-10%), significant (>10%)
+- Added markdown summary cell interpreting basin shift results
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py (appended cells)
+- **Learnings for future iterations:**
+  - run_local_optimization() must be defined locally in notebook 08 (not imported from notebook 05)
+  - sample_in_ball() uses param_scales to measure distance in degrees across heterogeneous parameter types
+  - Basin radius of 2 degrees is a reasonable moderate radius for perturbed start analysis
+  - Qualitative assessment thresholds: <1% = negligible, 1-10% = moderate, >10% = significant shift relative to basin width
+---

@@ -809,3 +809,266 @@ plt.show()
 #
 # These results justify using the lo-fi objective for broad exploration (Stage 1)
 # before refining with the hi-fi objective (Stage 2).
+
+# %% [markdown]
+# ---
+# ## Experiment 2: Basin Shift Analysis
+#
+# Determine whether the global minimum shifts when shadows are disabled by comparing
+# converged L-BFGS-B solutions from both fidelity levels.
+
+# %% [markdown]
+# ### Experiment 2a: Basin Shift from True Parameters
+
+# %%
+# Run L-BFGS-B from true_params on both fidelity levels
+
+print("=" * 70)
+print("EXPERIMENT 2a: BASIN SHIFT FROM TRUE PARAMETERS")
+print("=" * 70)
+
+
+def run_local_optimization(
+    objective_fn: ObjectiveFunction,
+    x0: np.ndarray,
+    bounds: list[tuple[float, float]],
+    ftol: float = 1e-8,
+    gtol: float = 1e-6,
+    maxiter: int = 1000,
+) -> tuple[np.ndarray, float, bool, int]:
+    """
+    Run local optimization using L-BFGS-B with axis-angle normalization.
+
+    Returns (x_opt, f_opt, success, n_evals).
+    """
+    n_evals = [0]
+
+    def wrapped_objective(params: np.ndarray) -> float:
+        n_evals[0] += 1
+        axis_angle = params[:3]
+        omega = params[3:]
+        q = axis_angle_to_quaternion(axis_angle)
+        q_normalized = normalize_quaternion(q)
+        axis_angle_norm = quaternion_to_axis_angle(q_normalized)
+        params_normalized = np.concatenate([axis_angle_norm, omega])
+        return objective_fn.evaluate(params_normalized)
+
+    result = minimize(
+        wrapped_objective,
+        x0,
+        method="L-BFGS-B",
+        bounds=bounds,
+        options={"maxiter": maxiter, "ftol": ftol, "gtol": gtol, "disp": False},
+    )
+
+    # Normalize final parameters
+    final_aa = result.x[:3]
+    final_omega = result.x[3:]
+    q_final = axis_angle_to_quaternion(final_aa)
+    q_final = normalize_quaternion(q_final)
+    final_aa = quaternion_to_axis_angle(q_final)
+    x_opt = np.concatenate([final_aa, final_omega])
+
+    return x_opt, result.fun, result.success, n_evals[0]
+
+
+# --- Run from true_params on both objectives ---
+print("\nOptimizing from true_params...")
+
+x_opt_hifi, f_opt_hifi, success_hifi, n_evals_hifi = run_local_optimization(
+    obj_hifi, true_params, bounds
+)
+print(f"  Hi-fi: f={f_opt_hifi:.6f}, n_evals={n_evals_hifi}, converged={success_hifi}")
+
+x_opt_lofi, f_opt_lofi, success_lofi, n_evals_lofi = run_local_optimization(
+    obj_lofi, true_params, bounds
+)
+print(f"  Lo-fi: f={f_opt_lofi:.6f}, n_evals={n_evals_lofi}, converged={success_lofi}")
+
+# --- Compare converged solutions ---
+euclidean_dist = np.linalg.norm(x_opt_hifi - x_opt_lofi)
+aa_displacement_rad = np.linalg.norm(x_opt_hifi[:3] - x_opt_lofi[:3])
+aa_displacement_deg = np.rad2deg(aa_displacement_rad)
+omega_displacement_rad = np.linalg.norm(x_opt_hifi[3:] - x_opt_lofi[3:])
+omega_displacement_deg = np.rad2deg(omega_displacement_rad)
+
+print(f"\nConverged solution comparison:")
+print(f"  Euclidean distance:         {euclidean_dist:.6f}")
+print(f"  Axis-angle displacement:    {aa_displacement_deg:.4f} deg ({aa_displacement_rad:.6f} rad)")
+print(f"  Omega displacement:         {omega_displacement_deg:.4f} deg/s ({omega_displacement_rad:.6f} rad/s)")
+
+print(f"\nHi-fi converged params: {x_opt_hifi}")
+print(f"Lo-fi converged params: {x_opt_lofi}")
+print(f"True params:            {true_params}")
+
+# %% [markdown]
+# ### Experiment 2b: Perturbed Starts Basin Shift
+
+# %%
+# Reuse sample_in_ball pattern from notebook 05
+# Define parameter scales: 1 degree for both axis-angle and omega
+
+AXIS_ANGLE_SCALE = np.deg2rad(1.0)  # 1 degree in radians
+OMEGA_SCALE = np.deg2rad(1.0)       # 1 deg/s in rad/s
+
+param_scales = np.array([
+    AXIS_ANGLE_SCALE, AXIS_ANGLE_SCALE, AXIS_ANGLE_SCALE,
+    OMEGA_SCALE, OMEGA_SCALE, OMEGA_SCALE,
+])
+
+
+def sample_in_ball(
+    center: np.ndarray,
+    radius: float,
+    n_samples: int,
+    param_scales: np.ndarray,
+    seed: int | None = None,
+) -> np.ndarray:
+    """
+    Sample points uniformly within a hypersphere around center.
+
+    Radius is measured in scaled units where each parameter is divided by its scale.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    n_dims = len(center)
+    samples = np.zeros((n_samples, n_dims))
+
+    for i in range(n_samples):
+        direction = np.random.randn(n_dims)
+        direction /= np.linalg.norm(direction)
+        u = np.random.random()
+        r = radius * (u ** (1.0 / n_dims))
+        scaled_offset = r * direction
+        param_offset = scaled_offset * param_scales
+        samples[i] = center + param_offset
+
+    return samples
+
+
+# Basin radius from notebook 05 analysis: use a moderate radius that gives
+# reasonable local optimization success (e.g., 2 degrees)
+BASIN_RADIUS_DEG = 2.0
+N_PERTURBED = 20
+
+print("=" * 70)
+print("EXPERIMENT 2b: PERTURBED STARTS BASIN SHIFT")
+print("=" * 70)
+print(f"\nBasin radius: {BASIN_RADIUS_DEG} degrees")
+print(f"Number of perturbed starts: {N_PERTURBED}")
+
+# Generate perturbed starting points
+perturbed_starts = sample_in_ball(
+    center=true_params,
+    radius=BASIN_RADIUS_DEG,
+    n_samples=N_PERTURBED,
+    param_scales=param_scales,
+    seed=42,
+)
+
+print(f"Generated {N_PERTURBED} perturbed starting points")
+
+# %%
+# Run L-BFGS-B from each perturbed start on both fidelity levels
+print("\nRunning pairwise optimizations...")
+print("-" * 50)
+
+results_hifi = []
+results_lofi = []
+pairwise_displacements = {
+    'euclidean': [],
+    'aa_deg': [],
+    'omega_deg_s': [],
+}
+
+for i in range(N_PERTURBED):
+    x0 = perturbed_starts[i]
+
+    # Optimize on hi-fi
+    x_hifi_i, f_hifi_i, _, _ = run_local_optimization(obj_hifi, x0, bounds)
+    results_hifi.append(x_hifi_i)
+
+    # Optimize on lo-fi
+    x_lofi_i, f_lofi_i, _, _ = run_local_optimization(obj_lofi, x0, bounds)
+    results_lofi.append(x_lofi_i)
+
+    # Compute pairwise displacement
+    euc_dist = np.linalg.norm(x_hifi_i - x_lofi_i)
+    aa_disp = np.rad2deg(np.linalg.norm(x_hifi_i[:3] - x_lofi_i[:3]))
+    omega_disp = np.rad2deg(np.linalg.norm(x_hifi_i[3:] - x_lofi_i[3:]))
+
+    pairwise_displacements['euclidean'].append(euc_dist)
+    pairwise_displacements['aa_deg'].append(aa_disp)
+    pairwise_displacements['omega_deg_s'].append(omega_disp)
+
+    if (i + 1) % 5 == 0:
+        print(f"  {i + 1}/{N_PERTURBED} starts completed")
+
+results_hifi = np.array(results_hifi)
+results_lofi = np.array(results_lofi)
+
+for key in pairwise_displacements:
+    pairwise_displacements[key] = np.array(pairwise_displacements[key])
+
+print(f"\nAll {N_PERTURBED} pairwise optimizations completed")
+
+# %%
+# Report displacement statistics
+print("\n" + "=" * 70)
+print("BASIN SHIFT DISPLACEMENT STATISTICS")
+print("=" * 70)
+
+print(f"\n{'Metric':<30} | {'Mean':>10} | {'Std':>10} | {'Max':>10}")
+print("-" * 70)
+print(f"{'Euclidean distance':<30} | {pairwise_displacements['euclidean'].mean():>10.6f} | "
+      f"{pairwise_displacements['euclidean'].std():>10.6f} | "
+      f"{pairwise_displacements['euclidean'].max():>10.6f}")
+print(f"{'Axis-angle displacement (deg)':<30} | {pairwise_displacements['aa_deg'].mean():>10.4f} | "
+      f"{pairwise_displacements['aa_deg'].std():>10.4f} | "
+      f"{pairwise_displacements['aa_deg'].max():>10.4f}")
+print(f"{'Omega displacement (deg/s)':<30} | {pairwise_displacements['omega_deg_s'].mean():>10.4f} | "
+      f"{pairwise_displacements['omega_deg_s'].std():>10.4f} | "
+      f"{pairwise_displacements['omega_deg_s'].max():>10.4f}")
+
+# Qualitative assessment based on basin width
+# Basin width is the diameter = 2 * BASIN_RADIUS_DEG
+basin_width_deg = 2 * BASIN_RADIUS_DEG
+mean_aa_shift = pairwise_displacements['aa_deg'].mean()
+shift_fraction = mean_aa_shift / basin_width_deg * 100
+
+print(f"\nQualitative assessment:")
+print(f"  Mean axis-angle shift: {mean_aa_shift:.4f} deg")
+print(f"  Basin width (diameter): {basin_width_deg:.1f} deg")
+print(f"  Shift as fraction of basin width: {shift_fraction:.2f}%")
+
+if shift_fraction < 1.0:
+    assessment = "NEGLIGIBLE"
+    detail = "The lo-fi and hi-fi minima are practically co-located."
+elif shift_fraction < 10.0:
+    assessment = "MODERATE"
+    detail = "The lo-fi minimum is shifted but remains within the hi-fi basin."
+else:
+    assessment = "SIGNIFICANT"
+    detail = "The lo-fi minimum is substantially shifted; handoff refinement is critical."
+
+print(f"\n  Basin shift: {assessment} (<1% = negligible, 1-10% = moderate, >10% = significant)")
+print(f"  {detail}")
+
+# %% [markdown]
+# ### Experiment 2 Summary
+#
+# **Basin Shift Analysis Results:**
+#
+# - **From true parameters**: L-BFGS-B converges to slightly different minima
+#   depending on fidelity level. The displacement quantifies how much the
+#   all-lit approximation biases the optimum.
+# - **From perturbed starts**: The pairwise displacements across 20 starting
+#   points characterize the typical shift magnitude and its variability.
+# - **Qualitative assessment**: The shift as a fraction of the basin width
+#   determines whether the lo-fi Stage 1 solution is a good starting point
+#   for hi-fi Stage 2 refinement.
+#
+# A negligible or moderate shift confirms that the two-stage mixed-fidelity
+# approach is viable: the lo-fi global search identifies candidates close
+# enough to the hi-fi minimum for local refinement to succeed.
