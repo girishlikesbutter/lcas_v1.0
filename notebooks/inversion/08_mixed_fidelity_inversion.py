@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.0
+#       jupytext_version: 1.19.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -701,3 +701,111 @@ print(f"  Mean:  {mag_residual.mean():.4f} mag")
 print(f"  Std:   {mag_residual.std():.4f} mag")
 print(f"  Range: [{mag_residual.min():.4f}, {mag_residual.max():.4f}] mag")
 print(f"  RMS:   {np.sqrt(np.mean(mag_residual**2)):.4f} mag")
+
+# %% [markdown]
+# ### Experiment 1c: Rank Correlation (Spearman)
+#
+# Evaluate both objectives on 100 random parameter samples to assess whether the
+# low-fidelity landscape preserves the ranking of solutions.
+
+# %%
+from scipy.stats import spearmanr
+
+# Evaluate both objectives on 100 random parameter samples within bounds
+n_samples = 100
+np.random.seed(123)
+
+bounds_lower = np.array([b[0] for b in bounds])
+bounds_upper = np.array([b[1] for b in bounds])
+
+random_samples = np.random.uniform(bounds_lower, bounds_upper, size=(n_samples, len(bounds)))
+
+print("=" * 70)
+print("EXPERIMENT 1c: RANK CORRELATION")
+print("=" * 70)
+print(f"\nEvaluating {n_samples} random samples on both objectives...")
+
+obj_values_hifi = np.empty(n_samples)
+obj_values_lofi = np.empty(n_samples)
+
+for i in range(n_samples):
+    obj_values_hifi[i] = obj_hifi.evaluate(random_samples[i])
+    obj_values_lofi[i] = obj_lofi.evaluate(random_samples[i])
+    if (i + 1) % 25 == 0:
+        print(f"  {i + 1}/{n_samples} samples evaluated")
+
+# Compute Spearman rank correlation
+rho, p_value = spearmanr(obj_values_lofi, obj_values_hifi)
+
+print(f"\nSpearman rank correlation:")
+print(f"  rho = {rho:.4f}")
+print(f"  p-value = {p_value:.2e}")
+
+# %%
+# Create 3-panel benchmark figure
+fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
+
+# Panel (a): Lightcurve overlay
+ax = axes[0]
+ax.plot(observation_times, mag_hifi, 'b-', linewidth=1.5, label='Hi-fi (shadows ON)')
+ax.plot(observation_times, mag_lofi, 'r--', linewidth=1.5, label='Lo-fi (shadows OFF)')
+ax.set_xlabel('Time (s)')
+ax.set_ylabel('Magnitude')
+ax.set_title('(a) Lightcurve Comparison')
+ax.invert_yaxis()
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.3)
+
+# Panel (b): Magnitude residual vs time
+ax = axes[1]
+ax.plot(observation_times, mag_residual, 'k-', linewidth=1.0)
+ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
+ax.fill_between(observation_times, -noise_sigma, noise_sigma, alpha=0.15, color='orange',
+                label=f'±noise_sigma ({noise_sigma} mag)')
+ax.set_xlabel('Time (s)')
+ax.set_ylabel('Residual (hi-fi − lo-fi) [mag]')
+ax.set_title('(b) Fidelity Residual')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.3)
+
+# Panel (c): Scatter of lofi vs hifi objectives with correlation annotation
+ax = axes[2]
+ax.scatter(obj_values_lofi, obj_values_hifi, s=15, alpha=0.6, color='steelblue', edgecolors='none')
+ax.plot([obj_values_lofi.min(), obj_values_lofi.max()],
+        [obj_values_lofi.min(), obj_values_lofi.max()],
+        'k--', alpha=0.4, label='y = x')
+ax.set_xlabel('Lo-fi Objective')
+ax.set_ylabel('Hi-fi Objective')
+ax.set_title('(c) Objective Correlation')
+ax.annotate(f'Spearman ρ = {rho:.3f}', xy=(0.05, 0.92), xycoords='axes fraction',
+            fontsize=10, bbox=dict(boxstyle='round,pad=0.3', facecolor='wheat', alpha=0.8))
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.3)
+
+plt.suptitle('Mixed-Fidelity Benchmark', fontsize=13, fontweight='bold', y=1.02)
+plt.tight_layout()
+
+# Save figure
+output_path = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics" / "mixed_fidelity_benchmark.png"
+fig.savefig(output_path, dpi=150, bbox_inches='tight')
+print(f"\nFigure saved: {output_path}")
+plt.show()
+
+# %% [markdown]
+# ### Experiment 1 Summary
+#
+# **Fidelity Benchmarking Results:**
+#
+# - **Speedup**: The lo-fi (shadow-free) evaluation is expected to be 5-20× faster
+#   than hi-fi (shadow-enabled), depending on the satellite geometry complexity and
+#   number of facets.
+# - **Rank correlation**: A Spearman ρ > 0.9 indicates the lo-fi objective is a
+#   good proxy for the hi-fi objective — the relative ranking of candidate solutions
+#   is largely preserved even without shadow computation.
+# - **Residual**: The magnitude residual between fidelity levels shows the lightcurve
+#   discrepancy introduced by the all-lit approximation. If the residual RMS is
+#   comparable to or smaller than the observation noise, the lo-fi approximation is
+#   well-suited for global search.
+#
+# These results justify using the lo-fi objective for broad exploration (Stage 1)
+# before refining with the hi-fi objective (Stage 2).
