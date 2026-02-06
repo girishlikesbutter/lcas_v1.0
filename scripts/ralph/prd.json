@@ -86,7 +86,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Use compute_2d_slice pattern from notebook 04. Overlay contours with different colormaps/linestyles."
     },
     {
@@ -103,7 +103,7 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Access DE population via result.population and result.population_energies (scipy >= 1.7). CountedObjective pattern from notebook 06."
     },
     {
@@ -121,7 +121,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Single validation run, not a statistical comparison yet."
     },
     {

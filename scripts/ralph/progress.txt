@@ -82,3 +82,56 @@ Started: Fri Feb  6 05:19:30 PM NZDT 2026
   - Basin radius of 2 degrees is a reasonable moderate radius for perturbed start analysis
   - Qualitative assessment thresholds: <1% = negligible, 1-10% = moderate, >10% = significant shift relative to basin width
 ---
+
+## 2026-02-06 - US-005
+- Implemented Experiment 2c: Basin shift visualization
+  - 1D sensitivity analysis across all 6 parameters to identify the 2 most sensitive dimensions
+  - 2D contour overlay plot: hi-fi (solid blue) vs lo-fi (dashed red) contours for the 2 most sensitive parameters
+  - Minima locations marked with stars, true params marked with cross
+  - Dual legends: marker legend (upper right) + linestyle legend (lower left)
+  - Scatter plot of converged hi-fi vs lo-fi parameter values (6 panels, one per dimension)
+  - Identity lines and true parameter reference lines on scatter plots
+  - Updated Experiment 2 Summary markdown cell with visualization interpretation
+- Saves: basin_shift_contours.png, basin_shift_scatter.png to data/results/inversion_diagnostics/
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - Use np.argsort(scores)[::-1][:2] to pick top-2 sensitive dimensions data-driven rather than hardcoding
+  - Delta ranges for 2D contour: ±5 degrees for axis-angle, ±0.5 deg/s for omega parameters gives good basin visibility
+  - For dual legends in matplotlib, create first legend, call ax.add_artist() on it, then create second legend
+  - The matplotlib.lines.Line2D import is needed for custom legend entries with linestyles
+  - n_contour=31 is a good balance between resolution and computation time (31x31=961 evals per fidelity)
+---
+
+## 2026-02-06 - US-006
+- Implemented run_mixed_fidelity() two-stage pipeline function
+  - Stage 1: DE global search on obj_lofi with CountedObjective budget enforcement
+  - Stage 2: L-BFGS-B local refinement on obj_hifi for top N candidates from DE population
+  - Extracts top candidates via result.population / result.population_energies sorted by energy
+  - Each Stage 2 candidate gets its own CountedObjective with hifi_evals_per_candidate budget
+  - Returns dict with x_best, f_best, n_evals, n_evals_lofi, n_evals_hifi, stage1_time, stage2_time, candidates
+- DE config: strategy='best1bin', mutation=(0.5, 1.0), recombination=0.7, popsize=15, polish=False
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - scipy DE result has .population (shape: pop_size x n_params) and .population_energies (shape: pop_size) for accessing the final population
+  - Use np.argsort(energies)[:top_n] to extract the top N candidates by ascending energy
+  - maxiter calculation: max(1, int(budget / (popsize * n_params)) - 1) to stay within eval budget
+  - Each Stage 2 candidate needs its own fresh CountedObjective instance (not shared)
+  - differential_evolution import: from scipy.optimize import differential_evolution
+---
+
+## 2026-02-06 - US-007
+- Implemented Experiment 3b: Pipeline validation on standard test case
+  - Runs mixed-fidelity pipeline once with N=3, lofi_budget=5000, hifi_evals_per_candidate=200
+  - Prints timing breakdown: Stage 1, Stage 2 (total and per-candidate), total pipeline time
+  - Prints evaluation counts: lofi evals, hifi evals, total
+  - Computes and prints parameter errors: axis-angle error (deg), omega error (deg/s), RMS residual (mag)
+  - Evaluates success using evaluate_success() with threshold reporting
+  - Prints best parameters vs true parameters
+  - Added markdown summary cell interpreting pipeline validation results
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - Pipeline result dict contains all needed info: x_best, f_best, n_evals_lofi, n_evals_hifi, stage1_time, stage2_time, candidates
+  - RMS residual from objective: sqrt(obj_value / n_observations) since ObjectiveFunction returns sum(residuals^2)/n_valid
+  - Per-candidate info (n_evals, converged) is accessible via pipeline_result['candidates'][i]
+  - Validation run is a single execution to confirm pipeline mechanics before statistical comparisons in later experiments
+---

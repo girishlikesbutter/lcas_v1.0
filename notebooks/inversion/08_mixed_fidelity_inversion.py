@@ -1423,3 +1423,135 @@ def run_mixed_fidelity(
 
 
 print("run_mixed_fidelity() pipeline function defined")
+
+# %% [markdown]
+# ### Experiment 3b: Pipeline Validation on Standard Test Case
+#
+# Run the mixed-fidelity pipeline once with N=3 candidates, lofi_budget=5000,
+# and hifi_evals_per_candidate=200 to validate correctness.
+
+# %%
+# Run pipeline validation
+print("=" * 70)
+print("EXPERIMENT 3b: PIPELINE VALIDATION")
+print("=" * 70)
+
+VALIDATION_N = 3
+VALIDATION_LOFI_BUDGET = 5000
+VALIDATION_HIFI_EVALS_PER_CANDIDATE = 200
+VALIDATION_SEED = 42
+
+print(f"\nPipeline configuration:")
+print(f"  Top N candidates:           {VALIDATION_N}")
+print(f"  Lo-fi budget (Stage 1):     {VALIDATION_LOFI_BUDGET} evals")
+print(f"  Hi-fi evals per candidate:  {VALIDATION_HIFI_EVALS_PER_CANDIDATE}")
+print(f"  Total hi-fi budget:         {VALIDATION_N * VALIDATION_HIFI_EVALS_PER_CANDIDATE} evals")
+print(f"  Seed:                       {VALIDATION_SEED}")
+
+print("\nRunning mixed-fidelity pipeline...")
+t0_pipeline = time.perf_counter()
+
+pipeline_result = run_mixed_fidelity(
+    obj_lofi=obj_lofi,
+    obj_hifi=obj_hifi,
+    bounds=bounds,
+    lofi_budget=VALIDATION_LOFI_BUDGET,
+    top_n=VALIDATION_N,
+    hifi_evals_per_candidate=VALIDATION_HIFI_EVALS_PER_CANDIDATE,
+    seed=VALIDATION_SEED,
+)
+
+total_pipeline_time = time.perf_counter() - t0_pipeline
+
+# --- Print timing ---
+print(f"\n{'─' * 50}")
+print("TIMING")
+print(f"{'─' * 50}")
+print(f"  Stage 1 (lo-fi DE):          {pipeline_result['stage1_time']:.2f} s")
+print(f"  Stage 2 (hi-fi L-BFGS-B):")
+for i, cand in enumerate(pipeline_result['candidates']):
+    print(f"    Candidate {i+1}:              {cand['n_evals']} evals, converged={cand['converged']}")
+print(f"  Stage 2 total:               {pipeline_result['stage2_time']:.2f} s")
+stage2_per_candidate = pipeline_result['stage2_time'] / VALIDATION_N
+print(f"  Stage 2 per candidate:       {stage2_per_candidate:.2f} s")
+print(f"  Total pipeline time:         {total_pipeline_time:.2f} s")
+
+# --- Print evaluation counts ---
+print(f"\n{'─' * 50}")
+print("EVALUATION COUNTS")
+print(f"{'─' * 50}")
+print(f"  Lo-fi evals (Stage 1):       {pipeline_result['n_evals_lofi']}")
+print(f"  Hi-fi evals (Stage 2):       {pipeline_result['n_evals_hifi']}")
+print(f"  Total evals:                 {pipeline_result['n_evals']}")
+
+# --- Print parameter errors ---
+x_best = pipeline_result['x_best']
+
+# Axis-angle error
+aa_error_rad = np.linalg.norm(x_best[:3] - true_params[:3])
+aa_error_deg = np.rad2deg(aa_error_rad)
+
+# Omega error
+omega_error_rad = np.linalg.norm(x_best[3:] - true_params[3:])
+omega_error_deg = np.rad2deg(omega_error_rad)
+
+# RMS residual
+obj_at_best = pipeline_result['f_best']
+rms_residual = np.sqrt(obj_at_best / n_observations)
+
+print(f"\n{'─' * 50}")
+print("PARAMETER ERRORS")
+print(f"{'─' * 50}")
+print(f"  Best objective value:        {obj_at_best:.6f}")
+print(f"  Axis-angle error:            {aa_error_deg:.4f} deg")
+print(f"  Omega error:                 {omega_error_deg:.4f} deg/s")
+print(f"  RMS residual:                {rms_residual:.4f} mag")
+
+# --- Evaluate success ---
+success, omega_err_eval, rms_eval = evaluate_success(
+    x_best, true_params, obj_hifi, noise_sigma
+)
+
+print(f"\n{'─' * 50}")
+print("SUCCESS EVALUATION")
+print(f"{'─' * 50}")
+print(f"  Omega error:    {omega_err_eval:.4f} deg/s  (threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s)")
+print(f"  RMS residual:   {rms_eval:.4f} mag   (threshold: {RMS_THRESHOLD_FACTOR * noise_sigma:.4f} mag)")
+if success:
+    print(f"\n  ✓ SUCCESS: Pipeline recovered accurate attitude parameters")
+else:
+    print(f"\n  ✗ FAIL: Pipeline did not meet success criteria")
+    if omega_err_eval >= OMEGA_ERROR_THRESHOLD_DEG_PER_S:
+        print(f"    - Omega error {omega_err_eval:.4f} >= {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s")
+    if rms_eval >= RMS_THRESHOLD_FACTOR * noise_sigma:
+        print(f"    - RMS residual {rms_eval:.4f} >= {RMS_THRESHOLD_FACTOR * noise_sigma:.4f} mag")
+
+# --- Print best parameters ---
+print(f"\n{'─' * 50}")
+print("BEST PARAMETERS")
+print(f"{'─' * 50}")
+print(f"  Best params: {x_best}")
+print(f"  True params: {true_params}")
+
+# %% [markdown]
+# ### Experiment 3 Summary
+#
+# **Pipeline Validation Results:**
+#
+# The mixed-fidelity pipeline was run once with:
+# - **Stage 1**: Differential Evolution on the lo-fi objective (5000 eval budget)
+# - **Stage 2**: L-BFGS-B refinement on the hi-fi objective for the top 3 candidates
+#   (200 evals each)
+#
+# **Key observations:**
+# - The pipeline demonstrates the two-stage approach: fast global exploration
+#   followed by accurate local refinement.
+# - Stage 1 (lo-fi DE) consumes the majority of evaluations but runs quickly
+#   due to the shadow-free approximation.
+# - Stage 2 (hi-fi L-BFGS-B) uses fewer evaluations but each is more expensive
+#   due to ray tracing.
+# - The success/failure result validates whether the lo-fi landscape is a
+#   sufficiently good proxy for identifying promising candidates.
+#
+# This single validation run confirms the pipeline mechanics before proceeding
+# to statistical comparisons in Experiments 4-5.
