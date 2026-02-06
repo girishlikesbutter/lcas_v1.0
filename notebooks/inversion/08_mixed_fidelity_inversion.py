@@ -1257,3 +1257,169 @@ plt.show()
 # A negligible or moderate shift confirms that the two-stage mixed-fidelity
 # approach is viable: the lo-fi global search identifies candidates close
 # enough to the hi-fi minimum for local refinement to succeed.
+
+# %% [markdown]
+# ---
+# ## Experiment 3: Mixed-Fidelity Pipeline
+#
+# Implement the core two-stage pipeline:
+# 1. **Stage 1**: Low-fidelity DE global search
+# 2. **Stage 2**: High-fidelity L-BFGS-B local refinement on top candidates
+
+# %%
+from scipy.optimize import differential_evolution
+
+
+def run_mixed_fidelity(
+    obj_lofi: ObjectiveFunction,
+    obj_hifi: ObjectiveFunction,
+    bounds: list[tuple[float, float]],
+    lofi_budget: int,
+    top_n: int,
+    hifi_evals_per_candidate: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Two-stage mixed-fidelity optimization pipeline.
+
+    Stage 1: Run Differential Evolution with polish=False on the low-fidelity
+    objective, then extract the top N candidates from the final population.
+
+    Stage 2: Run L-BFGS-B on the high-fidelity objective for each of the N
+    candidates, selecting the overall best solution.
+
+    Parameters
+    ----------
+    obj_lofi : ObjectiveFunction
+        Low-fidelity objective function (shadows disabled).
+    obj_hifi : ObjectiveFunction
+        High-fidelity objective function (shadows enabled).
+    bounds : list[tuple[float, float]]
+        Parameter bounds for each dimension.
+    lofi_budget : int
+        Maximum number of lo-fi evaluations for Stage 1 (DE).
+    top_n : int
+        Number of top candidates to pass from Stage 1 to Stage 2.
+    hifi_evals_per_candidate : int
+        Maximum number of hi-fi evaluations per candidate in Stage 2.
+    seed : int | None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    dict
+        Results with keys:
+        - x_best: Best solution found overall
+        - f_best: Best hi-fi objective value
+        - n_evals: Total evaluations (lofi + hifi)
+        - n_evals_lofi: Lo-fi evaluations used in Stage 1
+        - n_evals_hifi: Hi-fi evaluations used in Stage 2
+        - stage1_time: Wall-clock time for Stage 1 (seconds)
+        - stage2_time: Wall-clock time for Stage 2 (seconds)
+        - candidates: List of per-candidate results dicts
+    """
+    n_params = len(bounds)
+
+    # =====================================================================
+    # Stage 1: Low-fidelity DE global search
+    # =====================================================================
+    counted_lofi = CountedObjective(obj_lofi, budget=lofi_budget)
+
+    # Calculate maxiter to stay within budget
+    popsize = 15
+    evals_per_generation = popsize * n_params
+    maxiter = max(1, int(lofi_budget / evals_per_generation) - 1)
+
+    t0_stage1 = time.perf_counter()
+
+    de_result = differential_evolution(
+        func=counted_lofi,
+        bounds=bounds,
+        seed=seed,
+        maxiter=maxiter,
+        tol=0.01,
+        polish=False,
+        strategy='best1bin',
+        mutation=(0.5, 1.0),
+        recombination=0.7,
+        workers=1,
+    )
+
+    stage1_time = time.perf_counter() - t0_stage1
+    n_evals_lofi = counted_lofi.n_evals
+
+    # Extract top N candidates from DE population
+    population = de_result.population  # shape: (pop_size, n_params)
+    energies = de_result.population_energies  # shape: (pop_size,)
+
+    # Sort by energy (ascending = best first) and take top N
+    sorted_indices = np.argsort(energies)[:top_n]
+    top_candidates = population[sorted_indices].copy()
+    top_energies = energies[sorted_indices].copy()
+
+    # =====================================================================
+    # Stage 2: High-fidelity L-BFGS-B local refinement
+    # =====================================================================
+    t0_stage2 = time.perf_counter()
+
+    candidate_results = []
+    n_evals_hifi_total = 0
+
+    for i in range(len(top_candidates)):
+        x0 = top_candidates[i]
+
+        # Use CountedObjective for budget enforcement on each candidate
+        counted_hifi = CountedObjective(obj_hifi, budget=hifi_evals_per_candidate)
+
+        result_i = minimize(
+            counted_hifi,
+            x0,
+            method="L-BFGS-B",
+            bounds=bounds,
+            options={"maxiter": 1000, "ftol": 1e-8, "gtol": 1e-6, "disp": False},
+        )
+
+        # Get best from tracked values (handles budget exhaustion)
+        if counted_hifi.best_params is not None:
+            x_opt = counted_hifi.best_params.copy()
+            f_opt = counted_hifi.best_value
+        else:
+            # Normalize result
+            aa = result_i.x[:3]
+            omega = result_i.x[3:]
+            q = axis_angle_to_quaternion(aa)
+            q = normalize_quaternion(q)
+            aa = quaternion_to_axis_angle(q)
+            x_opt = np.concatenate([aa, omega])
+            f_opt = result_i.fun
+
+        n_evals_hifi_total += counted_hifi.n_evals
+
+        candidate_results.append({
+            'x_opt': x_opt,
+            'f_opt': f_opt,
+            'n_evals': counted_hifi.n_evals,
+            'lofi_energy': float(top_energies[i]),
+            'converged': result_i.success,
+        })
+
+    stage2_time = time.perf_counter() - t0_stage2
+
+    # Select overall best candidate
+    best_idx = int(np.argmin([c['f_opt'] for c in candidate_results]))
+    x_best = candidate_results[best_idx]['x_opt']
+    f_best = candidate_results[best_idx]['f_opt']
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': n_evals_lofi + n_evals_hifi_total,
+        'n_evals_lofi': n_evals_lofi,
+        'n_evals_hifi': n_evals_hifi_total,
+        'stage1_time': stage1_time,
+        'stage2_time': stage2_time,
+        'candidates': candidate_results,
+    }
+
+
+print("run_mixed_fidelity() pipeline function defined")
