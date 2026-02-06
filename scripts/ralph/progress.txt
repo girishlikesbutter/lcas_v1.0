@@ -210,3 +210,32 @@ Started: Fri Feb  6 05:19:30 PM NZDT 2026
   - ablation_summary list of dicts is a convenient intermediate for both table printing and plotting
   - Stage 2 time scales linearly with N; Stage 1 time is constant (fixed lo-fi budget)
 ---
+
+## 2026-02-06 - US-012
+- Implemented Experiment 7: Phase angle failure regime identification
+  - Defined create_phase_angle_geometry() to rotate observer positions in J2000 frame
+    around the satellite-to-sun axis to achieve target phase angles
+  - Verification step confirms phase angle geometry function produces correct angles
+    and preserves observer distances
+  - Sweeps 17 phase angles from 10° to 170° in 10° steps
+  - For each phase angle:
+    - Rotates observer geometry to target phase angle
+    - Generates new synthetic lightcurve with shadows at rotated geometry
+    - Creates new hi-fi and lo-fi ObjectiveFunction instances
+    - Computes lightcurve discrepancy RMS(mag_hifi - mag_lofi) at true params
+    - Runs 5 mixed-fidelity and 5 full-fidelity DE trials
+  - Identifies crossover phase angle where MF success drops below DE success
+  - Prints results table: phase angle vs discrepancy, success rates, omega errors
+  - Added markdown summary cell interpreting phase angle failure regime
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb, scripts/ralph/prd.json
+- **Learnings for future iterations:**
+  - To rotate observer geometry to a target phase angle: decompose observer direction
+    into components parallel and perpendicular to sun direction, then reconstruct at
+    new angle using cos(target)*e1 + sin(target)*e2
+  - Use different base seed (4000) from Experiments 4 (1000), 5 (2000), 6 (3000)
+  - scipy.spatial.transform.Rotation is available but for this 2D rotation in the
+    sun-observer plane, direct vector math is simpler and more transparent
+  - show_progress=False on compute_shadows() and generate_lightcurves() to reduce
+    output spam during batch phase angle sweep
+  - Phase angle = arccos(dot(sun_unit, obs_unit)) where both are unit vectors from satellite
+---

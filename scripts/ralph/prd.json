@@ -210,7 +210,7 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "Phase angle = arccos(dot(sun_vec, obs_vec)). Prefer searching existing epoch range for target angles. If unavailable, rotate observer position analytically."
     },
     {

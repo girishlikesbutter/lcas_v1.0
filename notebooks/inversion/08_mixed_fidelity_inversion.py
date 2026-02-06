@@ -2808,3 +2808,391 @@ plt.show()
 # **Recommended N**: The optimal N balances success rate improvement against
 # additional hi-fi evaluation cost. Choose the smallest N where the success rate
 # plateaus (marginal gain < 5 percentage points for doubling N).
+
+# %% [markdown]
+# ---
+# ## Experiment 7: Phase Angle Failure Regime Identification
+#
+# Identify phase angle ranges where the low-fidelity (shadow-free) approximation
+# fails, causing mixed-fidelity inversion to underperform full-fidelity DE.
+#
+# **Phase angle** = arccos(dot(sun_unit, obs_unit)) where sun_unit and obs_unit
+# are unit vectors from the satellite to the sun and observer respectively.
+#
+# For each target phase angle, we rotate the observer position in J2000 frame
+# around the satellite-to-sun axis, then regenerate synthetic lightcurve data
+# and objective functions.
+
+# %% [markdown]
+# ### Experiment 7a: Phase Angle Test Case Generation
+
+# %%
+# ============================================================================
+# EXPERIMENT 7: PHASE ANGLE FAILURE REGIME IDENTIFICATION
+# ============================================================================
+
+# Phase angles to test: 10 to 170 degrees in 10-degree steps (17 cases)
+PHASE_ANGLES_DEG = np.arange(10, 180, 10)  # [10, 20, ..., 170]
+N_PHASE_TRIALS = 5       # Trials per strategy per phase angle
+PHASE_BASE_SEED = 4000   # Independent from earlier experiments
+PHASE_LOFI_BUDGET = 5000
+PHASE_TOP_N = 3
+PHASE_HIFI_EVALS_PER_CANDIDATE = 200
+PHASE_DE_BUDGET = 5000
+
+print("=" * 70)
+print("EXPERIMENT 7: PHASE ANGLE FAILURE REGIME IDENTIFICATION")
+print("=" * 70)
+print(f"\nPhase angles: {PHASE_ANGLES_DEG[0]}° to {PHASE_ANGLES_DEG[-1]}° "
+      f"in {PHASE_ANGLES_DEG[1] - PHASE_ANGLES_DEG[0]}° steps ({len(PHASE_ANGLES_DEG)} cases)")
+print(f"Trials per strategy per phase angle: {N_PHASE_TRIALS}")
+print(f"Base seed: {PHASE_BASE_SEED}")
+
+
+# %%
+def create_phase_angle_geometry(
+    sun_positions_j2000: np.ndarray,
+    observer_positions_j2000: np.ndarray,
+    satellite_positions_j2000: np.ndarray,
+    target_phase_angle_deg: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Rotate observer positions in J2000 frame to achieve a target phase angle.
+
+    Rotates the observer position around the satellite-to-sun axis so that
+    the angle between the sun direction and observer direction (as seen from
+    the satellite) equals the target phase angle.
+
+    Parameters
+    ----------
+    sun_positions_j2000 : np.ndarray
+        Sun positions in J2000 frame, shape (N, 3).
+    observer_positions_j2000 : np.ndarray
+        Observer positions in J2000 frame, shape (N, 3).
+    satellite_positions_j2000 : np.ndarray
+        Satellite positions in J2000 frame, shape (N, 3).
+    target_phase_angle_deg : float
+        Desired phase angle in degrees.
+
+    Returns
+    -------
+    new_observer_positions : np.ndarray
+        Rotated observer positions, shape (N, 3).
+    new_observer_distances : np.ndarray
+        Updated observer distances, shape (N,).
+    """
+    from scipy.spatial.transform import Rotation
+
+    n_obs = len(sun_positions_j2000)
+    target_rad = np.deg2rad(target_phase_angle_deg)
+
+    new_obs_positions = np.zeros_like(observer_positions_j2000)
+
+    for i in range(n_obs):
+        # Direction vectors from satellite
+        sun_vec = sun_positions_j2000[i] - satellite_positions_j2000[i]
+        obs_vec = observer_positions_j2000[i] - satellite_positions_j2000[i]
+
+        sun_unit = sun_vec / np.linalg.norm(sun_vec)
+        obs_dist = np.linalg.norm(obs_vec)
+        obs_unit = obs_vec / obs_dist
+
+        # Current phase angle
+        cos_current = np.clip(np.dot(sun_unit, obs_unit), -1.0, 1.0)
+        current_phase = np.arccos(cos_current)
+
+        # Build a coordinate frame:
+        # e1 = sun_unit (axis towards sun)
+        # e2 = component of obs_unit perpendicular to sun_unit (normalized)
+        e1 = sun_unit
+        obs_perp = obs_unit - np.dot(obs_unit, e1) * e1
+        obs_perp_norm = np.linalg.norm(obs_perp)
+
+        if obs_perp_norm < 1e-10:
+            # Observer is along sun direction; pick an arbitrary perpendicular
+            arb = np.array([1.0, 0.0, 0.0])
+            if abs(np.dot(e1, arb)) > 0.9:
+                arb = np.array([0.0, 1.0, 0.0])
+            e2 = arb - np.dot(arb, e1) * e1
+            e2 = e2 / np.linalg.norm(e2)
+        else:
+            e2 = obs_perp / obs_perp_norm
+
+        # New observer direction at target phase angle (in the sun-observer plane)
+        new_obs_unit = np.cos(target_rad) * e1 + np.sin(target_rad) * e2
+
+        # Place observer at original distance
+        new_obs_positions[i] = satellite_positions_j2000[i] + obs_dist * new_obs_unit
+
+    new_obs_distances = np.linalg.norm(
+        new_obs_positions - satellite_positions_j2000, axis=1
+    )
+
+    return new_obs_positions, new_obs_distances
+
+
+print("create_phase_angle_geometry() defined")
+
+# %%
+# Verify geometry function: check that we can recover the original phase angle
+# and that the target phase angle is achieved
+print("\nVerifying phase angle geometry function...")
+
+# Compute original mean phase angle
+orig_sun_vecs = sun_positions_j2000 - satellite_positions_j2000
+orig_obs_vecs = observer_positions_j2000 - satellite_positions_j2000
+orig_sun_units = orig_sun_vecs / np.linalg.norm(orig_sun_vecs, axis=1, keepdims=True)
+orig_obs_units = orig_obs_vecs / np.linalg.norm(orig_obs_vecs, axis=1, keepdims=True)
+orig_cos_phase = np.clip(np.sum(orig_sun_units * orig_obs_units, axis=1), -1.0, 1.0)
+orig_phase_deg = np.rad2deg(np.arccos(orig_cos_phase))
+print(f"  Original phase angles: mean={orig_phase_deg.mean():.1f}°, "
+      f"range=[{orig_phase_deg.min():.1f}°, {orig_phase_deg.max():.1f}°]")
+
+# Test at a few target angles
+for test_angle in [30, 90, 150]:
+    new_obs_pos, new_obs_dist = create_phase_angle_geometry(
+        sun_positions_j2000, observer_positions_j2000,
+        satellite_positions_j2000, test_angle,
+    )
+    # Verify achieved phase angle
+    new_sun_vecs = sun_positions_j2000 - satellite_positions_j2000
+    new_obs_vecs = new_obs_pos - satellite_positions_j2000
+    new_sun_units = new_sun_vecs / np.linalg.norm(new_sun_vecs, axis=1, keepdims=True)
+    new_obs_units = new_obs_vecs / np.linalg.norm(new_obs_vecs, axis=1, keepdims=True)
+    new_cos = np.clip(np.sum(new_sun_units * new_obs_units, axis=1), -1.0, 1.0)
+    achieved_deg = np.rad2deg(np.arccos(new_cos))
+    print(f"  Target={test_angle}°: achieved mean={achieved_deg.mean():.2f}°, "
+          f"dist preserved={np.allclose(new_obs_dist, observer_distances, rtol=1e-6)}")
+
+# %% [markdown]
+# ### Experiment 7b: Lightcurve Discrepancy and Inversion Trials per Phase Angle
+
+# %%
+# For each phase angle:
+#   1. Rotate observer geometry to target phase angle
+#   2. Generate synthetic lightcurve with shadows
+#   3. Compute lightcurve discrepancy RMS(mag_hifi - mag_lofi) at true params
+#   4. Run mixed-fidelity (5 trials) and full-fidelity DE (5 trials)
+#   5. Record success rate and omega error
+
+print("\n" + "-" * 70)
+print("Running phase angle sweep...")
+print("-" * 70)
+
+phase_results = []
+
+for pa_idx, pa_deg in enumerate(PHASE_ANGLES_DEG):
+    print(f"\n--- Phase angle: {pa_deg}° ({pa_idx + 1}/{len(PHASE_ANGLES_DEG)}) ---")
+
+    # Step 1: Rotate observer geometry
+    pa_obs_pos, pa_obs_dist = create_phase_angle_geometry(
+        sun_positions_j2000, observer_positions_j2000,
+        satellite_positions_j2000, pa_deg,
+    )
+
+    # Step 2: Generate synthetic lightcurve with shadows at this phase angle
+    # Use a temporary ObjectiveFunction to get body-frame vectors
+    pa_obj_temp = ObjectiveFunction(
+        satellite=satellite,
+        observation_times=observation_times,
+        observed_lightcurve=np.zeros(n_observations),
+        sun_positions_j2000=sun_positions_j2000,
+        observer_positions_j2000=pa_obs_pos,
+        satellite_positions_j2000=satellite_positions_j2000,
+        observer_distances=pa_obs_dist,
+        compute_shadows_flag=True,
+        articulation_matrices=articulation_matrices,
+        mode="tumbling",
+        inertia_tensor=inertia_tensor,
+    )
+
+    # Get body-frame vectors at true attitude
+    pa_k1, pa_k2 = pa_obj_temp._compute_body_frame_vectors(true_quaternions)
+
+    # Compute shadows
+    pa_lit_status = compute_shadows(
+        satellite=satellite,
+        k1_vectors=pa_k1,
+        explicit_component_matrices=articulation_matrices,
+        show_progress=False,
+    )
+
+    # Generate true lightcurve with shadows
+    pa_true_lc, pa_flux, _, _, _, _ = generate_lightcurves(
+        facet_lit_status_dict=pa_lit_status,
+        k1_vectors_array=pa_k1,
+        k2_vectors_array=pa_k2,
+        observer_distances=pa_obs_dist,
+        satellite=satellite,
+        epochs=epochs,
+        pre_computed_matrices=articulation_matrices,
+        generate_no_shadow=False,
+        animate=False,
+        show_progress=False,
+    )
+
+    # Add noise (same seed for comparability)
+    np.random.seed(42)
+    pa_observed_lc = pa_true_lc + np.random.normal(0, noise_sigma, n_observations)
+
+    # Step 3: Create hi-fi and lo-fi objectives for this phase angle
+    pa_obj_hifi = ObjectiveFunction(
+        satellite=satellite,
+        observation_times=observation_times,
+        observed_lightcurve=pa_observed_lc,
+        sun_positions_j2000=sun_positions_j2000,
+        observer_positions_j2000=pa_obs_pos,
+        satellite_positions_j2000=satellite_positions_j2000,
+        observer_distances=pa_obs_dist,
+        compute_shadows_flag=True,
+        articulation_matrices=articulation_matrices,
+        mode="tumbling",
+        inertia_tensor=inertia_tensor,
+    )
+
+    pa_obj_lofi = ObjectiveFunction(
+        satellite=satellite,
+        observation_times=observation_times,
+        observed_lightcurve=pa_observed_lc,
+        sun_positions_j2000=sun_positions_j2000,
+        observer_positions_j2000=pa_obs_pos,
+        satellite_positions_j2000=satellite_positions_j2000,
+        observer_distances=pa_obs_dist,
+        compute_shadows_flag=False,
+        articulation_matrices=articulation_matrices,
+        mode="tumbling",
+        inertia_tensor=inertia_tensor,
+    )
+
+    # Compute lightcurve discrepancy at true params
+    pa_mag_hifi = pa_obj_hifi._generate_predicted_lightcurve(pa_k1, pa_k2)
+    pa_mag_lofi = pa_obj_lofi._generate_predicted_lightcurve(pa_k1, pa_k2)
+    pa_discrepancy_rms = np.sqrt(np.mean((pa_mag_hifi - pa_mag_lofi) ** 2))
+
+    print(f"  Discrepancy RMS(hifi-lofi): {pa_discrepancy_rms:.4f} mag")
+
+    # Step 4: Run trials for both strategies
+    mf_results_pa = []
+    de_results_pa = []
+
+    for trial in range(N_PHASE_TRIALS):
+        seed = PHASE_BASE_SEED + trial * 100
+
+        # Mixed-fidelity trial
+        t0 = time.perf_counter()
+        mf_result = run_mixed_fidelity(
+            obj_lofi=pa_obj_lofi,
+            obj_hifi=pa_obj_hifi,
+            bounds=bounds,
+            lofi_budget=PHASE_LOFI_BUDGET,
+            top_n=PHASE_TOP_N,
+            hifi_evals_per_candidate=PHASE_HIFI_EVALS_PER_CANDIDATE,
+            seed=seed,
+        )
+        mf_time = time.perf_counter() - t0
+
+        mf_success, mf_omega_err, mf_rms = evaluate_success(
+            mf_result['x_best'], true_params, pa_obj_hifi, noise_sigma
+        )
+        mf_results_pa.append({
+            'success': mf_success,
+            'omega_error': mf_omega_err,
+            'rms_residual': mf_rms,
+            'wall_time': mf_time,
+        })
+
+        # Full-fidelity DE trial
+        t0 = time.perf_counter()
+        counted_de = CountedObjective(pa_obj_hifi, budget=PHASE_DE_BUDGET)
+        de_result = run_de(
+            counted_objective=counted_de,
+            bounds=bounds,
+            max_evals=PHASE_DE_BUDGET,
+            seed=seed,
+        )
+        de_time = time.perf_counter() - t0
+
+        if de_result['x_best'] is not None:
+            de_success, de_omega_err, de_rms = evaluate_success(
+                de_result['x_best'], true_params, pa_obj_hifi, noise_sigma
+            )
+        else:
+            de_success, de_omega_err, de_rms = False, float('inf'), float('inf')
+
+        de_results_pa.append({
+            'success': de_success,
+            'omega_error': de_omega_err,
+            'rms_residual': de_rms,
+            'wall_time': de_time,
+        })
+
+    # Step 5: Aggregate results for this phase angle
+    mf_success_rate = np.mean([r['success'] for r in mf_results_pa])
+    mf_mean_omega = np.mean([r['omega_error'] for r in mf_results_pa])
+    de_success_rate = np.mean([r['success'] for r in de_results_pa])
+    de_mean_omega = np.mean([r['omega_error'] for r in de_results_pa])
+
+    phase_results.append({
+        'phase_angle': pa_deg,
+        'discrepancy_rms': pa_discrepancy_rms,
+        'mf_success_rate': mf_success_rate,
+        'mf_mean_omega_error': mf_mean_omega,
+        'de_success_rate': de_success_rate,
+        'de_mean_omega_error': de_mean_omega,
+        'mf_trials': mf_results_pa,
+        'de_trials': de_results_pa,
+    })
+
+    print(f"  Mixed-Fidelity: success={mf_success_rate:.0%}, mean_omega_err={mf_mean_omega:.4f} deg/s")
+    print(f"  Full-Fidelity DE: success={de_success_rate:.0%}, mean_omega_err={de_mean_omega:.4f} deg/s")
+
+print("\n" + "-" * 70)
+print("Phase angle sweep complete!")
+print("-" * 70)
+
+# %%
+# Identify crossover phase angle
+print("\n" + "=" * 70)
+print("PHASE ANGLE RESULTS TABLE")
+print("=" * 70)
+
+print(f"\n{'Phase':>7} | {'Discrepancy':>12} | {'MF Success':>11} | {'DE Success':>11} | {'MF omega':>10} | {'DE omega':>10}")
+print(f"{'(deg)':>7} | {'RMS (mag)':>12} | {'Rate':>11} | {'Rate':>11} | {'(deg/s)':>10} | {'(deg/s)':>10}")
+print("-" * 80)
+
+crossover_angle = None
+for pr in phase_results:
+    mf_sr = f"{pr['mf_success_rate']:.0%}"
+    de_sr = f"{pr['de_success_rate']:.0%}"
+    print(f"{pr['phase_angle']:>7} | {pr['discrepancy_rms']:>12.4f} | {mf_sr:>11} | {de_sr:>11} | "
+          f"{pr['mf_mean_omega_error']:>10.4f} | {pr['de_mean_omega_error']:>10.4f}")
+
+    # Detect crossover: where MF success drops below DE success
+    if crossover_angle is None and pr['mf_success_rate'] < pr['de_success_rate']:
+        crossover_angle = pr['phase_angle']
+
+print(f"\nCrossover phase angle (MF success < DE success): "
+      f"{crossover_angle}°" if crossover_angle else "\nNo crossover detected: Mixed-fidelity performs >= DE at all phase angles")
+
+# %% [markdown]
+# ### Experiment 7 Summary
+#
+# **Phase Angle Failure Regime Identification:**
+#
+# This experiment tests how phase angle affects the viability of the shadow-free
+# (lo-fi) approximation used in mixed-fidelity inversion.
+#
+# **Methodology:**
+# - 17 phase angle test cases from 10° to 170° in 10° steps.
+# - At each phase angle, observer geometry is rotated to achieve the target angle
+#   while preserving observer distance.
+# - Lightcurve discrepancy RMS(hifi - lofi) quantifies how much shadow effects
+#   matter at each phase angle.
+# - 5 trials each of mixed-fidelity and full-fidelity DE at each phase angle.
+#
+# **Expected behavior:**
+# - At low phase angles (near opposition, sun behind observer), shadows are
+#   minimal → lo-fi approximation is good → mixed-fidelity performs well.
+# - At high phase angles (near forward scattering), shadows become significant
+#   → lo-fi approximation diverges → mixed-fidelity may underperform.
+# - The crossover phase angle marks where mixed-fidelity stops being advantageous.
