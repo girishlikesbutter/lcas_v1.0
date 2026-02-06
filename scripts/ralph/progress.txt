@@ -239,3 +239,32 @@ Started: Fri Feb  6 05:19:30 PM NZDT 2026
     output spam during batch phase angle sweep
   - Phase angle = arccos(dot(sun_unit, obs_unit)) where both are unit vectors from satellite
 ---
+
+## 2026-02-06 - US-013
+- Implemented Experiment 7c: Phase angle failure visualization
+  - 3-panel figure (phase_angle_failure.png):
+    - (a) Lightcurve fidelity discrepancy RMS vs phase angle with noise_sigma reference line
+    - (b) Success rate vs phase angle for Mixed-Fidelity and Full-Fidelity DE with Wilson score CI error bars
+    - (c) Mean omega error vs phase angle (log scale) with success threshold line
+  - Crossover phase angle marked on panels (b) and (c) if detected
+- Recommended phase angle range printed: identifies viable and marginal phase angles
+- Comprehensive study summary (mixed_fidelity_summary.txt):
+  - All key numerical results from Experiments 1-7
+  - Timing benchmarks, Spearman correlation, basin shift statistics
+  - Evaluation-count and wall-clock comparison tables
+  - Handoff ablation results
+  - Phase angle failure regime table
+  - Viability assessment against 3 PRD success criteria (speedup, success rate, accuracy)
+- Final markdown summary section with:
+  - Approach description
+  - Key findings per experiment
+  - Viability assessment table against success criteria
+  - Recommendations for practical use
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb, scripts/ralph/prd.json
+- **Learnings for future iterations:**
+  - Use `dir()` or `'varname' in dir()` to check variable availability when building cross-experiment summaries
+  - pairwise_displacements dict has keys: 'euclidean', 'aa_deg', 'omega_deg_s'
+  - compute_binomial_ci() is reusable across experiments for Wilson score CIs on success rates
+  - Use semilogy for omega error plots when range spans multiple orders of magnitude
+  - Offset errorbar x-positions slightly (±1.5) when overlapping two series on same axis
+---

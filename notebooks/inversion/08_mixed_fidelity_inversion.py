@@ -32,6 +32,58 @@
 
 # %% [markdown]
 # ---
+# ## Configuration Flags
+#
+# Skip flags for experiments that have already been run.
+# Set to True to skip, False to run.
+
+# %%
+# =============================================================================
+# EXPERIMENT SKIP FLAGS
+# =============================================================================
+# Set these to True to skip experiments that have already completed.
+# Results from completed experiments are saved to data/results/inversion_diagnostics/
+
+SKIP_EXP_1 = False  # Fidelity Benchmarking (timing, correlation)
+SKIP_EXP_2 = False  # Basin Shift Analysis
+SKIP_EXP_3 = False  # Mixed-Fidelity Pipeline Validation
+SKIP_EXP_4 = False  # Evaluation-Count Matched Comparison
+SKIP_EXP_5 = False  # Wall-Clock Matched Comparison
+SKIP_EXP_6 = False  # Handoff Parameter Ablation
+SKIP_EXP_7 = False  # Phase Angle Failure Regimes
+
+# =============================================================================
+# EXPERIMENT PARAMETERS (adjust based on benchmark results)
+# =============================================================================
+# Benchmark results from Exp 1: hi-fi ~6s/eval, lo-fi ~0.04s/eval, speedup ~163x
+
+# Exp 2: Basin shift analysis
+EXP2_N_PERTURBED = 5  # Reduced from 20 for faster preliminary runs
+
+# Exp 4-5: Comparison trials
+EXP4_N_TRIALS = 3          # Reduced from 10 (use 10+ for paper-quality)
+EXP4_BUDGET = 1000         # Reduced from 5000 (use 5000+ for paper-quality)
+
+# Exp 6: Ablation
+EXP6_N_TRIALS = 3          # Reduced from 10
+
+# Exp 7: Phase angle sweep
+EXP7_N_ANGLES = 5          # Number of phase angles to test
+EXP7_N_TRIALS = 3          # Trials per angle
+
+print("=" * 70)
+print("EXPERIMENT CONFIGURATION")
+print("=" * 70)
+print(f"Skip flags: Exp1={SKIP_EXP_1}, Exp2={SKIP_EXP_2}, Exp3={SKIP_EXP_3}")
+print(f"            Exp4={SKIP_EXP_4}, Exp5={SKIP_EXP_5}, Exp6={SKIP_EXP_6}, Exp7={SKIP_EXP_7}")
+print(f"Exp 2: N_PERTURBED = {EXP2_N_PERTURBED}")
+print(f"Exp 4-5: N_TRIALS = {EXP4_N_TRIALS}, BUDGET = {EXP4_BUDGET}")
+print(f"Exp 6: N_TRIALS = {EXP6_N_TRIALS}")
+print(f"Exp 7: N_ANGLES = {EXP7_N_ANGLES}, N_TRIALS = {EXP7_N_TRIALS}")
+print("=" * 70 + "\n")
+
+# %% [markdown]
+# ---
 # ## Setup
 #
 # Reuse the Intelsat 901 test case from notebooks 04-07 with tumbling dynamics.
@@ -43,6 +95,8 @@ import time
 import os
 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend for script execution
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
@@ -617,6 +671,39 @@ print("\n" + "=" * 70)
 print("NOTEBOOK 08 SETUP COMPLETE")
 print("=" * 70)
 
+# %%
+# =============================================================================
+# RESULTS SAVING INFRASTRUCTURE
+# =============================================================================
+import json
+from datetime import datetime
+
+RESULTS_DIR = Path("data/results/inversion_diagnostics")
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Master results dictionary - will be saved to JSON at the end
+notebook_results = {
+    "notebook": "08_mixed_fidelity_inversion",
+    "timestamp": datetime.now().isoformat(),
+    "config": {
+        "n_observations": n_observations,
+        "noise_sigma": noise_sigma,
+        "exp2_n_perturbed": EXP2_N_PERTURBED,
+        "exp4_n_trials": EXP4_N_TRIALS,
+        "exp4_budget": EXP4_BUDGET,
+    },
+    "experiments": {}
+}
+
+def save_results():
+    """Save results dict to JSON file."""
+    results_path = RESULTS_DIR / "notebook_08_results.json"
+    with open(results_path, 'w') as f:
+        json.dump(notebook_results, f, indent=2, default=str)
+    print(f"Results saved to: {results_path}")
+
+print(f"Results will be saved to: {RESULTS_DIR}/notebook_08_results.json")
+
 # %% [markdown]
 # ---
 # ## Experiment 1: Fidelity Benchmarking
@@ -630,14 +717,17 @@ print("=" * 70)
 # %%
 # Time N evaluations of each fidelity level at true_params
 N_timing = 20
+print("\nStarting Experiment 1a timing...", flush=True)
 
 # --- High-fidelity timing ---
 times_hifi = []
 for i in range(N_timing):
+    print(f"  Hi-fi eval {i+1}/{N_timing}...", end=" ", flush=True)
     t0 = time.perf_counter()
     obj_hifi.evaluate(true_params)
     t1 = time.perf_counter()
     times_hifi.append(t1 - t0)
+    print(f"{t1-t0:.2f}s", flush=True)
 
 times_hifi = np.array(times_hifi)
 
@@ -810,6 +900,29 @@ plt.show()
 # These results justify using the lo-fi objective for broad exploration (Stage 1)
 # before refining with the hi-fi objective (Stage 2).
 
+# %%
+# Save Experiment 1 results
+notebook_results["experiments"]["exp1_fidelity_benchmark"] = {
+    "timing": {
+        "hifi_mean_s": float(mean_hifi),
+        "hifi_std_s": float(std_hifi),
+        "lofi_mean_s": float(mean_lofi),
+        "lofi_std_s": float(std_lofi),
+        "speedup_factor": float(speedup),
+    },
+    "rank_correlation": {
+        "spearman_rho": float(rho),
+        "p_value": float(p_value),
+    },
+    "lightcurve_residual": {
+        "mean_mag": float(mag_residual.mean()),
+        "std_mag": float(mag_residual.std()),
+        "rms_mag": float(np.sqrt(np.mean(mag_residual**2))),
+    },
+}
+save_results()
+print("Experiment 1 results saved.")
+
 # %% [markdown]
 # ---
 # ## Experiment 2: Basin Shift Analysis
@@ -950,7 +1063,7 @@ def sample_in_ball(
 # Basin radius from notebook 05 analysis: use a moderate radius that gives
 # reasonable local optimization success (e.g., 2 degrees)
 BASIN_RADIUS_DEG = 2.0
-N_PERTURBED = 20
+N_PERTURBED = EXP2_N_PERTURBED  # Configured at top of notebook
 
 print("=" * 70)
 print("EXPERIMENT 2b: PERTURBED STARTS BASIN SHIFT")
@@ -1258,6 +1371,27 @@ plt.show()
 # approach is viable: the lo-fi global search identifies candidates close
 # enough to the hi-fi minimum for local refinement to succeed.
 
+# %%
+# Save Experiment 2 results
+notebook_results["experiments"]["exp2_basin_shift"] = {
+    "from_true_params": {
+        "euclidean_distance": float(euclidean_distance),
+        "axis_angle_displacement_deg": float(axis_angle_displacement_deg),
+        "omega_displacement_deg_s": float(omega_displacement_deg),
+    },
+    "perturbed_starts": {
+        "n_starts": N_PERTURBED,
+        "euclidean_mean": float(pairwise_displacements['euclidean'].mean()),
+        "euclidean_std": float(pairwise_displacements['euclidean'].std()),
+        "aa_deg_mean": float(pairwise_displacements['aa_deg'].mean()),
+        "aa_deg_std": float(pairwise_displacements['aa_deg'].std()),
+        "omega_deg_s_mean": float(pairwise_displacements['omega_deg_s'].mean()),
+        "omega_deg_s_std": float(pairwise_displacements['omega_deg_s'].std()),
+    },
+}
+save_results()
+print("Experiment 2 results saved.")
+
 # %% [markdown]
 # ---
 # ## Experiment 3: Mixed-Fidelity Pipeline
@@ -1556,6 +1690,35 @@ print(f"  True params: {true_params}")
 # This single validation run confirms the pipeline mechanics before proceeding
 # to statistical comparisons in Experiments 4-5.
 
+# %%
+# Save Experiment 3 results
+notebook_results["experiments"]["exp3_pipeline_validation"] = {
+    "config": {
+        "lofi_budget": VALIDATION_LOFI_BUDGET,
+        "top_n": VALIDATION_N,
+        "hifi_evals_per_candidate": VALIDATION_HIFI_EVALS_PER_CANDIDATE,
+    },
+    "timing": {
+        "stage1_time_s": float(pipeline_result['stage1_time']),
+        "stage2_time_s": float(pipeline_result['stage2_time']),
+        "total_time_s": float(total_pipeline_time),
+    },
+    "evals": {
+        "lofi": int(pipeline_result['n_evals_lofi']),
+        "hifi": int(pipeline_result['n_evals_hifi']),
+        "total": int(pipeline_result['n_evals']),
+    },
+    "result": {
+        "f_best": float(pipeline_result['f_best']),
+        "aa_error_deg": float(aa_error_deg),
+        "omega_error_deg_s": float(omega_error_deg),
+        "rms_residual": float(rms_eval),
+        "success": bool(success),
+    },
+}
+save_results()
+print("Experiment 3 results saved.")
+
 # %% [markdown]
 # ---
 # ## Experiment 4: Evaluation-Count Matched Baseline Comparison
@@ -1770,8 +1933,8 @@ print("Baseline strategy functions defined: multistart_local, run_de, run_basinh
 # ============================================================================
 # EXPERIMENT 4 CONFIGURATION
 # ============================================================================
-COMPARISON_BUDGET = 5000  # Fixed total evaluation budget
-N_COMPARISON_TRIALS = 10  # Trials per strategy
+COMPARISON_BUDGET = EXP4_BUDGET  # Configured at top of notebook
+N_COMPARISON_TRIALS = EXP4_N_TRIALS  # Configured at top of notebook
 BASE_SEED = 1000  # Base seed for reproducibility
 
 # Multi-start settings
