@@ -1555,3 +1555,448 @@ print(f"  True params: {true_params}")
 #
 # This single validation run confirms the pipeline mechanics before proceeding
 # to statistical comparisons in Experiments 4-5.
+
+# %% [markdown]
+# ---
+# ## Experiment 4: Evaluation-Count Matched Baseline Comparison
+#
+# Compare mixed-fidelity against notebook 06 baselines (multi-start local,
+# Differential Evolution, basin-hopping) with the same total evaluation budget
+# of 5000 evaluations. All baselines use the hi-fi objective; mixed-fidelity
+# splits the budget between lo-fi Stage 1 and hi-fi Stage 2.
+
+# %% [markdown]
+# ### Experiment 4a: Define Baseline Strategies
+#
+# Reuse `multistart_local`, `run_de`, and `run_basinhopping` implementations
+# from notebook 06, adapted to use `obj_hifi` as the baseline objective.
+
+# %%
+from scipy.stats.qmc import LatinHypercube
+from scipy.optimize import basinhopping
+
+
+def multistart_local(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    n_starts: int,
+    max_evals_per_start: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Multi-start local optimization using Latin Hypercube Sampling.
+
+    Returns dict with keys: x_best, f_best, n_evals, n_successful_starts,
+    n_starts_attempted, all_results.
+    """
+    n_params = len(bounds)
+    lower_bounds = np.array([b[0] for b in bounds])
+    upper_bounds = np.array([b[1] for b in bounds])
+
+    # Generate Latin Hypercube samples in [0, 1]^n
+    lhs = LatinHypercube(d=n_params, seed=seed)
+    samples_unit = lhs.random(n=n_starts)
+
+    # Scale to parameter bounds
+    initial_points = lower_bounds + samples_unit * (upper_bounds - lower_bounds)
+
+    # Track results
+    all_results = []
+    x_best = None
+    f_best = float('inf')
+    n_successful_starts = 0
+
+    for i, x0 in enumerate(initial_points):
+        if counted_objective.is_budget_exhausted():
+            break
+
+        evals_before = counted_objective.n_evals
+
+        result = minimize(
+            counted_objective,
+            x0,
+            method='L-BFGS-B',
+            bounds=bounds,
+            options={
+                'maxfun': max_evals_per_start,
+                'ftol': 1e-8,
+                'gtol': 1e-6,
+            },
+        )
+
+        evals_used = counted_objective.n_evals - evals_before
+
+        local_result = {
+            'x0': x0.copy(),
+            'x_opt': result.x.copy(),
+            'f_opt': result.fun,
+            'n_evals': evals_used,
+            'success': result.success,
+        }
+        all_results.append(local_result)
+
+        if result.fun < f_best:
+            f_best = result.fun
+            x_best = result.x.copy()
+
+        if not counted_objective.is_budget_exhausted():
+            n_successful_starts += 1
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'n_successful_starts': n_successful_starts,
+        'n_starts_attempted': len(all_results),
+        'all_results': all_results,
+    }
+
+
+def run_de(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    max_evals: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Run Differential Evolution with evaluation budget.
+
+    Returns dict with keys: x_best, f_best, n_evals, success, message.
+    """
+    n_params = len(bounds)
+    popsize = 15
+    evals_per_generation = popsize * n_params
+    maxiter = max(1, int(max_evals / evals_per_generation) - 1)
+
+    result = differential_evolution(
+        func=counted_objective,
+        bounds=bounds,
+        seed=seed,
+        maxiter=maxiter,
+        tol=0.01,
+        polish=False,
+        strategy='best1bin',
+        mutation=(0.5, 1.0),
+        recombination=0.7,
+        updating='deferred',
+        workers=1,
+    )
+
+    if counted_objective.best_params is not None:
+        x_best = counted_objective.best_params.copy()
+        f_best = counted_objective.best_value
+    else:
+        x_best = result.x.copy()
+        f_best = result.fun
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'success': result.success,
+        'message': result.message,
+    }
+
+
+def run_basinhopping_strategy(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    max_evals: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Run Basin-Hopping with evaluation budget.
+
+    Returns dict with keys: x_best, f_best, n_evals, nit, message.
+    """
+    n_params = len(bounds)
+    lower_bounds = np.array([b[0] for b in bounds])
+    upper_bounds = np.array([b[1] for b in bounds])
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    x0 = lower_bounds + np.random.random(n_params) * (upper_bounds - lower_bounds)
+
+    evals_per_hop = 75
+    niter = max(1, int(max_evals / evals_per_hop) - 2)
+
+    minimizer_kwargs = {
+        'method': 'L-BFGS-B',
+        'bounds': bounds,
+        'options': {
+            'ftol': 1e-8,
+            'gtol': 1e-6,
+            'maxfun': min(200, max_evals // 5),
+        },
+    }
+
+    def callback(x: np.ndarray, f: float, accept: bool) -> bool:
+        return counted_objective.is_budget_exhausted()
+
+    result = basinhopping(
+        func=counted_objective,
+        x0=x0,
+        niter=niter,
+        T=1.0,
+        stepsize=0.5,
+        minimizer_kwargs=minimizer_kwargs,
+        callback=callback,
+        seed=seed,
+    )
+
+    if counted_objective.best_params is not None:
+        x_best = counted_objective.best_params.copy()
+        f_best = counted_objective.best_value
+    else:
+        x_best = result.x.copy()
+        f_best = result.fun
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'nit': result.nit,
+        'message': result.message[0] if isinstance(result.message, list) else str(result.message),
+    }
+
+
+print("Baseline strategy functions defined: multistart_local, run_de, run_basinhopping_strategy")
+
+# %% [markdown]
+# ### Experiment 4b: Run Trial Dispatcher and Comparison
+
+# %%
+# ============================================================================
+# EXPERIMENT 4 CONFIGURATION
+# ============================================================================
+COMPARISON_BUDGET = 5000  # Fixed total evaluation budget
+N_COMPARISON_TRIALS = 10  # Trials per strategy
+BASE_SEED = 1000  # Base seed for reproducibility
+
+# Multi-start settings
+MS_N_STARTS = 50
+MS_EVALS_PER_START = COMPARISON_BUDGET // MS_N_STARTS  # 100 evals per start
+
+# Mixed-fidelity settings
+MF_TOP_N = 3
+MF_HIFI_EVALS_PER_CANDIDATE = 200
+MF_HIFI_BUDGET = MF_TOP_N * MF_HIFI_EVALS_PER_CANDIDATE  # 600
+MF_LOFI_BUDGET = COMPARISON_BUDGET - MF_HIFI_BUDGET  # 4400
+
+STRATEGIES = ['Multi-start', 'DE', 'Basin-Hopping', 'Mixed-Fidelity']
+
+print("=" * 70)
+print("EXPERIMENT 4: EVALUATION-COUNT MATCHED COMPARISON")
+print("=" * 70)
+print(f"\nConfiguration:")
+print(f"  Total evaluation budget: {COMPARISON_BUDGET}")
+print(f"  Trials per strategy:     {N_COMPARISON_TRIALS}")
+print(f"  Base random seed:        {BASE_SEED}")
+print(f"\nStrategies:")
+print(f"  1. Multi-start local (n_starts={MS_N_STARTS}, evals_per_start={MS_EVALS_PER_START})")
+print(f"  2. Differential Evolution (full hi-fi, budget={COMPARISON_BUDGET})")
+print(f"  3. Basin-Hopping (full hi-fi, budget={COMPARISON_BUDGET})")
+print(f"  4. Mixed-Fidelity (lofi_budget={MF_LOFI_BUDGET}, hifi_budget={MF_HIFI_BUDGET}, N={MF_TOP_N})")
+
+
+# %%
+def run_trial(
+    strategy: str,
+    seed: int,
+) -> dict:
+    """
+    Run a single trial of the specified optimization strategy.
+
+    Parameters
+    ----------
+    strategy : str
+        One of 'Multi-start', 'DE', 'Basin-Hopping', 'Mixed-Fidelity'.
+    seed : int
+        Random seed for this trial.
+
+    Returns
+    -------
+    dict
+        Trial results with keys: strategy, seed, best_objective, omega_error,
+        rms_residual, success, n_evals, wall_time.
+    """
+    start_time = time.perf_counter()
+
+    if strategy == 'Multi-start':
+        counted_obj = CountedObjective(obj_hifi, budget=COMPARISON_BUDGET)
+        result = multistart_local(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            n_starts=MS_N_STARTS,
+            max_evals_per_start=MS_EVALS_PER_START,
+            seed=seed,
+        )
+        n_evals = result['n_evals']
+
+    elif strategy == 'DE':
+        counted_obj = CountedObjective(obj_hifi, budget=COMPARISON_BUDGET)
+        result = run_de(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            max_evals=COMPARISON_BUDGET,
+            seed=seed,
+        )
+        n_evals = result['n_evals']
+
+    elif strategy == 'Basin-Hopping':
+        counted_obj = CountedObjective(obj_hifi, budget=COMPARISON_BUDGET)
+        result = run_basinhopping_strategy(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            max_evals=COMPARISON_BUDGET,
+            seed=seed,
+        )
+        n_evals = result['n_evals']
+
+    elif strategy == 'Mixed-Fidelity':
+        result = run_mixed_fidelity(
+            obj_lofi=obj_lofi,
+            obj_hifi=obj_hifi,
+            bounds=bounds,
+            lofi_budget=MF_LOFI_BUDGET,
+            top_n=MF_TOP_N,
+            hifi_evals_per_candidate=MF_HIFI_EVALS_PER_CANDIDATE,
+            seed=seed,
+        )
+        n_evals = result['n_evals']
+
+    else:
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+    wall_time = time.perf_counter() - start_time
+
+    # Get best solution
+    x_best = result.get('x_best')
+    f_best = result.get('f_best', float('inf'))
+
+    # Evaluate success criteria
+    if x_best is not None:
+        success, omega_error, rms_residual = evaluate_success(
+            x_best, true_params, obj_hifi, noise_sigma
+        )
+    else:
+        success = False
+        omega_error = float('inf')
+        rms_residual = float('inf')
+
+    return {
+        'strategy': strategy,
+        'seed': seed,
+        'best_objective': f_best,
+        'omega_error': omega_error,
+        'rms_residual': rms_residual,
+        'success': success,
+        'n_evals': n_evals,
+        'wall_time': wall_time,
+    }
+
+
+print("run_trial() dispatcher defined")
+
+# %%
+# Run the comparison experiment
+print("\n" + "-" * 70)
+print("Running comparison experiment...")
+print("-" * 70)
+
+comparison_results: list[dict] = []
+
+for strategy in STRATEGIES:
+    print(f"\n{strategy}:")
+    for trial in range(N_COMPARISON_TRIALS):
+        seed = BASE_SEED + trial * 100
+        print(f"  Trial {trial + 1}/{N_COMPARISON_TRIALS} (seed={seed})...", end=" ", flush=True)
+
+        trial_result = run_trial(strategy, seed)
+        comparison_results.append(trial_result)
+
+        status = "SUCCESS" if trial_result['success'] else "FAIL"
+        print(f"{status}, f={trial_result['best_objective']:.4f}, "
+              f"omega_err={trial_result['omega_error']:.4f} deg/s, "
+              f"t={trial_result['wall_time']:.1f}s")
+
+print("\n" + "-" * 70)
+print("Experiment complete!")
+print("-" * 70)
+
+# %%
+# Organize results and print comparison table
+print("\n" + "=" * 70)
+print("EXPERIMENT 4: COMPARISON TABLE")
+print("=" * 70)
+
+strategy_results: dict[str, dict] = {}
+
+for strategy in STRATEGIES:
+    strategy_trials = [r for r in comparison_results if r['strategy'] == strategy]
+
+    strategy_results[strategy] = {
+        'best_objectives': np.array([r['best_objective'] for r in strategy_trials]),
+        'omega_errors': np.array([r['omega_error'] for r in strategy_trials]),
+        'rms_residuals': np.array([r['rms_residual'] for r in strategy_trials]),
+        'successes': np.array([r['success'] for r in strategy_trials]),
+        'n_evals': np.array([r['n_evals'] for r in strategy_trials]),
+        'wall_times': np.array([r['wall_time'] for r in strategy_trials]),
+    }
+
+# Print formatted comparison table
+print(f"\nFixed evaluation budget: {COMPARISON_BUDGET}")
+print(f"Trials per strategy: {N_COMPARISON_TRIALS}")
+print()
+print(f"{'Strategy':<15} | {'Success Rate':>12} | {'Mean Objective':>14} | "
+      f"{'Mean Omega Err':>14} | {'Mean Wall Time':>14}")
+print("-" * 80)
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_COMPARISON_TRIALS * 100
+    mean_obj = sr['best_objectives'].mean()
+    mean_omega_err = sr['omega_errors'].mean()
+    mean_time = sr['wall_times'].mean()
+
+    print(f"{strategy:<15} | {success_rate:>10.0f}% | {mean_obj:>14.4f} | "
+          f"{mean_omega_err:>11.4f}°/s | {mean_time:>12.1f}s")
+
+print("-" * 80)
+
+# Print per-strategy detail
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    n_success = int(sr['successes'].sum())
+    print(f"\n{strategy}:")
+    print(f"  Success rate: {n_success}/{N_COMPARISON_TRIALS} "
+          f"({n_success / N_COMPARISON_TRIALS * 100:.0f}%)")
+    print(f"  Objective: {sr['best_objectives'].mean():.4f} ± "
+          f"{sr['best_objectives'].std():.4f}")
+    print(f"  Omega error: {sr['omega_errors'].mean():.4f} ± "
+          f"{sr['omega_errors'].std():.4f} deg/s")
+    print(f"  Wall time: {sr['wall_times'].mean():.1f} ± "
+          f"{sr['wall_times'].std():.1f} s")
+    print(f"  Evals used: {sr['n_evals'].mean():.0f} ± {sr['n_evals'].std():.0f}")
+
+# %% [markdown]
+# ### Experiment 4 Summary
+#
+# **Evaluation-Count Matched Comparison Results:**
+#
+# Four strategies were compared with a fixed evaluation budget of 5000:
+#
+# 1. **Multi-start local**: 50 random starts with LHS, 100 L-BFGS-B evals each
+# 2. **Differential Evolution**: Full hi-fi DE with budget enforcement
+# 3. **Basin-Hopping**: L-BFGS-B local minimizer with random perturbations
+# 4. **Mixed-Fidelity**: Lo-fi DE (4400 evals) + hi-fi L-BFGS-B refinement (3×200 evals)
+#
+# **Key observations:**
+# - All strategies use the same total evaluation budget (5000) for fair comparison.
+# - Mixed-fidelity splits the budget: the lo-fi stage explores broadly (fast),
+#   then the hi-fi stage refines the top 3 candidates (accurate).
+# - The comparison reveals whether the mixed-fidelity approach achieves competitive
+#   success rates and parameter accuracy despite using fewer hi-fi evaluations.
+# - Wall-clock time differences reflect the computational advantage of lo-fi
+#   evaluations in the mixed-fidelity pipeline.
