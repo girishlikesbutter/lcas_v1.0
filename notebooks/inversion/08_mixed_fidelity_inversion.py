@@ -616,3 +616,88 @@ print(f"  CountedObjective: budget-enforcing wrapper")
 print("\n" + "=" * 70)
 print("NOTEBOOK 08 SETUP COMPLETE")
 print("=" * 70)
+
+# %% [markdown]
+# ---
+# ## Experiment 1: Fidelity Benchmarking
+#
+# Quantify the speedup and lightcurve discrepancy between shadow-enabled (hi-fi)
+# and shadow-disabled (lo-fi) evaluation.
+
+# %% [markdown]
+# ### Experiment 1a: Evaluation Timing
+
+# %%
+# Time N evaluations of each fidelity level at true_params
+N_timing = 20
+
+# --- High-fidelity timing ---
+times_hifi = []
+for i in range(N_timing):
+    t0 = time.perf_counter()
+    obj_hifi.evaluate(true_params)
+    t1 = time.perf_counter()
+    times_hifi.append(t1 - t0)
+
+times_hifi = np.array(times_hifi)
+
+# --- Low-fidelity timing ---
+times_lofi = []
+for i in range(N_timing):
+    t0 = time.perf_counter()
+    obj_lofi.evaluate(true_params)
+    t1 = time.perf_counter()
+    times_lofi.append(t1 - t0)
+
+times_lofi = np.array(times_lofi)
+
+# --- Print results ---
+mean_hifi = times_hifi.mean()
+std_hifi = times_hifi.std()
+mean_lofi = times_lofi.mean()
+std_lofi = times_lofi.std()
+speedup = mean_hifi / mean_lofi
+
+print("=" * 70)
+print("EXPERIMENT 1a: EVALUATION TIMING")
+print("=" * 70)
+print(f"\nHigh-fidelity (shadows ON):  {mean_hifi:.4f} ± {std_hifi:.4f} s")
+print(f"Low-fidelity  (shadows OFF): {mean_lofi:.4f} ± {std_lofi:.4f} s")
+print(f"\nSpeedup factor: {speedup:.1f}x")
+
+# %% [markdown]
+# ### Experiment 1b: Lightcurve Comparison at True Parameters
+
+# %%
+# Generate predicted lightcurves at true_params for both fidelity levels
+# Replicate evaluate() pipeline steps 1-4 to extract predicted magnitudes
+
+q0_true = axis_angle_to_quaternion(true_params[:3])
+omega0_true = true_params[3:]
+
+quaternions_true, _ = propagate_attitude(
+    q0=q0_true,
+    omega0=omega0_true,
+    times=observation_times,
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
+)
+
+# Body-frame vectors (same for both objectives since geometry is identical)
+k1_true, k2_true = obj_hifi._compute_body_frame_vectors(quaternions_true)
+
+# Predicted lightcurves from each fidelity level
+mag_hifi = obj_hifi._generate_predicted_lightcurve(k1_true, k2_true)
+mag_lofi = obj_lofi._generate_predicted_lightcurve(k1_true, k2_true)
+
+# Compute residual between fidelity levels
+mag_residual = mag_hifi - mag_lofi
+
+print("Predicted lightcurves at true parameters:")
+print(f"  Hi-fi range: [{mag_hifi.min():.2f}, {mag_hifi.max():.2f}] mag")
+print(f"  Lo-fi range: [{mag_lofi.min():.2f}, {mag_lofi.max():.2f}] mag")
+print(f"\nMagnitude residual (hifi - lofi):")
+print(f"  Mean:  {mag_residual.mean():.4f} mag")
+print(f"  Std:   {mag_residual.std():.4f} mag")
+print(f"  Range: [{mag_residual.min():.4f}, {mag_residual.max():.4f}] mag")
+print(f"  RMS:   {np.sqrt(np.mean(mag_residual**2)):.4f} mag")

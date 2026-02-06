@@ -33,3 +33,16 @@ Started: Fri Feb  6 05:19:30 PM NZDT 2026
   - No formal typechecker (mypy/pyright) is installed; use py_compile and AST parsing for syntax checks
   - Branch was created from ralph/lightcurve-inversion (not master) since that's where notebooks 04-07 live
 ---
+
+## 2026-02-06 - US-002
+- Implemented Experiment 1a: Evaluation timing benchmark (N=20 evals of each fidelity level)
+- Prints mean/std timing for hi-fi and lo-fi, plus speedup factor
+- Implemented Experiment 1b: Lightcurve comparison at true parameters
+- Extracts predicted magnitudes from both objectives using _generate_predicted_lightcurve()
+- Computes magnitude residual (hifi - lofi) with mean, std, range, and RMS statistics
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py (appended cells)
+- **Learnings for future iterations:**
+  - To extract predicted lightcurves, replicate evaluate() pipeline: axis_angle_to_quaternion → propagate_attitude → _compute_body_frame_vectors → _generate_predicted_lightcurve
+  - Body-frame vectors (k1, k2) are identical for both objectives since geometry/attitude are the same; only the shadow computation differs in _generate_predicted_lightcurve
+  - ObjectiveFunction._compute_chi_squared returns MSE (sum(residuals^2)/n_valid) when no uncertainties are provided
+---
