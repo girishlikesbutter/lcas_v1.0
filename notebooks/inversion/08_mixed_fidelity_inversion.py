@@ -2558,3 +2558,253 @@ plt.show()
 # A successful outcome is a mixed-fidelity success rate and omega error comparable
 # to or better than full-fidelity DE at matched wall-clock time, validating the
 # 3x speedup target from the PRD success criteria.
+
+# %% [markdown]
+# ---
+# ## Experiment 6: Handoff Parameter Ablation
+#
+# Determine the optimal number of candidates (N) to pass from Stage 1 to Stage 2
+# by sweeping N in {1, 3, 5, 10} with a fixed lo-fi budget.
+
+# %%
+# === Experiment 6: Handoff parameter ablation ===
+
+print("=" * 70)
+print("EXPERIMENT 6: HANDOFF PARAMETER ABLATION")
+print("=" * 70)
+
+ABLATION_N_VALUES = [1, 3, 5, 10]
+ABLATION_LOFI_BUDGET = 5000
+ABLATION_HIFI_EVALS_PER_CANDIDATE = 200
+ABLATION_N_TRIALS = 10
+ABLATION_BASE_SEED = 3000
+
+print(f"\nConfiguration:")
+print(f"  N values to sweep:         {ABLATION_N_VALUES}")
+print(f"  Lo-fi budget (fixed):      {ABLATION_LOFI_BUDGET} evals")
+print(f"  Hi-fi evals per candidate: {ABLATION_HIFI_EVALS_PER_CANDIDATE}")
+print(f"  Trials per N:              {ABLATION_N_TRIALS}")
+print(f"  Base seed:                 {ABLATION_BASE_SEED}")
+
+ablation_results: dict[int, list[dict]] = {}
+
+for n_val in ABLATION_N_VALUES:
+    hifi_budget = n_val * ABLATION_HIFI_EVALS_PER_CANDIDATE
+    total_budget = ABLATION_LOFI_BUDGET + hifi_budget
+    print(f"\n{'─' * 60}")
+    print(f"N = {n_val}  (hi-fi budget = {hifi_budget}, total = {total_budget})")
+    print(f"{'─' * 60}")
+
+    n_results: list[dict] = []
+
+    for trial in range(ABLATION_N_TRIALS):
+        seed = ABLATION_BASE_SEED + trial * 100
+        print(f"  Trial {trial + 1}/{ABLATION_N_TRIALS} (seed={seed})...", end=" ", flush=True)
+
+        t0 = time.perf_counter()
+        pipeline_result = run_mixed_fidelity(
+            obj_lofi=obj_lofi,
+            obj_hifi=obj_hifi,
+            bounds=bounds,
+            lofi_budget=ABLATION_LOFI_BUDGET,
+            top_n=n_val,
+            hifi_evals_per_candidate=ABLATION_HIFI_EVALS_PER_CANDIDATE,
+            seed=seed,
+        )
+        wall_time = time.perf_counter() - t0
+
+        x_best = pipeline_result['x_best']
+        f_best = pipeline_result['f_best']
+        success, omega_err, rms_res = evaluate_success(
+            x_best, true_params, obj_hifi, noise_sigma
+        )
+
+        n_results.append({
+            'seed': seed,
+            'x_best': x_best,
+            'f_best': f_best,
+            'omega_error': omega_err,
+            'rms_residual': rms_res,
+            'success': success,
+            'n_evals_lofi': pipeline_result['n_evals_lofi'],
+            'n_evals_hifi': pipeline_result['n_evals_hifi'],
+            'n_evals': pipeline_result['n_evals'],
+            'wall_time': wall_time,
+            'stage1_time': pipeline_result['stage1_time'],
+            'stage2_time': pipeline_result['stage2_time'],
+        })
+
+        status = "OK" if success else "FAIL"
+        print(f"ω_err={omega_err:.4f} deg/s, t={wall_time:.1f}s [{status}]")
+
+    ablation_results[n_val] = n_results
+
+print(f"\n{'=' * 70}")
+print("Ablation sweep complete!")
+
+# %%
+# --- Print ablation results table ---
+print("=" * 70)
+print("EXPERIMENT 6: ABLATION RESULTS TABLE")
+print("=" * 70)
+
+print(f"\n{'N':>4s}  {'Success':>8s}  {'Mean ω err':>12s}  {'Mean Time':>10s}  "
+      f"{'Stage2 Frac':>11s}  {'HiFi Evals':>10s}  {'Total Evals':>11s}")
+print("─" * 80)
+
+ablation_summary: list[dict] = []
+
+for n_val in ABLATION_N_VALUES:
+    trials = ablation_results[n_val]
+    n_success = sum(1 for t in trials if t['success'])
+    success_rate = n_success / len(trials)
+    mean_omega = np.mean([t['omega_error'] for t in trials])
+    mean_time = np.mean([t['wall_time'] for t in trials])
+    mean_s1_time = np.mean([t['stage1_time'] for t in trials])
+    mean_s2_time = np.mean([t['stage2_time'] for t in trials])
+    s2_frac = mean_s2_time / mean_time if mean_time > 0 else 0
+    mean_hifi_evals = np.mean([t['n_evals_hifi'] for t in trials])
+    mean_total_evals = np.mean([t['n_evals'] for t in trials])
+
+    print(f"{n_val:>4d}  {n_success:>4d}/{len(trials):<3d}  "
+          f"{mean_omega:>10.4f}    {mean_time:>8.1f} s  "
+          f"{s2_frac:>9.1%}    {mean_hifi_evals:>8.0f}    {mean_total_evals:>9.0f}")
+
+    ablation_summary.append({
+        'N': n_val,
+        'n_success': n_success,
+        'n_trials': len(trials),
+        'success_rate': success_rate,
+        'mean_omega_error': mean_omega,
+        'mean_total_time': mean_time,
+        'mean_stage1_time': mean_s1_time,
+        'mean_stage2_time': mean_s2_time,
+        'stage2_fraction': s2_frac,
+        'mean_hifi_evals': mean_hifi_evals,
+        'mean_total_evals': mean_total_evals,
+    })
+
+print(f"\nFixed lo-fi budget: {ABLATION_LOFI_BUDGET} evals")
+print(f"Hi-fi evals per candidate: {ABLATION_HIFI_EVALS_PER_CANDIDATE}")
+
+# %%
+# --- Experiment 6 Visualization ---
+
+fig_abl, axes_abl = plt.subplots(1, 2, figsize=(14, 6))
+
+# --- Panel (a): Success rate vs N with 95% CI error bars ---
+ax_sr = axes_abl[0]
+
+n_vals_arr = np.array([s['N'] for s in ablation_summary])
+success_rates = np.array([s['success_rate'] for s in ablation_summary])
+ci_data = [
+    compute_binomial_ci(s['n_success'], s['n_trials'])
+    for s in ablation_summary
+]
+
+rates_pct = success_rates * 100
+ci_lo_pct = np.array([c[1] * 100 for c in ci_data])
+ci_hi_pct = np.array([c[2] * 100 for c in ci_data])
+yerr_lo = rates_pct - ci_lo_pct
+yerr_hi = ci_hi_pct - rates_pct
+
+bar_colors = ['#4C72B0', '#55A868', '#C44E52', '#8172B2']
+
+bars_sr = ax_sr.bar(
+    range(len(n_vals_arr)), rates_pct,
+    color=bar_colors[:len(n_vals_arr)], alpha=0.7,
+    edgecolor='black', linewidth=1.5,
+)
+ax_sr.errorbar(
+    range(len(n_vals_arr)), rates_pct,
+    yerr=[yerr_lo, yerr_hi],
+    fmt='none', ecolor='black', capsize=6, capthick=2, linewidth=2,
+)
+
+# Annotate with success count
+for i, (bar, s) in enumerate(zip(bars_sr, ablation_summary)):
+    ax_sr.text(
+        bar.get_x() + bar.get_width() / 2,
+        bar.get_height() + yerr_hi[i] + 2,
+        f"{s['n_success']}/{s['n_trials']}",
+        ha='center', va='bottom', fontsize=10, fontweight='bold',
+    )
+
+ax_sr.set_xticks(range(len(n_vals_arr)))
+ax_sr.set_xticklabels([f'N={n}' for n in n_vals_arr])
+ax_sr.set_ylabel('Success Rate (%)')
+ax_sr.set_ylim(0, 120)
+ax_sr.set_xlabel('Number of Candidates (N)')
+ax_sr.set_title('(a) Success Rate vs N')
+ax_sr.grid(True, alpha=0.3, axis='y')
+
+# --- Panel (b): Mean total wall time vs N with Stage 1 + Stage 2 stacked breakdown ---
+ax_wt = axes_abl[1]
+
+stage1_times = np.array([s['mean_stage1_time'] for s in ablation_summary])
+stage2_times = np.array([s['mean_stage2_time'] for s in ablation_summary])
+
+bars_s1 = ax_wt.bar(
+    range(len(n_vals_arr)), stage1_times,
+    color='#4C72B0', alpha=0.7, edgecolor='black', linewidth=1,
+    label='Stage 1 (lo-fi DE)',
+)
+bars_s2 = ax_wt.bar(
+    range(len(n_vals_arr)), stage2_times,
+    bottom=stage1_times,
+    color='#C44E52', alpha=0.7, edgecolor='black', linewidth=1,
+    label='Stage 2 (hi-fi L-BFGS-B)',
+)
+
+# Annotate with total time
+for i in range(len(n_vals_arr)):
+    total_t = stage1_times[i] + stage2_times[i]
+    ax_wt.text(
+        i, total_t + 0.5,
+        f'{total_t:.1f}s',
+        ha='center', va='bottom', fontsize=10, fontweight='bold',
+    )
+
+ax_wt.set_xticks(range(len(n_vals_arr)))
+ax_wt.set_xticklabels([f'N={n}' for n in n_vals_arr])
+ax_wt.set_ylabel('Mean Wall-Clock Time (s)')
+ax_wt.set_xlabel('Number of Candidates (N)')
+ax_wt.set_title('(b) Wall-Clock Time Breakdown vs N')
+ax_wt.legend(fontsize=9)
+ax_wt.grid(True, alpha=0.3, axis='y')
+
+plt.suptitle('Experiment 6: Handoff Parameter Ablation', fontsize=13, fontweight='bold', y=1.02)
+plt.tight_layout()
+
+# Save figure
+abl_path = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics" / "handoff_ablation.png"
+fig_abl.savefig(abl_path, dpi=150, bbox_inches='tight')
+print(f"Handoff ablation figure saved: {abl_path}")
+plt.show()
+
+# %% [markdown]
+# ### Experiment 6 Summary
+#
+# **Handoff Parameter Ablation Results:**
+#
+# This experiment determines the optimal number of candidates (N) to pass from
+# Stage 1 (lo-fi DE) to Stage 2 (hi-fi L-BFGS-B) by sweeping N ∈ {1, 3, 5, 10}.
+#
+# **Methodology:**
+# - Stage 1 lo-fi budget is **fixed** at 5000 evaluations for all N values.
+# - Stage 2 hi-fi budget scales linearly with N: N × 200 evaluations per candidate.
+# - Total cost increases with N, but Stage 1 cost is constant.
+# - 10 trials per N value, each with independent random seeds.
+#
+# **Key observations:**
+# - **N=1**: Minimum cost, but relies on a single candidate from DE — risky if
+#   the DE global minimum doesn't translate well to the hi-fi objective.
+# - **N=3**: Moderate cost increase, provides redundancy against poor DE candidates.
+#   Often a good balance between cost and robustness.
+# - **N=5–10**: Higher robustness, but Stage 2 time grows linearly. Diminishing
+#   returns expected as additional candidates are unlikely to be significantly
+#   different from the top few.
+#
+# **Recommended N**: The optimal N balances success rate improvement against
+# additional hi-fi evaluation cost. Choose the smallest N where the success rate
+# plateaus (marginal gain < 5 percentage points for doubling N).
