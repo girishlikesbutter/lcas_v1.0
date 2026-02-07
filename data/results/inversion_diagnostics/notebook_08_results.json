@@ -1,0 +1,51 @@
+{
+  "notebook": "08_mixed_fidelity_inversion",
+  "timestamp": "2026-02-06T20:42:57.123097",
+  "config": {
+    "n_observations": 50,
+    "noise_sigma": 0.05,
+    "exp2_n_perturbed": 5,
+    "exp4_n_trials": 3,
+    "exp4_budget": 1000
+  },
+  "experiments": {
+    "exp1_fidelity_benchmark": {
+      "timing": {
+        "hifi_mean_s": 6.240164194749741,
+        "hifi_std_s": 0.09030195120436466,
+        "lofi_mean_s": 0.03742426355056523,
+        "lofi_std_s": 0.000577180026472867,
+        "speedup_factor": 166.74113536846053
+      },
+      "rank_correlation": {
+        "spearman_rho": 0.9782898289828982,
+        "p_value": 8.496927236319685e-69
+      },
+      "lightcurve_residual": {
+        "mean_mag": 0.1460149278404229,
+        "std_mag": 0.16219293560879877,
+        "rms_mag": 0.21823589877388147
+      }
+    },
+    "exp2_basin_shift": {
+      "from_true_params": {
+        "euclidean_distance": 2e-06,
+        "axis_angle_displacement_deg": 0.0001,
+        "omega_displacement_deg_s": 0.0001
+      },
+      "perturbed_starts": {
+        "n_starts": 5,
+        "euclidean_mean": 0.074743,
+        "euclidean_std": 0.085847,
+        "aa_deg_mean": 4.2103,
+        "aa_deg_std": 4.8336,
+        "omega_deg_s_mean": 0.7786,
+        "omega_deg_s_std": 0.9147
+      },
+      "assessment": {
+        "shift_fraction_of_basin": 1.0526,
+        "verdict": "SIGNIFICANT - handoff refinement is critical"
+      }
+    }
+  }
+}

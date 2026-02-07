@@ -44,32 +44,48 @@
 # Set these to True to skip experiments that have already completed.
 # Results from completed experiments are saved to data/results/inversion_diagnostics/
 
-SKIP_EXP_1 = False  # Fidelity Benchmarking (timing, correlation)
-SKIP_EXP_2 = False  # Basin Shift Analysis
+SKIP_EXP_1 = True   # Fidelity Benchmarking (timing, correlation) - COMPLETED
+SKIP_EXP_2 = True   # Basin Shift Analysis - COMPLETED
 SKIP_EXP_3 = False  # Mixed-Fidelity Pipeline Validation
-SKIP_EXP_4 = False  # Evaluation-Count Matched Comparison
-SKIP_EXP_5 = False  # Wall-Clock Matched Comparison
-SKIP_EXP_6 = False  # Handoff Parameter Ablation
-SKIP_EXP_7 = False  # Phase Angle Failure Regimes
+SKIP_EXP_4 = True   # Evaluation-Count Matched Comparison - SKIP FOR NOW
+SKIP_EXP_5 = True   # Wall-Clock Matched Comparison - SKIP FOR NOW
+SKIP_EXP_6 = True   # Handoff Parameter Ablation - SKIP FOR NOW
+SKIP_EXP_7 = True   # Phase Angle Failure Regimes - SKIP FOR NOW
+
+# =============================================================================
+# FAST TEST MODE - set True to run quick validation, False for full runs
+# =============================================================================
+FAST_TEST_MODE = True  # Set to False for overnight runs
 
 # =============================================================================
 # EXPERIMENT PARAMETERS (adjust based on benchmark results)
 # =============================================================================
 # Benchmark results from Exp 1: hi-fi ~6s/eval, lo-fi ~0.04s/eval, speedup ~163x
 
-# Exp 2: Basin shift analysis
-EXP2_N_PERTURBED = 5  # Reduced from 20 for faster preliminary runs
-
-# Exp 4-5: Comparison trials
-EXP4_N_TRIALS = 3          # Reduced from 10 (use 10+ for paper-quality)
-EXP4_BUDGET = 1000         # Reduced from 5000 (use 5000+ for paper-quality)
-
-# Exp 6: Ablation
-EXP6_N_TRIALS = 3          # Reduced from 10
-
-# Exp 7: Phase angle sweep
-EXP7_N_ANGLES = 5          # Number of phase angles to test
-EXP7_N_TRIALS = 3          # Trials per angle
+if FAST_TEST_MODE:
+    # FAST TEST VALUES - completes in minutes, validates code paths
+    EXP2_N_PERTURBED = 2
+    EXP3_LOFI_BUDGET = 100       # Tiny DE run
+    EXP3_TOP_N = 1               # Single candidate
+    EXP3_HIFI_EVALS = 20         # Minimal refinement
+    EXP4_N_TRIALS = 1
+    EXP4_BUDGET = 100
+    EXP6_N_TRIALS = 1
+    EXP7_N_ANGLES = 2
+    EXP7_N_TRIALS = 1
+    print(">>> FAST TEST MODE ENABLED - using minimal parameters <<<")
+else:
+    # FULL RUN VALUES - for overnight/paper-quality runs
+    EXP2_N_PERTURBED = 5
+    EXP3_LOFI_BUDGET = 5000      # Full DE exploration
+    EXP3_TOP_N = 3               # Top 3 candidates
+    EXP3_HIFI_EVALS = 200        # Full refinement budget
+    EXP4_N_TRIALS = 3
+    EXP4_BUDGET = 1000
+    EXP6_N_TRIALS = 3
+    EXP7_N_ANGLES = 5
+    EXP7_N_TRIALS = 3
+    print(">>> FULL RUN MODE - using production parameters <<<")
 
 print("=" * 70)
 print("EXPERIMENT CONFIGURATION")
@@ -1375,8 +1391,8 @@ plt.show()
 # Save Experiment 2 results
 notebook_results["experiments"]["exp2_basin_shift"] = {
     "from_true_params": {
-        "euclidean_distance": float(euclidean_distance),
-        "axis_angle_displacement_deg": float(axis_angle_displacement_deg),
+        "euclidean_distance": float(euclidean_dist),
+        "axis_angle_displacement_deg": float(aa_displacement_deg),
         "omega_displacement_deg_s": float(omega_displacement_deg),
     },
     "perturbed_starts": {
@@ -1570,9 +1586,9 @@ print("=" * 70)
 print("EXPERIMENT 3b: PIPELINE VALIDATION")
 print("=" * 70)
 
-VALIDATION_N = 3
-VALIDATION_LOFI_BUDGET = 5000
-VALIDATION_HIFI_EVALS_PER_CANDIDATE = 200
+VALIDATION_N = EXP3_TOP_N
+VALIDATION_LOFI_BUDGET = EXP3_LOFI_BUDGET
+VALIDATION_HIFI_EVALS_PER_CANDIDATE = EXP3_HIFI_EVALS
 VALIDATION_SEED = 42
 
 print(f"\nPipeline configuration:")
