@@ -1,0 +1,207 @@
+{
+  "timestamp": "2026-02-08T18:58:09",
+  "elapsed_s": 184.22758931000044,
+  "results": {
+    "true_params": [
+      0.4513650031598957,
+      0.22568250157994785,
+      0.6018200042131943,
+      8.726646259971648e-05,
+      -5.235987755982989e-05,
+      0.0008726646259971648
+    ],
+    "true_axis_angle_deg": [
+      25.86130970097109,
+      12.930654850485546,
+      34.481746267961455
+    ],
+    "true_omega_deg_s": [
+      0.005,
+      -0.003,
+      0.05
+    ],
+    "lofi_eval_time_s": 0.04134032199999638,
+    "tests": [
+      {
+        "label": "sanity",
+        "initial_attitude_dist_deg": 0.0,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 0.001238123690579377,
+        "final_omega_err_deg_s": 0.00010987506682657056,
+        "rms_residual": 0.19803971251945518,
+        "n_evals": 147,
+        "time_s": 10.047137669999756,
+        "converged": true,
+        "success": "True",
+        "x_best": [
+          0.45138041176711313,
+          0.22568838180646225,
+          0.6018339950502927,
+          8.915903173215934e-05,
+          -5.246801874847082e-05,
+          0.000872374814686798
+        ]
+      },
+      {
+        "label": "att_1deg",
+        "initial_attitude_dist_deg": 1.0000000000011828,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 0.9989675891536056,
+        "final_omega_err_deg_s": 0.0001430805557605601,
+        "rms_residual": 0.20487832331038525,
+        "n_evals": 315,
+        "time_s": 21.46049490399946,
+        "converged": true,
+        "success": "True",
+        "x_best": [
+          0.45009369204293476,
+          0.21376427862332295,
+          0.6150320228633562,
+          8.889182370404257e-05,
+          -5.381281357672205e-05,
+          0.0008714467097972312
+        ]
+      },
+      {
+        "label": "att_2deg",
+        "initial_attitude_dist_deg": 2.0000000000005294,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 1.0578051378383972,
+        "final_omega_err_deg_s": 0.00017623136066133101,
+        "rms_residual": 0.2060917427666292,
+        "n_evals": 357,
+        "time_s": 18.447872441000072,
+        "converged": true,
+        "success": "True",
+        "x_best": [
+          0.439217667920972,
+          0.21281080019078868,
+          0.6084556231747185,
+          8.936384575628405e-05,
+          -5.4425347862828584e-05,
+          0.0008717727350024543
+        ]
+      },
+      {
+        "label": "att_5deg",
+        "initial_attitude_dist_deg": 5.000000000000198,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 3.8800400788418163,
+        "final_omega_err_deg_s": 0.0004466321924431632,
+        "rms_residual": 0.23192078578894906,
+        "n_evals": 364,
+        "time_s": 19.42202187700059,
+        "converged": true,
+        "success": "True",
+        "x_best": [
+          0.3898638334264399,
+          0.1949322826743947,
+          0.6026036350779574,
+          9.041967895596163e-05,
+          -5.9426143651035847e-05,
+          0.0008717210746779432
+        ]
+      },
+      {
+        "label": "att_10deg",
+        "initial_attitude_dist_deg": 9.999999999999984,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 10.000008327349983,
+        "final_omega_err_deg_s": 0.0007906364135580568,
+        "rms_residual": 0.8003680788357339,
+        "n_evals": 224,
+        "time_s": 13.860877876999439,
+        "converged": true,
+        "success": "False",
+        "x_best": [
+          0.3752741650755767,
+          0.37842181912241596,
+          0.6553657481844972,
+          7.601324915519084e-05,
+          -5.565509716973264e-05,
+          0.0008799395743101498
+        ]
+      },
+      {
+        "label": "att_15deg",
+        "initial_attitude_dist_deg": 15.000000000000025,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 14.088720602239858,
+        "final_omega_err_deg_s": 0.0014502055439775821,
+        "rms_residual": 0.7707559300608112,
+        "n_evals": 399,
+        "time_s": 21.013776212000266,
+        "converged": true,
+        "success": "False",
+        "x_best": [
+          0.45951839816192924,
+          0.4761476492718489,
+          0.5753394427639927,
+          7.705566698452628e-05,
+          -3.380125587255027e-05,
+          0.0008865194781271978
+        ]
+      },
+      {
+        "label": "att_20deg",
+        "initial_attitude_dist_deg": 20.000000000000025,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 19.944961814500683,
+        "final_omega_err_deg_s": 0.001772274919373533,
+        "rms_residual": 0.8701853035263994,
+        "n_evals": 406,
+        "time_s": 19.56924589099981,
+        "converged": true,
+        "success": "False",
+        "x_best": [
+          0.27886077811801513,
+          0.3120532501177649,
+          0.3091173123739577,
+          6.684890078859193e-05,
+          -4.072234417304766e-05,
+          0.0008927763545835159
+        ]
+      },
+      {
+        "label": "att_30deg",
+        "initial_attitude_dist_deg": 30.000000000000036,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 35.293377009529934,
+        "final_omega_err_deg_s": 0.004137218232579914,
+        "rms_residual": 0.8430988151438726,
+        "n_evals": 504,
+        "time_s": 27.57034159900013,
+        "converged": false,
+        "success": "False",
+        "x_best": [
+          1.0707297832945866,
+          0.13983586949513668,
+          0.6416953910444109,
+          3.812272013787903e-05,
+          -5.339531512607555e-06,
+          0.0008484161939579495
+        ]
+      },
+      {
+        "label": "att_45deg",
+        "initial_attitude_dist_deg": 45.00000000000001,
+        "initial_omega_dist_deg_s": 0.0,
+        "final_attitude_err_deg": 30.00300496055874,
+        "final_omega_err_deg_s": 0.010627482203355566,
+        "rms_residual": 1.087585015810104,
+        "n_evals": 504,
+        "time_s": 26.020486420999987,
+        "converged": false,
+        "success": "False",
+        "x_best": [
+          0.4283353751395613,
+          0.7359836205525008,
+          0.43484784628026407,
+          0.00015891063221961857,
+          -0.0001345772678981539,
+          0.0010227044009519977
+        ]
+      }
+    ]
+  }
+}

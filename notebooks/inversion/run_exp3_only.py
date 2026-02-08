@@ -703,6 +703,30 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 # SKIPPING EXP 1 AND 2 - GOING DIRECTLY TO EXP 3
 # ======================================================================
 
+# Load existing results (from Exp 1 and 2) and add Exp 3
+results_path = RESULTS_DIR / "notebook_08_results.json"
+if results_path.exists():
+    with open(results_path) as f:
+        notebook_results = json.load(f)
+    print(f"Loaded existing results from: {results_path}")
+else:
+    notebook_results = {
+        "notebook": "08_mixed_fidelity_inversion",
+        "timestamp": datetime.now().isoformat(),
+        "config": {
+            "n_observations": n_observations,
+            "noise_sigma": noise_sigma,
+        },
+        "experiments": {}
+    }
+
+def save_results():
+    """Save results dict to JSON file."""
+    notebook_results["timestamp"] = datetime.now().isoformat()
+    with open(results_path, 'w') as f:
+        json.dump(notebook_results, f, indent=2, default=str)
+    print(f"Results saved to: {results_path}")
+
 
 # %%
 from scipy.optimize import differential_evolution
