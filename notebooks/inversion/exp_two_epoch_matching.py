@@ -61,12 +61,13 @@ log = logging.getLogger(__name__).info
 
 # ─── Configuration ──────────────────────────────────────────────────────────
 
-N_OBSERVATIONS = 100
+N_OBSERVATIONS = 200
 NOISE_SIGMA = 0.05
 N_SEEDS = 10000
 N_WORKERS = 8
 TOP_K_REFINE = 5
 RANDOM_SEED = 42
+END_TIME_UTC = '2020-02-05T11:00:00'  # 1-hour window (constant-ω valid ~15 min)
 
 # ─── Module-level globals for multiprocessing workers ───────────────────────
 
@@ -169,7 +170,8 @@ if __name__ == '__main__':
     ctx = setup_experiment(
         n_observations=N_OBSERVATIONS,
         noise_sigma=NOISE_SIGMA,
-        random_seed=RANDOM_SEED)
+        random_seed=RANDOM_SEED,
+        end_time_utc=END_TIME_UTC)
 
     log(f"  Satellite loaded, {ctx.n_observations} epochs, "
         f"dt_sampling={ctx.dt_sampling:.1f}s")
@@ -418,8 +420,10 @@ if __name__ == '__main__':
     for i0, iT in surviving_indices:
         R_0 = Rotation.from_quat(quats_0[i0])
         R_T = Rotation.from_quat(quats_T[iT])
-        dR = R_T * R_0.inv()
-        omega_est_rad = dR.as_rotvec() / dt_epoch
+        # Body-frame relative rotation: R_0^{-1} * R_T
+        # (NOT R_T * R_0^{-1}, which gives space-frame omega)
+        dR_body = R_0.inv() * R_T
+        omega_est_rad = dR_body.as_rotvec() / dt_epoch
         omega_est_deg = np.rad2deg(omega_est_rad)
 
         # Filter by omega magnitude
@@ -489,9 +493,9 @@ if __name__ == '__main__':
             q0_wxyz = np.array(candidates_0[p['q0_idx']]['quat'])
             omega_rad = np.array(p['omega_rad'])
 
-            # Propagate: q_check = Rotation.from_rotvec(omega * dt) * R_0
+            # Propagate: R_check = R_0 * Rotation.from_rotvec(omega_body * dt)
             R_0 = Rotation.from_quat([q0_wxyz[1], q0_wxyz[2], q0_wxyz[3], q0_wxyz[0]])
-            R_check = Rotation.from_rotvec(omega_rad * check_dt) * R_0
+            R_check = R_0 * Rotation.from_rotvec(omega_rad * check_dt)
             q_check_scipy = R_check.as_quat()  # x,y,z,w
             q_check_wxyz = np.array([q_check_scipy[3], q_check_scipy[0],
                                      q_check_scipy[1], q_check_scipy[2]])
@@ -546,11 +550,12 @@ if __name__ == '__main__':
             q0_wxyz = np.array(candidates_0[p['q0_idx']]['quat'])
             omega_rad = np.array(p['omega_rad'])
 
-            # Propagate over full observation window (constant-ω)
+            # Propagate over full observation window (tumbling dynamics)
             quats_prop, _ = propagate_attitude(
                 q0=q0_wxyz, omega0=omega_rad,
                 times=ctx.observation_times,
-                mode="principal_axis")
+                mode="tumbling",
+                inertia_tensor=ctx.inertia_tensor)
 
             # Create lo-fi ObjectiveFunction for full LC evaluation
             obj_lofi = ObjectiveFunction(
@@ -563,7 +568,8 @@ if __name__ == '__main__':
                 observer_distances=ctx.obs_dist,
                 compute_shadows_flag=False,
                 articulation_matrices=ctx.art_matrices,
-                mode="principal_axis",
+                mode="tumbling",
+                inertia_tensor=ctx.inertia_tensor,
                 show_progress=False)
 
             # Compute body-frame vectors and predicted LC
