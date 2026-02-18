@@ -64,6 +64,7 @@ log = logging.getLogger(__name__).info
 N_OBSERVATIONS = 200
 NOISE_SIGMA = 0.05
 N_SEEDS = 10000
+N_MAX_CANDIDATES = 2000  # cap per epoch (truth has low residual, so safe)
 N_WORKERS = 8
 TOP_K_REFINE = 5
 RANDOM_SEED = 42
@@ -292,12 +293,17 @@ if __name__ == '__main__':
               initargs=(worker_ctx_data, target_lofi_0, epoch_0_idx, true_q_ep0)) as pool:
         raw_1 = pool.map(_iso_brightness_worker, args_0)
 
-    candidates_0 = [r for r in raw_1 if r is not None and r['resid'] < NOISE_SIGMA]
+    candidates_0_all = [r for r in raw_1 if r is not None and r['resid'] < NOISE_SIGMA]
+    # Cap to N_MAX_CANDIDATES (take best by residual; truth has low residual)
+    candidates_0_all.sort(key=lambda c: c['resid'])
+    candidates_0 = candidates_0_all[:N_MAX_CANDIDATES]
     errs_0 = sorted([c['att_err'] for c in candidates_0])
 
     phase1_time = time.time() - t1
-    log(f"  Converged: {len(candidates_0)}/{N_SEEDS} in {phase1_time:.0f}s "
+    log(f"  Converged: {len(candidates_0_all)}/{N_SEEDS} in {phase1_time:.0f}s "
         f"({phase1_time/N_SEEDS*1000:.1f} ms/seed)")
+    if len(candidates_0_all) > N_MAX_CANDIDATES:
+        log(f"  Capped: {len(candidates_0_all)} → {N_MAX_CANDIDATES}")
     if errs_0:
         log(f"  Min att error: {errs_0[0]:.2f}°")
         log(f"  Within 5°: {sum(1 for e in errs_0 if e < 5)}")
@@ -339,12 +345,16 @@ if __name__ == '__main__':
               initargs=(worker_ctx_data, target_lofi_T, epoch_T_idx, true_q_epT)) as pool:
         raw_2 = pool.map(_iso_brightness_worker, args_T)
 
-    candidates_T = [r for r in raw_2 if r is not None and r['resid'] < NOISE_SIGMA]
+    candidates_T_all = [r for r in raw_2 if r is not None and r['resid'] < NOISE_SIGMA]
+    candidates_T_all.sort(key=lambda c: c['resid'])
+    candidates_T = candidates_T_all[:N_MAX_CANDIDATES]
     errs_T = sorted([c['att_err'] for c in candidates_T])
 
     phase2_time = time.time() - t2
-    log(f"  Converged: {len(candidates_T)}/{N_SEEDS} in {phase2_time:.0f}s "
+    log(f"  Converged: {len(candidates_T_all)}/{N_SEEDS} in {phase2_time:.0f}s "
         f"({phase2_time/N_SEEDS*1000:.1f} ms/seed)")
+    if len(candidates_T_all) > N_MAX_CANDIDATES:
+        log(f"  Capped: {len(candidates_T_all)} → {N_MAX_CANDIDATES}")
     if errs_T:
         log(f"  Min att error: {errs_T[0]:.2f}°")
         log(f"  Within 5°: {sum(1 for e in errs_T if e < 5)}")
@@ -382,66 +392,96 @@ if __name__ == '__main__':
         save_results(JSON_PATH, results)
         sys.exit(1)
 
-    # Convert to scipy quaternion format (x,y,z,w)
-    quats_0 = np.array([[c['quat'][1], c['quat'][2], c['quat'][3], c['quat'][0]]
-                         for c in candidates_0])
-    quats_T = np.array([[c['quat'][1], c['quat'][2], c['quat'][3], c['quat'][0]]
-                         for c in candidates_T])
+    # Convert to wxyz arrays for vectorized quaternion math
+    quats_0_wxyz = np.array([c['quat'] for c in candidates_0])  # (n0, 4) w,x,y,z
+    quats_T_wxyz = np.array([c['quat'] for c in candidates_T])  # (nT, 4) w,x,y,z
 
-    # Max rotation angle from FFT bound
     safety_factor = 1.5
     max_omega_rad = np.deg2rad(fft_omega_bound_deg * safety_factor)
-    max_angle_rad = max_omega_rad * dt_epoch
     log(f"  ω bound: {fft_omega_bound_deg:.3f} °/s × {safety_factor} safety "
-        f"→ max rotation: {np.rad2deg(max_angle_rad):.1f}°")
+        f"→ max |ω|: {np.rad2deg(max_omega_rad):.3f} °/s")
 
-    # First pass: rotation angle filter (chunked, vectorized)
-    CHUNK = 2000
-    surviving_indices = []
+    # Fully vectorized pair matching + omega derivation (chunked for memory)
+    # Body-frame relative rotation: q_rel = conj(q_0) * q_T
+    # Then omega_body = rotvec(q_rel) / dt
+    true_omega_deg_arr = np.rad2deg(ctx.true_omega0)
+    surviving_pairs = []
+    CHUNK = 500  # 500 × nT pairs per chunk
+
+    def _quat_conj_wxyz(q):
+        """Conjugate of quaternion(s) in w,x,y,z format."""
+        c = q.copy()
+        c[..., 1:] *= -1
+        return c
+
+    def _quat_mult_wxyz(q1, q2):
+        """Hamilton product of quaternion arrays, w,x,y,z convention.
+        q1: (M, 4), q2: (N, 4) → broadcast to (M, N, 4)"""
+        w1, x1, y1, z1 = q1[..., 0], q1[..., 1], q1[..., 2], q1[..., 3]
+        w2, x2, y2, z2 = q2[..., 0], q2[..., 1], q2[..., 2], q2[..., 3]
+        return np.stack([
+            w1*w2 - x1*x2 - y1*y2 - z1*z2,
+            w1*x2 + x1*w2 + y1*z2 - z1*y2,
+            w1*y2 - x1*z2 + y1*w2 + z1*x2,
+            w1*z2 + x1*y2 - y1*x2 + z1*w2,
+        ], axis=-1)
+
+    def _quat_to_rotvec_wxyz(q):
+        """Convert quaternion(s) w,x,y,z → rotation vector(s).
+        q: (..., 4) → (..., 3)"""
+        # Ensure w > 0 (shorter path)
+        sign = np.sign(q[..., 0:1])
+        sign[sign == 0] = 1
+        q = q * sign
+        w = np.clip(q[..., 0], -1.0, 1.0)
+        half_angle = np.arccos(w)
+        angle = 2.0 * half_angle
+        sin_half = np.sin(half_angle)
+        # Avoid division by zero for near-identity rotations
+        safe = sin_half > 1e-12
+        xyz = q[..., 1:4]
+        axis = np.where(safe[..., None], xyz / np.where(safe, sin_half, 1.0)[..., None],
+                        np.zeros_like(xyz))
+        return angle[..., None] * axis
 
     for i_start in range(0, n0, CHUNK):
         i_end = min(i_start + CHUNK, n0)
-        chunk_0 = quats_0[i_start:i_end]  # (chunk, 4)
-        dots = np.abs(chunk_0 @ quats_T.T)  # (chunk, nT)
-        dots = np.clip(dots, 0, 1)
-        angles = 2 * np.arccos(dots)
-        valid_i, valid_j = np.where(angles < max_angle_rad)
-        valid_i += i_start
-        for ii, jj in zip(valid_i, valid_j):
-            surviving_indices.append((int(ii), int(jj)))
+        chunk_0 = quats_0_wxyz[i_start:i_end]  # (chunk, 4)
 
-    log(f"  After rotation angle filter: {len(surviving_indices):,} pairs "
-        f"({100 * len(surviving_indices) / max(1, n0 * nT):.2f}%)")
+        # conj(q_0): (chunk, 4)
+        q0_conj = _quat_conj_wxyz(chunk_0)
 
-    # Second pass: compute omega for survivors
-    true_omega_deg_arr = np.rad2deg(ctx.true_omega0)
-    surviving_pairs = []
+        # Broadcast multiply: (chunk, 1, 4) * (1, nT, 4) → (chunk, nT, 4)
+        q_rel = _quat_mult_wxyz(q0_conj[:, None, :], quats_T_wxyz[None, :, :])
 
-    for i0, iT in surviving_indices:
-        R_0 = Rotation.from_quat(quats_0[i0])
-        R_T = Rotation.from_quat(quats_T[iT])
-        # Body-frame relative rotation: R_0^{-1} * R_T
-        # (NOT R_T * R_0^{-1}, which gives space-frame omega)
-        dR_body = R_0.inv() * R_T
-        omega_est_rad = dR_body.as_rotvec() / dt_epoch
-        omega_est_deg = np.rad2deg(omega_est_rad)
+        # Rotation vectors: (chunk, nT, 3)
+        rotvecs = _quat_to_rotvec_wxyz(q_rel)
+
+        # Omega = rotvec / dt: (chunk, nT, 3)
+        omega_rad = rotvecs / dt_epoch
 
         # Filter by omega magnitude
-        omega_mag_deg = np.linalg.norm(omega_est_deg)
-        if omega_mag_deg > fft_omega_bound_deg * safety_factor:
-            continue
+        omega_mag = np.linalg.norm(omega_rad, axis=-1)  # (chunk, nT)
+        valid_i, valid_j = np.where(omega_mag < max_omega_rad)
 
-        omega_err = np.linalg.norm(omega_est_deg - true_omega_deg_arr)
+        for ii, jj in zip(valid_i, valid_j):
+            gi = i_start + int(ii)
+            omega_est_rad = omega_rad[ii, jj]
+            omega_est_deg = np.rad2deg(omega_est_rad)
+            omega_err = float(np.linalg.norm(omega_est_deg - true_omega_deg_arr))
+            surviving_pairs.append({
+                'q0_idx': gi,
+                'qT_idx': int(jj),
+                'omega_deg': omega_est_deg.tolist(),
+                'omega_rad': omega_est_rad.tolist(),
+                'omega_err_deg': omega_err,
+                'att_err_0': candidates_0[gi]['att_err'],
+                'att_err_T': candidates_T[int(jj)]['att_err'],
+            })
 
-        surviving_pairs.append({
-            'q0_idx': i0,
-            'qT_idx': iT,
-            'omega_deg': omega_est_deg.tolist(),
-            'omega_rad': omega_est_rad.tolist(),
-            'omega_err_deg': float(omega_err),
-            'att_err_0': candidates_0[i0]['att_err'],
-            'att_err_T': candidates_T[iT]['att_err'],
-        })
+        if (i_start // CHUNK) % 2 == 0:
+            log(f"    Chunk {i_start}-{i_end}/{n0}: "
+                f"{len(surviving_pairs):,} survivors so far")
 
     phase3_time = time.time() - t3
     log(f"  After omega magnitude filter: {len(surviving_pairs):,} pairs")
