@@ -1,0 +1,79 @@
+{
+  "omega_bound_deg": 3.193599980541653,
+  "n_seeds": 5000,
+  "results": [
+    {
+      "offset": 1,
+      "dt": 7.214428901672363,
+      "max_rot_deg": 23.04,
+      "n_anchor": 5000,
+      "n_second": 5000,
+      "total_pairs": 25000000,
+      "surviving_pairs": 255748,
+      "cull_pct": 98.977008,
+      "avg_partners": 51.1496,
+      "truth_anchor_partners": 65.8,
+      "truth_truth_pairs": 2,
+      "n_truth_anchor": 5,
+      "n_truth_second": 2,
+      "status": "ok"
+    },
+    {
+      "offset": 2,
+      "dt": 14.428857684135437,
+      "max_rot_deg": 46.07999961929321,
+      "n_anchor": 5000,
+      "n_second": 5000,
+      "total_pairs": 25000000,
+      "surviving_pairs": 984003,
+      "cull_pct": 96.063988,
+      "avg_partners": 196.8006,
+      "truth_anchor_partners": 274.8,
+      "truth_truth_pairs": 1,
+      "n_truth_anchor": 5,
+      "n_truth_second": 1,
+      "status": "ok"
+    },
+    {
+      "offset": 5,
+      "dt": 36.07214426994324,
+      "max_rot_deg": 115.19999923858643,
+      "n_anchor": 5000,
+      "n_second": 5000,
+      "total_pairs": 25000000,
+      "surviving_pairs": 9187602,
+      "cull_pct": 63.249592,
+      "avg_partners": 1837.5204,
+      "truth_anchor_partners": 1868.4,
+      "truth_truth_pairs": 0,
+      "n_truth_anchor": 5,
+      "n_truth_second": 0,
+      "status": "ok"
+    },
+    {
+      "offset": 10,
+      "dt": 72.14428853988647,
+      "max_rot_deg": 230.39999847717286,
+      "status": "skip_180",
+      "cull_pct": 0,
+      "truth_survival": null
+    },
+    {
+      "offset": 20,
+      "dt": 144.28857719898224,
+      "max_rot_deg": 460.79999733505247,
+      "status": "skip_180",
+      "cull_pct": 0,
+      "truth_survival": null
+    },
+    {
+      "offset": 50,
+      "dt": 360.72144293785095,
+      "max_rot_deg": 1151.9999931472778,
+      "status": "skip_180",
+      "cull_pct": 0,
+      "truth_survival": null
+    }
+  ],
+  "total_time": 1515.4261786937714
+}

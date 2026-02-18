@@ -1,0 +1,27 @@
+{
+  "epoch_indices": [
+    0,
+    5,
+    8
+  ],
+  "epoch_times": [
+    0.0,
+    1090.9090912342072,
+    1745.4545459747314
+  ],
+  "epoch_mags": [
+    12.1061122510893,
+    12.988990293258407,
+    14.291653927924488
+  ],
+  "n_candidates": [
+    10000,
+    10000,
+    10000
+  ],
+  "n_surviving_triplets": 0,
+  "triplets": [],
+  "omega_bound_deg": 0.198,
+  "omega_threshold_deg": 0.05,
+  "total_time": 2274.897137403488
+}
