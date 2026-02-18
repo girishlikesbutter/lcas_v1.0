@@ -61,14 +61,15 @@ log = logging.getLogger(__name__).info
 
 # ─── Configuration ──────────────────────────────────────────────────────────
 
-N_OBSERVATIONS = 200
+N_OBSERVATIONS = 500
 NOISE_SIGMA = 0.05
 N_SEEDS = 10000
 N_MAX_CANDIDATES = 2000  # cap per epoch (truth has low residual, so safe)
 N_WORKERS = 8
 TOP_K_REFINE = 5
 RANDOM_SEED = 42
-END_TIME_UTC = '2020-02-05T11:00:00'  # 1-hour window (constant-ω valid ~15 min)
+END_TIME_UTC = '2020-02-05T11:00:00'  # 1-hour window
+EPOCH_T_OFFSET = 1  # 1 index apart (~7.2s gap for meaningful culling)
 
 # ─── Module-level globals for multiprocessing workers ───────────────────────
 
@@ -205,29 +206,18 @@ if __name__ == '__main__':
     hifi_single_ms = (time.time() - t_bench) / 10 * 1000
     log(f"  Benchmark hi-fi single epoch: {hifi_single_ms:.1f} ms")
 
-    # Choose epoch T (~25% through window) with brightness separation from epoch 0
-    target_idx = ctx.n_observations // 4
-    search_lo = max(0, target_idx - 5)
-    search_hi = min(ctx.n_observations, target_idx + 6)
-    epoch_T_idx = max(
-        range(search_lo, search_hi),
-        key=lambda i: abs(ctx.observed_lc[i] - ctx.observed_lc[0]))
+    # Choose epoch T: small gap for rotation angle culling (~7s at 500 obs/1hr)
     epoch_0_idx = 0
+    epoch_T_idx = EPOCH_T_OFFSET
 
-    # Validation epoch at ~12% (between epoch 0 and epoch T)
-    val_target = ctx.n_observations // 8
-    val_search_lo = max(1, val_target - 3)
-    val_search_hi = min(epoch_T_idx, val_target + 4)
-    val_epoch_idx = max(
-        range(val_search_lo, val_search_hi),
-        key=lambda i: abs(ctx.observed_lc[i] - ctx.observed_lc[0]))
-
-    # Additional check epochs: ~37% and ~50%
-    check_epoch_indices = [val_epoch_idx]
-    for frac in [0.37, 0.50]:
-        ci = int(frac * ctx.n_observations)
+    # Validation epochs: spread across the window for progressive culling
+    # Pick ~2%, ~5%, ~10%, ~25% through window
+    check_epoch_indices = []
+    for frac in [0.02, 0.05, 0.10, 0.25]:
+        ci = max(EPOCH_T_OFFSET + 1, int(frac * ctx.n_observations))
         ci = min(ci, ctx.n_observations - 1)
-        check_epoch_indices.append(ci)
+        if ci not in check_epoch_indices:
+            check_epoch_indices.append(ci)
 
     dt_epoch = ctx.observation_times[epoch_T_idx] - ctx.observation_times[epoch_0_idx]
     log(f"  Epoch 0: idx={epoch_0_idx}, mag={ctx.observed_lc[epoch_0_idx]:.3f}")
