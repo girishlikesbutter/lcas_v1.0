@@ -1,0 +1,31 @@
+{
+  "lofi_residual_at_truth": 0.14805409272954143,
+  "hifi_residual_at_truth": 0.0024024474443931514,
+  "hifi_residual_pass": true,
+  "T_values": [
+    6.692423558460145,
+    6.692423558198478,
+    6.69242355838063,
+    6.692423559061892,
+    6.692423557418013
+  ],
+  "T_relative_spread": 2.456328109737384e-10,
+  "L_magnitudes": [
+    472.51912393020405,
+    472.5191239091788,
+    472.51912392379177,
+    472.51912397841164,
+    472.5191238458169
+  ],
+  "L_relative_spread": 2.80612390629636e-10,
+  "L_direction_spread": 0.0,
+  "conservation_pass": true,
+  "L_omega_roundtrip_error": 1.939479807224432e-18,
+  "L_omega_roundtrip_pass": true,
+  "omega_param_value": 0.14805409272954143,
+  "L_param_value": 0.14805409272953698,
+  "L_omega_diff": 4.440892098500626e-15,
+  "L_param_pass": true,
+  "all_pass": true,
+  "total_script_time_s": 117.1
+}

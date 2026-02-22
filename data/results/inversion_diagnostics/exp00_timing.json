@@ -1,0 +1,13 @@
+{
+  "propagate_attitude_ms": 76.88780047465116,
+  "lofi_full_lc_ms": 220.7630520570092,
+  "hifi_full_lc_ms": 60135.589889017865,
+  "single_epoch_lofi_ms": 13.20768950972706,
+  "single_epoch_hifi_ms": 46.674462500959635,
+  "lbfgsb_6param_total_ms": 42219.8,
+  "lbfgsb_6param_n_iters": 10,
+  "lbfgsb_6param_n_evals": 133,
+  "lbfgsb_6param_ms_per_iter": 4222.0,
+  "hifi_lofi_ratio": 272.4,
+  "total_script_time_s": 705.2
+}

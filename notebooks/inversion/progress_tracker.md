@@ -1,6 +1,6 @@
 # Experiment Progress Tracker
 
-**Last updated**: 2026-02-23 10:45 NZST
+**Last updated**: 2026-02-23 (Phase 1 complete)
 **Branch**: `ralph/mixed-fidelity-inversion`
 **Deadline**: Roberto update by 2:30 PM NZST
 
@@ -19,8 +19,8 @@ Claude should: read this file, check the current phase, read any referenced resu
 
 | Phase | Status | Key Result |
 |-------|--------|------------|
-| Phase 0: Setup infrastructure | DONE | roadmap.md, progress_tracker.md, MEMORY.md |
-| Phase 1: Exp 00 + 01 (timing + sanity) | NOT STARTED | |
+| Phase 0: Setup infrastructure | DONE | roadmap.md, progress_tracker.md, MEMORY.md (commit 0e606c2) |
+| Phase 1: Exp 00 + 01 (timing + sanity) | DONE | lo-fi 221ms, hi-fi 60s, 272x ratio; all sanity pass |
 | Phase 2: Exp 02 + 03 (basin characterization) | NOT STARTED | |
 | Phase 3: Exp 04 + 05 (joint basin + window) | NOT STARTED | |
 | Phase 4: Exp 06-09 (progressive + filtering) | NOT STARTED | |
@@ -77,36 +77,46 @@ from src.dynamics.attitude_propagator import propagate_attitude
 **L-param helpers needed** (copy into each script or import from a shared file):
 ```python
 def omega_to_L(q_wxyz, omega_body, inertia_tensor):
+    """R(q) is body->inertial (propagator uses q_dot = 0.5*q*omega_quat)."""
     R = _quaternion_to_rotation_matrix(q_wxyz)
     L_body = inertia_tensor @ omega_body
-    return R.T @ L_body
+    return R @ L_body   # body -> inertial
 
 def L_to_omega(q_wxyz, L_inertial, inertia_tensor):
     R = _quaternion_to_rotation_matrix(q_wxyz)
-    L_body = R @ L_inertial
+    L_body = R.T @ L_inertial   # inertial -> body
     return np.linalg.solve(inertia_tensor, L_body)
 ```
+**CONVENTION NOTE**: `_quaternion_to_rotation_matrix(q)` returns the **body→inertial** rotation
+matrix (NOT inertial→body as the comment in objective_function.py says). Verified by conservation
+check: `L_inertial = R @ (I @ omega_body)` is conserved; `R.T @ (I @ omega_body)` is NOT.
 
 **Result**: Save to `data/results/inversion_diagnostics/exp01_sanity.json`
 
 ### Phase 1 Results
-_(fill in after running)_
 ```
-Exp 00 timing:
-  propagate_attitude (500 epochs, 3600s): ??? ms
-  lo-fi full LC eval: ??? ms
-  hi-fi full LC eval: ??? ms
-  single-epoch lo-fi: ??? ms
-  single-epoch hi-fi: ??? ms
-  L-BFGS-B iteration (6 params, lo-fi): ??? ms
+Exp 00 timing (median of 10 reps):
+  propagate_attitude (500 epochs, 3600s): 76.9 ms
+  lo-fi full LC eval:                     220.8 ms
+  hi-fi full LC eval:                     60,136 ms (~60s)
+  single-epoch lo-fi:                     13.2 ms
+  single-epoch hi-fi:                     46.7 ms
+  L-BFGS-B iteration (6 params, lo-fi):   4,222 ms (~4.2s)
+    → 10 iters, 133 evals = ~13 evals/iter (6 params × 2 finite diff + 1)
+  hi-fi / lo-fi ratio:                    272x
 
-Exp 01 sanity:
-  Lo-fi residual at truth: ???
-  Hi-fi residual at truth: ???
-  Conservation spread (T): ???
-  Conservation spread (|L|): ???
-  L<->omega roundtrip error: ???
-  L-param vs omega-param diff: ???
+Exp 01 sanity (ALL PASS):
+  Lo-fi residual at truth:   0.148054  (high because observed LC is hi-fi)
+  Hi-fi residual at truth:   0.002402  (≈ noise σ²=0.0025, PASS)
+  Conservation spread (T):   2.46e-10  (< 1e-6, PASS)
+  Conservation spread (|L|): 2.81e-10  (< 1e-6, PASS)
+  L direction conserved:     0.00e+00  (< 1e-6, PASS)
+  L<->omega roundtrip error: 1.94e-18  (< 1e-12, PASS)
+  L-param vs omega-param:    4.44e-15  (< 1e-10, PASS)
+
+Key insight: R(q) convention is body→inertial, so L_inertial = R @ (I @ omega).
+The comment in objective_function.py claiming R is "J2000 to body" is WRONG
+(but the code works because R is used consistently throughout).
 ```
 
 ---
@@ -253,11 +263,10 @@ Key points to cover:
 ---
 
 ## GIT COMMIT LOG
-_(update after each commit)_
 
 | Time | Commit | Files |
 |------|--------|-------|
-| | | |
+| Phase 1 | (pending) | exp00_timing.py, exp01_sanity.py, progress_tracker.md, exp00_timing.json, exp01_sanity.json |
 
 ---
 
