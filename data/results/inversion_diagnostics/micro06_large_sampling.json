@@ -1,0 +1,158 @@
+{
+  "peak_0": {
+    "epoch_idx": 183,
+    "time_s": 1320.240481376648,
+    "ref_mag": 6.966165413441686,
+    "n_matches": 1360,
+    "match_rate_pct": 0.136,
+    "nearest_deg": 5.947,
+    "ang_percentiles": {
+      "p10": 87.92,
+      "p50": 127.53,
+      "p90": 176.19
+    },
+    "g_stats": {
+      "min": 20.941,
+      "med": 25.689,
+      "max": 34.016
+    },
+    "unknown_omega_filter": {
+      "tight": {
+        "threshold": 0.006931,
+        "n_survive": 1360,
+        "nearest_ok": true
+      },
+      "medium": {
+        "threshold": 0.034653,
+        "n_survive": 1360,
+        "nearest_ok": true
+      },
+      "loose": {
+        "threshold": 0.138611,
+        "n_survive": 1360,
+        "nearest_ok": true
+      }
+    },
+    "oracle_filter": {
+      "1x": {
+        "n_survive": 8,
+        "nearest_ok": false
+      },
+      "5x": {
+        "n_survive": 49,
+        "nearest_ok": false
+      },
+      "20x": {
+        "n_survive": 240,
+        "nearest_ok": false
+      }
+    }
+  },
+  "peak_1": {
+    "epoch_idx": 260,
+    "time_s": 1875.751503586769,
+    "ref_mag": 6.913497386416195,
+    "n_matches": 1338,
+    "match_rate_pct": 0.1338,
+    "nearest_deg": 4.304,
+    "ang_percentiles": {
+      "p10": 87.84,
+      "p50": 128.28,
+      "p90": 176.86
+    },
+    "g_stats": {
+      "min": 20.085,
+      "med": 24.998,
+      "max": 33.596
+    },
+    "unknown_omega_filter": {
+      "tight": {
+        "threshold": 0.006931,
+        "n_survive": 1338,
+        "nearest_ok": true
+      },
+      "medium": {
+        "threshold": 0.034653,
+        "n_survive": 1338,
+        "nearest_ok": true
+      },
+      "loose": {
+        "threshold": 0.138611,
+        "n_survive": 1338,
+        "nearest_ok": true
+      }
+    },
+    "oracle_filter": {
+      "1x": {
+        "n_survive": 16,
+        "nearest_ok": false
+      },
+      "5x": {
+        "n_survive": 73,
+        "nearest_ok": false
+      },
+      "20x": {
+        "n_survive": 266,
+        "nearest_ok": false
+      }
+    }
+  },
+  "peak_2": {
+    "epoch_idx": 360,
+    "time_s": 2597.1943895816803,
+    "ref_mag": 7.503881552680854,
+    "n_matches": 2922,
+    "match_rate_pct": 0.2922,
+    "nearest_deg": 0.559,
+    "ang_percentiles": {
+      "p10": 59.03,
+      "p50": 143.81,
+      "p90": 178.49
+    },
+    "g_stats": {
+      "min": 0.345,
+      "med": 23.745,
+      "max": 37.846
+    },
+    "unknown_omega_filter": {
+      "tight": {
+        "threshold": 0.006931,
+        "n_survive": 2922,
+        "nearest_ok": true
+      },
+      "medium": {
+        "threshold": 0.034653,
+        "n_survive": 2922,
+        "nearest_ok": true
+      },
+      "loose": {
+        "threshold": 0.138611,
+        "n_survive": 2922,
+        "nearest_ok": true
+      }
+    },
+    "oracle_filter": {
+      "1x": {
+        "n_survive": 57,
+        "nearest_ok": false
+      },
+      "5x": {
+        "n_survive": 269,
+        "nearest_ok": false
+      },
+      "20x": {
+        "n_survive": 1063,
+        "nearest_ok": true
+      }
+    }
+  },
+  "config": {
+    "n_total": 1000000,
+    "batch": 100000,
+    "seed": 42,
+    "tol_pct": 1,
+    "dphi": 1e-05,
+    "n_peaks": 3,
+    "omega_max_deg_s": 5.0
+  }
+}
