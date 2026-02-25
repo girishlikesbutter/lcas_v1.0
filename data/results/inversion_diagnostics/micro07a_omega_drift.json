@@ -1,0 +1,101 @@
+{
+  "inertia": {
+    "tensor": [
+      [
+        37985.1557,
+        -0.0,
+        -0.0
+      ],
+      [
+        -0.0,
+        38305.7056,
+        0.0
+      ],
+      [
+        -0.0,
+        0.0,
+        7749.0147
+      ]
+    ],
+    "principal_moments": [
+      7749.0147,
+      37985.1557,
+      38305.7056
+    ],
+    "ratios": {
+      "I2_I1": 4.901934,
+      "I3_I1": 4.9433,
+      "I3_I2": 1.008439
+    },
+    "asymmetry_param": 0.01049
+  },
+  "omega_at_peaks": [
+    {
+      "epoch": 183,
+      "time_s": 1320.240481376648,
+      "omega_deg_s": [
+        0.535659,
+        0.231868,
+        1.999525
+      ],
+      "omega_mag_deg_s": 2.082977,
+      "delta_omega_deg_s": 0.533062,
+      "delta_omega_pct": 25.5878
+    },
+    {
+      "epoch": 260,
+      "time_s": 1875.751503586769,
+      "omega_deg_s": [
+        -0.461727,
+        -0.35513,
+        2.000473
+      ],
+      "omega_mag_deg_s": 2.083555,
+      "delta_omega_deg_s": 0.963306,
+      "delta_omega_pct": 46.2402
+    },
+    {
+      "epoch": 360,
+      "time_s": 2597.1943895816803,
+      "omega_deg_s": [
+        -0.493221,
+        0.310815,
+        2.000087
+      ],
+      "omega_mag_deg_s": 2.083319,
+      "delta_omega_deg_s": 1.166012,
+      "delta_omega_pct": 55.9704
+    }
+  ],
+  "trajectory_drift": {
+    "max_delta_omega_deg_s": 1.16623,
+    "max_delta_omega_pct": 55.9808,
+    "max_drift_epoch": 485,
+    "mean_delta_omega_deg_s": 0.742221
+  },
+  "conservation": {
+    "max_L_relative_error": 1.1529597776315656e-09,
+    "max_T_relative_error": 4.0593329544294256e-10
+  },
+  "precession": {
+    "linearized_period_s": 225.89,
+    "measured_period_s": 230.86,
+    "nutation_angle_deg": 16.2539,
+    "dominant_axis": "I1 (short)"
+  },
+  "config": {
+    "seed": 42,
+    "n_observations": 500,
+    "true_omega_deg": [
+      0.5,
+      -0.3,
+      2.0
+    ],
+    "peak_epochs": [
+      183,
+      260,
+      360
+    ],
+    "observation_window_s": 3600.0000010728836
+  }
+}
