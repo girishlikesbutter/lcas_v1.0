@@ -1,0 +1,49 @@
+{
+  "peak_0": {
+    "epoch_idx": 183,
+    "time_s": 1320.240481376648,
+    "hifi_truth_mag": 7.144809010506018,
+    "lofi_truth_mag": 6.966165413441686,
+    "n_lofi_bright": 21,
+    "n_hifi_bright": 17,
+    "n_hifi_deriv_1x": 0,
+    "n_hifi_deriv_5x": 0,
+    "hifi_eval_time_s": 457.6,
+    "ms_per_hifi_eval": 45.8,
+    "grad_eval_time_s": 0.7
+  },
+  "peak_1": {
+    "epoch_idx": 260,
+    "time_s": 1875.751503586769,
+    "hifi_truth_mag": 7.03985611622287,
+    "lofi_truth_mag": 6.913497386416195,
+    "n_lofi_bright": 22,
+    "n_hifi_bright": 20,
+    "n_hifi_deriv_1x": 0,
+    "n_hifi_deriv_5x": 0,
+    "hifi_eval_time_s": 458.2,
+    "ms_per_hifi_eval": 45.8,
+    "grad_eval_time_s": 1.3
+  },
+  "peak_2": {
+    "epoch_idx": 360,
+    "time_s": 2597.1943895816803,
+    "hifi_truth_mag": 7.503883742991959,
+    "lofi_truth_mag": 7.503881552680854,
+    "n_lofi_bright": 33,
+    "n_hifi_bright": 29,
+    "n_hifi_deriv_1x": 0,
+    "n_hifi_deriv_5x": 1,
+    "hifi_eval_time_s": 456.3,
+    "ms_per_hifi_eval": 45.6,
+    "grad_eval_time_s": 1.3
+  },
+  "config": {
+    "n_samples": 10000,
+    "seed": 42,
+    "brightness_tol_pct": 1,
+    "dphi": 1e-05,
+    "n_peaks": 3,
+    "dLdt_threshold": 0.006930555553490089
+  }
+}
