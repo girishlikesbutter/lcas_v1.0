@@ -1,0 +1,41 @@
+{
+  "strongest_glint": {
+    "peak_epoch_idx": 260,
+    "peak_time_s": 1875.751503586769,
+    "peak_mag": 7.03985611622287,
+    "omega_at_peak_deg_s": [
+      -0.46172731609177375,
+      -0.35512951683991956,
+      2.000473136347
+    ],
+    "n_brightness_match": 14,
+    "truth_dLdt": 0.23425992706277016,
+    "n_pass_1x_sigma_dt": 0,
+    "n_pass_5x_sigma_dt": 0,
+    "g_norm_median": 26.8,
+    "dev_from_90_median": 38.9
+  },
+  "moderate_peak": {
+    "peak_epoch_idx": 112,
+    "peak_time_s": 808.0160323381424,
+    "peak_mag": 12.208085489887589,
+    "omega_at_peak_deg_s": [
+      -0.2958445372806499,
+      0.4994258827039262,
+      2.0020876584532075
+    ],
+    "n_brightness_match": 824,
+    "truth_dLdt": 0.06394567786790194,
+    "n_pass_1x_sigma_dt": 51,
+    "n_pass_5x_sigma_dt": 281,
+    "g_norm_median": 1.8,
+    "dev_from_90_median": 42.9
+  },
+  "config": {
+    "n_samples": 10000,
+    "seed": 42,
+    "brightness_tol_pct": 1,
+    "dphi_rad": 1e-05,
+    "dLdt_threshold_mag_s": 0.006930555553490089
+  }
+}
