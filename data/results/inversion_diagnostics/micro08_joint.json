@@ -1,0 +1,46 @@
+{
+  "config": {
+    "peaks": [
+      183,
+      260,
+      360
+    ],
+    "tol_pct": 3,
+    "deriv_thresholds": [
+      0.1,
+      0.5,
+      1.0
+    ],
+    "grid": [
+      20,
+      20
+    ],
+    "seed": 42
+  },
+  "n_candidates": 1360,
+  "n_brightness_survivors": 2287,
+  "results": {
+    "0.1": {
+      "n_bright": 2287,
+      "n_deriv": 1051,
+      "n_joint": 13,
+      "u_deriv": 726,
+      "u_joint": 13
+    },
+    "0.5": {
+      "n_bright": 2287,
+      "n_deriv": 1796,
+      "n_joint": 17,
+      "u_deriv": 982,
+      "u_joint": 17
+    },
+    "1.0": {
+      "n_bright": 2287,
+      "n_deriv": 2084,
+      "n_joint": 19,
+      "u_deriv": 1052,
+      "u_joint": 19
+    }
+  },
+  "runtime_s": 510.3
+}
