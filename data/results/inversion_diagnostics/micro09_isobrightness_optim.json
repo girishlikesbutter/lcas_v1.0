@@ -1,0 +1,23 @@
+{
+  "config": {
+    "peak": 183,
+    "n_seeds": 100,
+    "seed": 42,
+    "method": "L-BFGS-B",
+    "maxiter": 50
+  },
+  "n_converged": 72,
+  "n_unique_clusters": 71,
+  "nearest_to_truth_deg": 25.64102366750809,
+  "att_error_stats": {
+    "min": 25.64102366750809,
+    "median": 120.26495850853455,
+    "max": 179.9809271405673,
+    "mean": 122.5698647519068
+  },
+  "comparison": {
+    "micro07_random_1M_nearest_deg": 5.95,
+    "micro09_optim_nearest_deg": 25.64102366750809
+  },
+  "runtime_s": 76.8
+}
