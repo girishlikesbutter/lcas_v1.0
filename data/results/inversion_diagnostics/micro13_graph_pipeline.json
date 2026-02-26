@@ -1,0 +1,31 @@
+{
+  "config": {
+    "peaks": [
+      183,
+      260,
+      360
+    ],
+    "n_cand": 50,
+    "n_samples": 1000000,
+    "tol_pct": 1,
+    "n_inter": 10,
+    "mm_prune_deg": 5.0,
+    "lam_grad": 0.1,
+    "lam_rate": 0.01,
+    "seed": 42
+  },
+  "n_valid_paths": 121326,
+  "truth_rank": 11979,
+  "truth_cost": 3.781288543568917,
+  "truth_idx": [
+    49,
+    49,
+    49
+  ],
+  "n_cands": [
+    50,
+    50,
+    50
+  ],
+  "runtime_s": 2711.9
+}
