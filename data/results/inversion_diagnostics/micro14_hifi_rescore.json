@@ -1,0 +1,37 @@
+{
+  "config": {
+    "peaks": [
+      183,
+      260,
+      360
+    ],
+    "n_cands": [
+      50,
+      50,
+      50
+    ],
+    "n_inter": 10,
+    "mm_prune_deg": 5.0,
+    "lam_rate": 0.01,
+    "rate_prior_deg": 5.0,
+    "scoring": "hi-fi"
+  },
+  "n_valid_paths": 121326,
+  "truth_rank": 13360,
+  "truth_cost": 3.832,
+  "truth_idx": [
+    49,
+    49,
+    49
+  ],
+  "n_cands": [
+    50,
+    50,
+    50
+  ],
+  "leg_timing_s": [
+    882.7,
+    846.2
+  ],
+  "runtime_s": 1788.2
+}
