@@ -1,0 +1,56 @@
+{
+  "config": {
+    "peaks": [
+      183,
+      260,
+      360
+    ],
+    "seed": 42,
+    "dphi": 1e-05,
+    "n_fine": 500,
+    "n_observations": 500,
+    "dt_sampling": 7.214428859865499
+  },
+  "results": {
+    "peak_1": {
+      "epoch": 183,
+      "t_discrete": 1320.240481376648,
+      "t_hifi_interp": 1320.7943259864637,
+      "dt_hifi": 0.5538446098157692,
+      "t_lofi_peak": 1316.4380869573963,
+      "dt_lofi": -3.802394419251641,
+      "gdot_discrete": -0.21142266053613035,
+      "gdot_hifi_interp": -0.1495736281176489,
+      "gdot_lofi_peak": 0.011491306274829152,
+      "reduction_hifi": 1.4135022543535105,
+      "reduction_lofi": 18.398487994287986
+    },
+    "peak_2": {
+      "epoch": 260,
+      "t_discrete": 1875.751503586769,
+      "t_hifi_interp": 1874.8381194780968,
+      "dt_hifi": -0.9133841086722896,
+      "t_lofi_peak": 1871.3707982382937,
+      "dt_lofi": -4.380705348475431,
+      "gdot_discrete": -0.23425992706277016,
+      "gdot_hifi_interp": -0.1340850431783995,
+      "gdot_lofi_peak": 0.011467731769492662,
+      "reduction_hifi": 1.7470996131245484,
+      "reduction_lofi": 20.427747332385845
+    },
+    "peak_3": {
+      "epoch": 360,
+      "t_discrete": 2597.1943895816803,
+      "t_hifi_interp": 2596.41970930515,
+      "dt_hifi": -0.7746802765304892,
+      "t_lofi_peak": 2592.0040489322914,
+      "dt_lofi": -5.190340649388872,
+      "gdot_discrete": -0.15317424233266308,
+      "gdot_hifi_interp": -0.19862176438394774,
+      "gdot_lofi_peak": 0.011269917106030229,
+      "reduction_hifi": 0.7711855888892826,
+      "reduction_lofi": 13.591425818979953
+    }
+  },
+  "runtime_s": 61.5
+}
