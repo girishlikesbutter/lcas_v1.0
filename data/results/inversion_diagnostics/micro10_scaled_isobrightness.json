@@ -1,0 +1,33 @@
+{
+  "config": {
+    "peak1": 183,
+    "peak2": 260,
+    "n_seeds": 10000,
+    "seed": 42,
+    "method": "L-BFGS-B",
+    "maxiter": 50,
+    "cluster_deg": 1.0
+  },
+  "n_converged": 6889,
+  "n_unique_basins": 5643,
+  "nearest_to_truth_deg": 24.569987560587542,
+  "att_error_percentiles": {
+    "1": 27.52,
+    "5": 38.55,
+    "10": 50.4,
+    "25": 91.45,
+    "50": 141.68,
+    "75": 159.32,
+    "90": 171.24,
+    "95": 175.6,
+    "99": 179.23
+  },
+  "comparison": {
+    "random_1M_nearest_deg": 5.95,
+    "micro09_100seeds_nearest_deg": 25.64,
+    "micro09_basins": 71,
+    "micro10_nearest_deg": 24.569987560587542,
+    "micro10_basins": 5643
+  },
+  "runtime_s": 1755.2
+}
