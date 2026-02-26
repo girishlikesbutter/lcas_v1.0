@@ -1,0 +1,48 @@
+{
+  "config": {
+    "peaks": [
+      183,
+      260,
+      360
+    ],
+    "tol_pct": 3,
+    "deriv_thresholds": [
+      0.1,
+      0.5,
+      1.0
+    ],
+    "grid": [
+      15,
+      15
+    ],
+    "seed": 42,
+    "n_candidates": 13848,
+    "source": "micro10b_dense_candidates.npz"
+  },
+  "n_candidates": 13848,
+  "n_brightness_survivors": 11706,
+  "results": {
+    "0.1": {
+      "n_bright": 11706,
+      "n_deriv": 4850,
+      "n_joint": 34,
+      "u_deriv": 4072,
+      "u_joint": 34
+    },
+    "0.5": {
+      "n_bright": 11706,
+      "n_deriv": 8969,
+      "n_joint": 61,
+      "u_deriv": 6586,
+      "u_joint": 61
+    },
+    "1.0": {
+      "n_bright": 11706,
+      "n_deriv": 10622,
+      "n_joint": 87,
+      "u_deriv": 7393,
+      "u_joint": 87
+    }
+  },
+  "runtime_s": 2691.5
+}
