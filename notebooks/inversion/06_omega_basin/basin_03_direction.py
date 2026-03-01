@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Basin 03 — Direction basin. Fix q=q_true, |omega|=true magnitude.
-Offset omega direction by various angles. What's the convergence radius in direction space?"""
+"""Basin 03 — Direction basin (2D). Fix q=q_true, |omega|=true magnitude.
+Optimise 2 free params (theta, phi) in a local frame where (0,0) = true omega direction.
+Magnitude locked. Find direction convergence radius."""
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
@@ -30,10 +31,10 @@ FIDELITY = 'hifi' if args.hifi else 'lofi'
 
 # ── Config ──
 SEED = 42
-N_TRIALS = 4
+N_PHI = 4           # phi values per offset: 0, 90, 180, 270 deg
 N_WORKERS = 8
 MAXITER = 100
-OFFSETS_DEG = [1, 2, 5, 10, 20, 45, 90]
+OFFSETS_DEG = [0.5, 1, 2, 5, 10, 20, 45, 90]
 CONVERGENCE_DPS = 0.01  # omega error threshold
 RESULTS_DIR = Path('data/results/inversion_diagnostics')
 
@@ -45,6 +46,7 @@ ctx = setup_experiment(n_observations=500, noise_sigma=0.05, random_seed=SEED,
 print(f"Setup: {time.time()-t0:.1f}s  [fidelity={FIDELITY}]")
 
 true_aa = quaternion_to_axis_angle(ctx.true_q0)
+true_dir = ctx.true_omega0 / np.linalg.norm(ctx.true_omega0)
 true_mag = np.linalg.norm(ctx.true_omega0)
 I = ctx.inertia_tensor
 
@@ -60,46 +62,61 @@ obj = ObjectiveFunction(
     articulation_matrices=ctx.art_matrices,
     mode="tumbling", inertia_tensor=I, show_progress=False)
 
+# ── Build a fixed orthonormal basis for the plane perpendicular to true_dir ──
+# e1: arbitrary vector perp to true_dir, e2 = true_dir x e1
+aux = np.array([1.0, 0.0, 0.0]) if abs(true_dir[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+E1 = np.cross(true_dir, aux)
+E1 /= np.linalg.norm(E1)
+E2 = np.cross(true_dir, E1)
+E2 /= np.linalg.norm(E2)  # {true_dir, E1, E2} is right-handed ONB
 
-# ── Trial function ──
+
+def theta_phi_to_omega(theta_phi):
+    """Convert (theta, phi) in radians to omega vector (3,).
+    theta = angular offset from true_dir, phi = azimuth in E1-E2 plane.
+    omega = true_mag * (Rodrigues rotation of true_dir by angle theta around axis n(phi))."""
+    theta, phi = theta_phi
+    # Rotation axis in the perpendicular plane
+    axis = np.cos(phi) * E1 + np.sin(phi) * E2
+    # Rodrigues rotation of true_dir by angle theta around axis
+    ct, st = np.cos(theta), np.sin(theta)
+    direction = ct * true_dir + st * np.cross(axis, true_dir) + \
+                (1 - ct) * np.dot(axis, true_dir) * axis
+    return true_mag * direction
+
+
+# ── Trial function: 2D optimisation over (theta, phi) ──
 def run_trial(trial_args):
-    offset_deg, trial_idx = trial_args
-    rng = np.random.RandomState(SEED + trial_idx + offset_deg * 100)
+    offset_deg, phi_idx = trial_args
+    phi_init = np.deg2rad(phi_idx * 90.0)  # 0, 90, 180, 270 deg
+    theta_init = np.deg2rad(offset_deg)
 
-    # Rotate true omega direction by offset_deg around a random axis
-    true_dir = ctx.true_omega0 / true_mag
-    rot_axis = rng.standard_normal(3)
-    rot_axis -= rot_axis.dot(true_dir) * true_dir  # perpendicular to omega
-    rot_axis /= np.linalg.norm(rot_axis)
-    R_offset = Rotation.from_rotvec(np.deg2rad(offset_deg) * rot_axis).as_matrix()
-    perturbed_dir = R_offset @ true_dir
-    omega_init = perturbed_dir * true_mag  # same magnitude, offset direction
-
-    def f_omega(omega):
+    def f_tp(theta_phi):
+        omega = theta_phi_to_omega(theta_phi)
         params = np.concatenate([true_aa, omega])
         return obj.evaluate(params)
 
-    res = minimize(f_omega, omega_init, method='L-BFGS-B',
-                   options={'maxiter': MAXITER})
-    omega_found = res.x
+    x0 = np.array([theta_init, phi_init])
+    res = minimize(f_tp, x0, method='L-BFGS-B', options={'maxiter': MAXITER})
 
+    omega_found = theta_phi_to_omega(res.x)
     omega_err_dps = np.rad2deg(np.linalg.norm(omega_found - ctx.true_omega0))
 
+    # Direction error between found and true omega
     cos_angle = np.clip(np.dot(omega_found, ctx.true_omega0) /
                         (np.linalg.norm(omega_found) * np.linalg.norm(ctx.true_omega0) + 1e-30),
                         -1.0, 1.0)
     dir_err_deg = np.rad2deg(np.arccos(cos_angle))
 
-    mag_found = np.rad2deg(np.linalg.norm(omega_found))
-    mag_true = np.rad2deg(true_mag)
-    mag_err = abs(mag_found - mag_true)
+    theta_found_deg = np.rad2deg(abs(res.x[0]))
 
     return {
         'offset_deg': offset_deg,
-        'trial': trial_idx,
+        'phi_idx': phi_idx,
+        'phi_init_deg': round(phi_idx * 90.0, 1),
+        'theta_found_deg': round(theta_found_deg, 4),
         'omega_error_dps': round(omega_err_dps, 6),
         'direction_error_deg': round(dir_err_deg, 4),
-        'magnitude_error_dps': round(mag_err, 6),
         'mse': round(float(res.fun), 8),
         'converged': omega_err_dps < CONVERGENCE_DPS,
         'nit': res.nit,
@@ -108,11 +125,12 @@ def run_trial(trial_args):
 
 
 # ── Run ──
-print(f"\nDirection basin (|omega| fixed at truth, q fixed at truth)")
-print(f"Offsets: {OFFSETS_DEG} deg, {N_TRIALS} trials/offset")
+print(f"\n2D direction basin (|omega| locked to truth, q fixed)")
+print(f"|omega_true| = {np.rad2deg(true_mag):.4f} deg/s")
+print(f"Offsets: {OFFSETS_DEG} deg, {N_PHI} phi values each (0/90/180/270)")
 print(f"Convergence: omega error < {CONVERGENCE_DPS} deg/s\n")
 
-all_args = [(d, i) for d in OFFSETS_DEG for i in range(N_TRIALS)]
+all_args = [(d, p) for d in OFFSETS_DEG for p in range(N_PHI)]
 t1 = time.time()
 with Pool(N_WORKERS) as pool:
     all_results = pool.map(run_trial, all_args)
@@ -124,6 +142,7 @@ print(f"\n{'Offset':>8s}  {'Conv':>6s}  {'Med omega err':>14s}  "
 print("-" * 60)
 
 results_by_level = {}
+basin_radius = None
 for offset_deg in OFFSETS_DEG:
     level_res = [r for r in all_results if r['offset_deg'] == offset_deg]
     n_conv = sum(1 for r in level_res if r['converged'])
@@ -131,7 +150,7 @@ for offset_deg in OFFSETS_DEG:
     med_dir_err = float(np.median([r['direction_error_deg'] for r in level_res]))
     med_mse = float(np.median([r['mse'] for r in level_res]))
 
-    print(f"  {offset_deg:5d} deg  {n_conv:>2d}/{N_TRIALS}  "
+    print(f"  {offset_deg:5.1f} deg  {n_conv:>2d}/{N_PHI}  "
           f"{med_omega_err:12.4f} d/s  "
           f"{med_dir_err:10.2f} deg  "
           f"{med_mse:10.6f}")
@@ -144,9 +163,17 @@ for offset_deg in OFFSETS_DEG:
         'trials': level_res,
     }
 
+    if basin_radius is None and n_conv < N_PHI:
+        basin_radius = offset_deg
+
 total_conv = sum(v['n_converged'] for v in results_by_level.values())
-total_trials = len(OFFSETS_DEG) * N_TRIALS
+total_trials = len(OFFSETS_DEG) * N_PHI
 print(f"\nOverall converged: {total_conv}/{total_trials}")
+
+if basin_radius is not None:
+    print(f"Direction basin radius: convergence first drops at {basin_radius} deg offset")
+else:
+    print(f"Direction basin radius: > {OFFSETS_DEG[-1]} deg (all trials converged)")
 
 # ── Save ──
 results = {
@@ -154,12 +181,14 @@ results = {
     'levels': results_by_level,
     'total_converged': total_conv,
     'total_trials': total_trials,
+    'basin_radius_deg': basin_radius,
     'config': {
-        'offsets_deg': OFFSETS_DEG, 'n_trials': N_TRIALS,
+        'offsets_deg': OFFSETS_DEG, 'n_phi': N_PHI,
         'maxiter': MAXITER, 'seed': SEED,
         'convergence_dps': CONVERGENCE_DPS,
         'n_observations': 500, 'noise_sigma': 0.05,
         'true_omega_dps': [round(np.rad2deg(w), 6) for w in ctx.true_omega0],
+        'true_mag_dps': round(np.rad2deg(true_mag), 6),
     },
 }
 
