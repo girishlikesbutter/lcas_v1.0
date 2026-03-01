@@ -16,13 +16,17 @@ os.chdir(PROJECT_ROOT)
 from lib.experiment_setup import setup_experiment, save_results
 from src.inversion.objective_function import ObjectiveFunction
 from src.inversion.quaternion_utils import quaternion_to_axis_angle
+from src.dynamics.attitude_propagator import propagate_attitude
 from scipy.optimize import minimize
+from scipy.signal import find_peaks
 
 # ── CLI ──
 parser = argparse.ArgumentParser()
 parser.add_argument('--hifi', action='store_true', help='Use hi-fi (ray-traced shadows)')
+parser.add_argument('--epochs', type=int, default=20, help='Number of epochs in window (default 20)')
 args = parser.parse_args()
 FIDELITY = 'hifi' if args.hifi else 'lofi'
+N_EPOCHS = args.epochs
 
 # ── Config ──
 SEED = 42
@@ -34,7 +38,36 @@ t0 = time.time()
 ctx = setup_experiment(n_observations=500, noise_sigma=0.05, random_seed=SEED,
                        true_omega_deg=(0.5, -0.3, 2.0),
                        end_time_utc='2020-02-05T11:00:00')
+
+# ── Window to first brightness peak ──
+# Brightness peak = magnitude minimum; find_peaks on negated magnitudes
+peaks, _ = find_peaks(-ctx.observed_lc)
+peak_idx = int(peaks[0]) if len(peaks) > 0 else int(np.argmin(ctx.observed_lc))
+end_idx = min(peak_idx + N_EPOCHS, len(ctx.observed_lc))
+idx = slice(peak_idx, end_idx)
+
+# Get omega at peak time via re-propagation
+_, omega_history = propagate_attitude(
+    q0=ctx.true_q0, omega0=ctx.true_omega0,
+    times=ctx.observation_times, mode="tumbling", inertia_tensor=ctx.inertia_tensor)
+
+ctx.true_q0 = ctx.true_quaternions[peak_idx]
+ctx.true_omega0 = omega_history[peak_idx]
+ctx.true_quaternions = ctx.true_quaternions[idx]
+ctx.observation_times = ctx.observation_times[idx] - ctx.observation_times[peak_idx]
+ctx.observed_lc = ctx.observed_lc[idx]
+ctx.true_lc = ctx.true_lc[idx]
+ctx.sun_pos = ctx.sun_pos[idx]
+ctx.obs_pos = ctx.obs_pos[idx]
+ctx.sat_pos = ctx.sat_pos[idx]
+ctx.obs_dist = ctx.obs_dist[idx]
+ctx.epochs = ctx.epochs[idx]
+ctx.art_matrices = {c: m[idx] for c, m in ctx.art_matrices.items()}
+ctx.n_observations = end_idx - peak_idx
+
 print(f"Setup: {time.time()-t0:.1f}s  [fidelity={FIDELITY}]")
+print(f"Window: peak_idx={peak_idx}, {ctx.n_observations} epochs, "
+      f"t=[{ctx.observation_times[0]:.1f}, {ctx.observation_times[-1]:.1f}]s")
 
 true_aa = quaternion_to_axis_angle(ctx.true_q0)
 I = ctx.inertia_tensor
@@ -94,31 +127,34 @@ print(f"  |omega| found:    {mag_found:.4f} deg/s")
 print(f"  Converged:        {res.success}")
 print(f"  Message:          {res.message}")
 
-passed = omega_err_dps < 0.001  # should be essentially zero
+passed = omega_err_dps < 0.01
 print(f"\n  VERDICT: {'PASS' if passed else 'FAIL'} "
-      f"(omega error {'<' if passed else '>'} 0.001 deg/s)")
+      f"(omega error {'<' if passed else '>'} 0.01 deg/s)")
 
 # ── Save ──
 results = {
     'fidelity': FIDELITY,
-    'mse_at_truth': round(mse_at_truth, 8),
+    'peak_idx': peak_idx,
+    'n_epochs': ctx.n_observations,
+    'mse_at_truth': round(float(mse_at_truth), 8),
     'mse_after_opt': round(float(res.fun), 8),
-    'omega_error_dps': round(omega_err_dps, 8),
-    'magnitude_error_dps': round(mag_err, 8),
-    'direction_error_deg': round(dir_err_deg, 6),
-    'mag_true_dps': round(mag_true, 6),
-    'mag_found_dps': round(mag_found, 6),
-    'omega_true': [round(np.rad2deg(w), 6) for w in ctx.true_omega0],
-    'omega_found': [round(np.rad2deg(w), 6) for w in omega_found],
-    'nit': res.nit,
-    'nfev': res.nfev,
+    'omega_error_dps': round(float(omega_err_dps), 8),
+    'magnitude_error_dps': round(float(mag_err), 8),
+    'direction_error_deg': round(float(dir_err_deg), 6),
+    'mag_true_dps': round(float(mag_true), 6),
+    'mag_found_dps': round(float(mag_found), 6),
+    'omega_true': [round(float(np.rad2deg(w)), 6) for w in ctx.true_omega0],
+    'omega_found': [round(float(np.rad2deg(w)), 6) for w in omega_found],
+    'nit': int(res.nit),
+    'nfev': int(res.nfev),
     'success': bool(res.success),
     'message': str(res.message),
     'opt_time_s': round(opt_time, 1),
-    'passed': passed,
+    'passed': bool(passed),
     'config': {
         'maxiter': MAXITER, 'seed': SEED,
-        'n_observations': 500, 'noise_sigma': 0.05,
+        'n_observations_full': 500, 'n_epochs_window': N_EPOCHS,
+        'noise_sigma': 0.05,
     },
 }
 

@@ -12,6 +12,7 @@ from pathlib import Path
 multiprocessing.set_start_method('fork')
 from multiprocessing import Pool
 from scipy.optimize import minimize
+from scipy.signal import find_peaks
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -21,12 +22,15 @@ os.chdir(PROJECT_ROOT)
 from lib.experiment_setup import setup_experiment, save_results
 from src.inversion.objective_function import ObjectiveFunction
 from src.inversion.quaternion_utils import quaternion_to_axis_angle
+from src.dynamics.attitude_propagator import propagate_attitude
 
 # ── CLI ──
 parser = argparse.ArgumentParser()
 parser.add_argument('--hifi', action='store_true', help='Use hi-fi (ray-traced shadows)')
+parser.add_argument('--epochs', type=int, default=20, help='Number of epochs in window (default 20)')
 args = parser.parse_args()
 FIDELITY = 'hifi' if args.hifi else 'lofi'
+N_EPOCHS = args.epochs
 
 # ── Config ──
 SEED = 42
@@ -44,7 +48,34 @@ t0 = time.time()
 ctx = setup_experiment(n_observations=500, noise_sigma=0.05, random_seed=SEED,
                        true_omega_deg=(0.5, -0.3, 2.0),
                        end_time_utc='2020-02-05T11:00:00')
+
+# ── Window to first brightness peak ──
+peaks, _ = find_peaks(-ctx.observed_lc)
+peak_idx = int(peaks[0]) if len(peaks) > 0 else int(np.argmin(ctx.observed_lc))
+end_idx = min(peak_idx + N_EPOCHS, len(ctx.observed_lc))
+idx = slice(peak_idx, end_idx)
+
+_, omega_history = propagate_attitude(
+    q0=ctx.true_q0, omega0=ctx.true_omega0,
+    times=ctx.observation_times, mode="tumbling", inertia_tensor=ctx.inertia_tensor)
+
+ctx.true_q0 = ctx.true_quaternions[peak_idx]
+ctx.true_omega0 = omega_history[peak_idx]
+ctx.true_quaternions = ctx.true_quaternions[idx]
+ctx.observation_times = ctx.observation_times[idx] - ctx.observation_times[peak_idx]
+ctx.observed_lc = ctx.observed_lc[idx]
+ctx.true_lc = ctx.true_lc[idx]
+ctx.sun_pos = ctx.sun_pos[idx]
+ctx.obs_pos = ctx.obs_pos[idx]
+ctx.sat_pos = ctx.sat_pos[idx]
+ctx.obs_dist = ctx.obs_dist[idx]
+ctx.epochs = ctx.epochs[idx]
+ctx.art_matrices = {c: m[idx] for c, m in ctx.art_matrices.items()}
+ctx.n_observations = end_idx - peak_idx
+
 print(f"Setup: {time.time()-t0:.1f}s  [fidelity={FIDELITY}]")
+print(f"Window: peak_idx={peak_idx}, {ctx.n_observations} epochs, "
+      f"t=[{ctx.observation_times[0]:.1f}, {ctx.observation_times[-1]:.1f}]s")
 
 true_aa = quaternion_to_axis_angle(ctx.true_q0)
 true_dir = ctx.true_omega0 / np.linalg.norm(ctx.true_omega0)  # unit vector
@@ -85,17 +116,17 @@ def run_trial(frac):
     mag_err_dps = np.rad2deg(s_err)
 
     return {
-        'fraction': frac,
-        's_init': round(np.rad2deg(s_init), 6),
-        's_found': round(np.rad2deg(s_found), 6),
-        's_true': round(np.rad2deg(s_true), 6),
-        's_error_frac': round(s_err_frac, 8),
-        'omega_error_dps': round(omega_err_dps, 6),
-        'magnitude_error_dps': round(mag_err_dps, 6),
+        'fraction': float(frac),
+        's_init': round(float(np.rad2deg(s_init)), 6),
+        's_found': round(float(np.rad2deg(s_found)), 6),
+        's_true': round(float(np.rad2deg(s_true)), 6),
+        's_error_frac': round(float(s_err_frac), 8),
+        'omega_error_dps': round(float(omega_err_dps), 6),
+        'magnitude_error_dps': round(float(mag_err_dps), 6),
         'mse': round(float(res.fun), 8),
-        'converged': s_err_frac < CONVERGENCE_FRAC,
-        'nit': res.nit,
-        'nfev': res.nfev,
+        'converged': bool(s_err_frac < CONVERGENCE_FRAC),
+        'nit': int(res.nit),
+        'nfev': int(res.nfev),
     }
 
 
@@ -140,6 +171,8 @@ else:
 # ── Save ──
 results = {
     'fidelity': FIDELITY,
+    'peak_idx': peak_idx,
+    'n_epochs': ctx.n_observations,
     'trials': all_results,
     'n_converged': n_conv,
     'basin_lo_frac': basin_lo,
@@ -147,9 +180,10 @@ results = {
     'config': {
         'fractions': ALL_FRACTIONS, 'maxiter': MAXITER, 'seed': SEED,
         'convergence_frac': CONVERGENCE_FRAC,
-        'n_observations': 500, 'noise_sigma': 0.05,
-        's_true_dps': round(s_true_dps, 6),
-        'true_omega_dps': [round(np.rad2deg(w), 6) for w in ctx.true_omega0],
+        'n_observations_full': 500, 'n_epochs_window': N_EPOCHS,
+        'noise_sigma': 0.05,
+        's_true_dps': round(float(s_true_dps), 6),
+        'true_omega_dps': [round(float(np.rad2deg(w)), 6) for w in ctx.true_omega0],
     },
 }
 
