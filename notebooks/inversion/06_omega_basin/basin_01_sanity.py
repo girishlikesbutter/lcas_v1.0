@@ -32,7 +32,9 @@ N_EPOCHS = args.epochs
 SEED = 42
 MAXITER = 100
 NOISE_SIGMA = 0.05
-MSE_THRESHOLD = 2 * NOISE_SIGMA**2  # 0.005 — converged if MSE < 2x noise floor
+MSE_THRESHOLD_HIFI = 2 * NOISE_SIGMA**2  # 0.005 — hi-fi: 2x noise floor
+MSE_THRESHOLD_LOFI = 0.01             # lo-fi: above model-mismatch floor (~0.008)
+MSE_THRESHOLD = MSE_THRESHOLD_HIFI if args.hifi else MSE_THRESHOLD_LOFI
 RESULTS_DIR = Path('data/results/inversion_diagnostics')
 
 # ── Setup ──
