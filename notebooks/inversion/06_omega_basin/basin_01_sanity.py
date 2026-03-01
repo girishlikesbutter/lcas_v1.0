@@ -31,6 +31,8 @@ N_EPOCHS = args.epochs
 # ── Config ──
 SEED = 42
 MAXITER = 100
+NOISE_SIGMA = 0.05
+MSE_THRESHOLD = 2 * NOISE_SIGMA**2  # 0.005 — converged if MSE < 2x noise floor
 RESULTS_DIR = Path('data/results/inversion_diagnostics')
 
 # ── Setup ──
@@ -127,9 +129,9 @@ print(f"  |omega| found:    {mag_found:.4f} deg/s")
 print(f"  Converged:        {res.success}")
 print(f"  Message:          {res.message}")
 
-passed = omega_err_dps < 0.01
+passed = float(res.fun) < MSE_THRESHOLD
 print(f"\n  VERDICT: {'PASS' if passed else 'FAIL'} "
-      f"(omega error {'<' if passed else '>'} 0.01 deg/s)")
+      f"(MSE {res.fun:.6f} {'<' if passed else '>='} {MSE_THRESHOLD})")
 
 # ── Save ──
 results = {
@@ -154,7 +156,7 @@ results = {
     'config': {
         'maxiter': MAXITER, 'seed': SEED,
         'n_observations_full': 500, 'n_epochs_window': N_EPOCHS,
-        'noise_sigma': 0.05,
+        'noise_sigma': NOISE_SIGMA, 'mse_threshold': MSE_THRESHOLD,
     },
 }
 

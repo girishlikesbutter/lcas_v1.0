@@ -40,7 +40,8 @@ MAXITER = 100
 FRACTIONS_DOWN = [0.99, 0.95, 0.9, 0.8, 0.7, 0.5, 0.3, 0.1, 0.0]
 FRACTIONS_UP   = [1.01, 1.05, 1.1, 1.2, 1.5, 2.0, 3.0]
 ALL_FRACTIONS = sorted(FRACTIONS_DOWN + FRACTIONS_UP)
-CONVERGENCE_FRAC = 0.005  # |s_found - s_true| / s_true < 0.5%
+NOISE_SIGMA = 0.05
+MSE_THRESHOLD = 2 * NOISE_SIGMA**2  # 0.005 — converged if MSE < 2x noise floor
 RESULTS_DIR = Path('data/results/inversion_diagnostics')
 
 # ── Setup ──
@@ -124,7 +125,7 @@ def run_trial(frac):
         'omega_error_dps': round(float(omega_err_dps), 6),
         'magnitude_error_dps': round(float(mag_err_dps), 6),
         'mse': round(float(res.fun), 8),
-        'converged': bool(s_err_frac < CONVERGENCE_FRAC),
+        'converged': bool(float(res.fun) < MSE_THRESHOLD),
         'nit': int(res.nit),
         'nfev': int(res.nfev),
     }
@@ -135,7 +136,7 @@ s_true_dps = np.rad2deg(s_true)
 print(f"\n1D magnitude basin (direction locked to truth, q fixed)")
 print(f"s_true = {s_true_dps:.4f} deg/s")
 print(f"Fractions: {ALL_FRACTIONS}")
-print(f"Convergence: |s_err|/s_true < {CONVERGENCE_FRAC}\n")
+print(f"Convergence: MSE < {MSE_THRESHOLD} (2x noise floor)\n")
 
 t1 = time.time()
 with Pool(N_WORKERS) as pool:
@@ -179,9 +180,9 @@ results = {
     'basin_hi_frac': basin_hi,
     'config': {
         'fractions': ALL_FRACTIONS, 'maxiter': MAXITER, 'seed': SEED,
-        'convergence_frac': CONVERGENCE_FRAC,
+        'mse_threshold': MSE_THRESHOLD,
         'n_observations_full': 500, 'n_epochs_window': N_EPOCHS,
-        'noise_sigma': 0.05,
+        'noise_sigma': NOISE_SIGMA,
         's_true_dps': round(float(s_true_dps), 6),
         'true_omega_dps': [round(float(np.rad2deg(w)), 6) for w in ctx.true_omega0],
     },

@@ -38,7 +38,8 @@ N_TRIALS = 4
 N_WORKERS = 8
 MAXITER = 100
 Q_OFFSETS_DEG = [0.5, 1, 2, 5, 10]
-CONVERGENCE_DPS = 0.01  # omega error threshold
+NOISE_SIGMA = 0.05
+MSE_THRESHOLD = 2 * NOISE_SIGMA**2  # 0.005 — converged if MSE < 2x noise floor
 RESULTS_DIR = Path('data/results/inversion_diagnostics')
 
 # ── Setup ──
@@ -133,7 +134,7 @@ def run_trial(trial_args):
         'direction_error_deg': round(float(dir_err_deg), 4),
         'magnitude_error_dps': round(float(mag_err), 6),
         'mse': round(float(res.fun), 8),
-        'converged': bool(omega_err_dps < CONVERGENCE_DPS),
+        'converged': bool(float(res.fun) < MSE_THRESHOLD),
         'nit': int(res.nit),
         'nfev': int(res.nfev),
     }
@@ -142,7 +143,7 @@ def run_trial(trial_args):
 # ── Run ──
 print(f"\nQ-degradation study (omega starts at truth)")
 print(f"Q offsets: {Q_OFFSETS_DEG} deg, {N_TRIALS} trials/offset")
-print(f"Convergence: omega error < {CONVERGENCE_DPS} deg/s\n")
+print(f"Convergence: MSE < {MSE_THRESHOLD} (2x noise floor)\n")
 
 all_args = [(d, i) for d in Q_OFFSETS_DEG for i in range(N_TRIALS)]
 t1 = time.time()
@@ -200,9 +201,9 @@ results = {
     'config': {
         'q_offsets_deg': Q_OFFSETS_DEG, 'n_trials': N_TRIALS,
         'maxiter': MAXITER, 'seed': SEED,
-        'convergence_dps': CONVERGENCE_DPS,
+        'mse_threshold': MSE_THRESHOLD,
         'n_observations_full': 500, 'n_epochs_window': N_EPOCHS,
-        'noise_sigma': 0.05,
+        'noise_sigma': NOISE_SIGMA,
         'true_omega_dps': [round(float(np.rad2deg(w)), 6) for w in ctx.true_omega0],
     },
 }

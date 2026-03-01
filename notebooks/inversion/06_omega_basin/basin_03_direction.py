@@ -38,7 +38,8 @@ N_PHI = 4           # phi values per offset: 0, 90, 180, 270 deg
 N_WORKERS = 8
 MAXITER = 100
 OFFSETS_DEG = [0.5, 1, 2, 5, 10, 20, 45, 90]
-CONVERGENCE_DPS = 0.01  # omega error threshold
+NOISE_SIGMA = 0.05
+MSE_THRESHOLD = 2 * NOISE_SIGMA**2  # 0.005 — converged if MSE < 2x noise floor
 RESULTS_DIR = Path('data/results/inversion_diagnostics')
 
 # ── Setup ──
@@ -148,7 +149,7 @@ def run_trial(trial_args):
         'omega_error_dps': round(float(omega_err_dps), 6),
         'direction_error_deg': round(float(dir_err_deg), 4),
         'mse': round(float(res.fun), 8),
-        'converged': bool(omega_err_dps < CONVERGENCE_DPS),
+        'converged': bool(float(res.fun) < MSE_THRESHOLD),
         'nit': int(res.nit),
         'nfev': int(res.nfev),
     }
@@ -158,7 +159,7 @@ def run_trial(trial_args):
 print(f"\n2D direction basin (|omega| locked to truth, q fixed)")
 print(f"|omega_true| = {np.rad2deg(true_mag):.4f} deg/s")
 print(f"Offsets: {OFFSETS_DEG} deg, {N_PHI} phi values each (0/90/180/270)")
-print(f"Convergence: omega error < {CONVERGENCE_DPS} deg/s\n")
+print(f"Convergence: MSE < {MSE_THRESHOLD} (2x noise floor)\n")
 
 all_args = [(d, p) for d in OFFSETS_DEG for p in range(N_PHI)]
 t1 = time.time()
@@ -217,9 +218,9 @@ results = {
     'config': {
         'offsets_deg': OFFSETS_DEG, 'n_phi': N_PHI,
         'maxiter': MAXITER, 'seed': SEED,
-        'convergence_dps': CONVERGENCE_DPS,
+        'mse_threshold': MSE_THRESHOLD,
         'n_observations_full': 500, 'n_epochs_window': N_EPOCHS,
-        'noise_sigma': 0.05,
+        'noise_sigma': NOISE_SIGMA,
         'true_omega_dps': [round(float(np.rad2deg(w)), 6) for w in ctx.true_omega0],
         'true_mag_dps': round(float(np.rad2deg(true_mag)), 6),
     },
