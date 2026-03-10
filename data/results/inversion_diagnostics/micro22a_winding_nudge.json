@@ -1,0 +1,122 @@
+{
+  "correct_step": 3,
+  "nudge_levels": [
+    0,
+    1,
+    3,
+    5
+  ],
+  "results": [
+    {
+      "nudge_deg": 0,
+      "direction": "baseline",
+      "trials": [
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.479385
+        }
+      ]
+    },
+    {
+      "nudge_deg": 1,
+      "n_directions": 5,
+      "p_rank1": 0.0,
+      "mean_rank": 3.0,
+      "trials": [
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.474742
+        },
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.551949
+        },
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.524811
+        },
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.413419
+        },
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.444416
+        }
+      ]
+    },
+    {
+      "nudge_deg": 3,
+      "n_directions": 5,
+      "p_rank1": 0.0,
+      "mean_rank": 3.6,
+      "trials": [
+        {
+          "correct_rank": 5,
+          "winner": 1,
+          "mse_correct": 2.562973
+        },
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.495287
+        },
+        {
+          "correct_rank": 4,
+          "winner": 1,
+          "mse_correct": 2.500173
+        },
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.264154
+        },
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.329414
+        }
+      ]
+    },
+    {
+      "nudge_deg": 5,
+      "n_directions": 5,
+      "p_rank1": 0.2,
+      "mean_rank": 3.0,
+      "trials": [
+        {
+          "correct_rank": 3,
+          "winner": 2,
+          "mse_correct": 2.448467
+        },
+        {
+          "correct_rank": 3,
+          "winner": 1,
+          "mse_correct": 2.226161
+        },
+        {
+          "correct_rank": 5,
+          "winner": 1,
+          "mse_correct": 2.921105
+        },
+        {
+          "correct_rank": 1,
+          "winner": 3,
+          "mse_correct": 2.275009
+        },
+        {
+          "correct_rank": 3,
+          "winner": 0,
+          "mse_correct": 2.279861
+        }
+      ]
+    }
+  ],
+  "runtime_s": 240.6
+}
