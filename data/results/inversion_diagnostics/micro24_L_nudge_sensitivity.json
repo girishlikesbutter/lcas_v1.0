@@ -1,0 +1,62 @@
+{
+  "nudge_degs": [
+    0.5,
+    1.0,
+    2.0,
+    3.0,
+    5.0,
+    7.0,
+    10.0
+  ],
+  "n_trials": 30,
+  "true_pair": {
+    "k": 3,
+    "j": 3
+  },
+  "part_A": "q_mid nudge is trivially invariant \u2014 R(q) cancels in DL",
+  "part_B_results": {
+    "0.5": {
+      "p_correct": 1.0,
+      "avg_rank": 1.0,
+      "avg_gap": 112.3188,
+      "avg_true_Lerr": 0.5292
+    },
+    "1.0": {
+      "p_correct": 1.0,
+      "avg_rank": 1.0,
+      "avg_gap": 111.3339,
+      "avg_true_Lerr": 1.2124
+    },
+    "2.0": {
+      "p_correct": 1.0,
+      "avg_rank": 1.0,
+      "avg_gap": 109.5892,
+      "avg_true_Lerr": 2.3906
+    },
+    "3.0": {
+      "p_correct": 1.0,
+      "avg_rank": 1.0,
+      "avg_gap": 107.5844,
+      "avg_true_Lerr": 3.5079
+    },
+    "5.0": {
+      "p_correct": 1.0,
+      "avg_rank": 1.0,
+      "avg_gap": 104.342,
+      "avg_true_Lerr": 5.6684
+    },
+    "7.0": {
+      "p_correct": 1.0,
+      "avg_rank": 1.0,
+      "avg_gap": 101.481,
+      "avg_true_Lerr": 7.3078
+    },
+    "10.0": {
+      "p_correct": 1.0,
+      "avg_rank": 1.0,
+      "avg_gap": 95.2365,
+      "avg_true_Lerr": 11.9425
+    }
+  },
+  "runtime_s": 89.6
+}
