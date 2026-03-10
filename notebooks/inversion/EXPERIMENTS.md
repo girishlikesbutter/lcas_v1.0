@@ -6,15 +6,15 @@
 
 ## 1. Resume Point
 
-- **ACTIVE THREAD:** Series 07b — L-conservation winding filter (2026-03-10)
-- **LAST COMPLETED:** micro25 — L-conservation validated as winding filter. **Works perfectly with oracle attitudes AND with up to 10 deg endpoint error.** The blocking problem is staircase coverage, not L-consistency.
-- **COMPLETED TODAY (2026-03-10):**
-  - micro23 (oracle L-test): **L-conservation identifies true pair rank 1/64, gap = 113 kg*m^2/s (9 orders of magnitude)**
-  - micro24 (nudge sensitivity): **100% correct at all nudge levels 0.5-10 deg.** Shared-node nudge is mathematically invariant (R cancels). Endpoint nudge degrades gap linearly but remains robust.
-  - micro25 (3-leg test): True triple ranks 1/512 with 4 peaks. 2 legs sufficient for this test case.
-- **RUNNING:** micro15 (α=0.1, 101 pairs), micro15b_alpha10 (α=10), micro16c (trough-constrained bridge)
-- **BLOCKING:** Leg 1 staircase misses true winding (jumps from 0.25 to 3.28 dps, skipping 2.08 dps). Need denser staircase or bidirectional search.
-- **OPEN QUESTION:** How to fix the staircase so it reliably includes the true winding on all legs?
+- **ACTIVE THREAD:** Integration — band-sweep enumeration + L-conservation pipeline (2026-03-11)
+- **LAST COMPLETED:** Three parallel investigation branches (2026-03-11):
+  - **Series 07c (winding enumeration):** micro19 mapped ALL winding valleys on both legs — true ω exists everywhere, staircase gap was a search failure. micro20 demonstrated multi-start fix (10 random starts per 0.5 deg/s band recovers all families).
+  - **Series 07a (multi-epoch scoring):** micro21/22a — **DEAD END.** All staircase ωs have 13-25° direction error; multi-epoch brightness can't discriminate. Not a fidelity problem — rotation axis is wrong.
+  - **Series 07b (L-conservation):** micro23/24/25 — **STRONG POSITIVE.** L-conservation identifies true winding pair rank 1/64, gap = 9 orders of magnitude. Robust to 10° endpoint error (100% correct, 210 trials). Shared-node error is mathematically irrelevant (R cancels).
+- **RUNNING:** micro15 (α=0.1, 101 pairs), micro15b_alpha10 (α=10), micro16c (trough-constrained bridge) — these are stale/superseded by findings above.
+- **BLOCKING:** No hard blockers. Both pieces (enumeration + filtering) are validated independently with oracle data.
+- **NEXT STEP:** Integration experiment — combine band-sweep winding enumeration (micro20) with L-conservation filter (micro23) in a single pipeline. Test with: (a) oracle attitudes, (b) nudged attitudes, (c) real iso-brightness candidates from micro10.
+- **OPEN QUESTION:** Does the integrated pipeline work end-to-end with non-oracle attitude candidates (~1-2° from truth)?
 
 ---
 
@@ -337,6 +337,30 @@ See `07_L_conservation/FINDINGS.md` for detailed analysis and plots.
 
 ---
 
+### Series 07c — Winding Enumeration Diagnostics (2026-03-11)
+
+Branch: `exp/L-conservation-winding-filter`. Diagnoses WHY the staircase misses winding solutions and demonstrates a robust fix. This was the critical blocker: both L-conservation (07b) and multi-epoch scoring (07a) depend on having the correct ω in the candidate set.
+
+```
+micro19 ─── Dense |ω| magnitude sweep (both legs)
+└── micro20 ─── Multi-start band search (leg 1 fix)
+```
+
+| Script | Question | Key Result | Status |
+|--------|----------|------------|--------|
+| `micro19_winding_landscape.py` | How many valid ω solutions exist at each magnitude? | Leg 0: 10 valleys (well separated). Leg 1: 6 valleys (wider, merged). **True ω valley exists on both legs** — leg 1 has arrival_err=0.00019 at \|ω\|=2.10 dps. The staircase gap is a search failure. | DONE |
+| `micro20_multistart_staircase.py` | Can multi-start random directions recover missed windings? | **Yes — all 12 magnitude bands (0-6 dps) contain valid solutions on leg 1.** The original staircase missed 5 entire families (at 0.7, 1.2, 1.9, 2.4, 2.7 dps). Multi-start with 10 random directions per 0.5 dps band finds them all. | DONE |
+
+**Root cause of staircase failure:** The heuristic `w_prev + (2π/dt) * rot_axis` assumes the rotation axis is constant across winding numbers. Under Euler dynamics with triaxial inertia, the axis shifts with |ω|. On leg 1 (longer dt=721s), this causes the initial guess to land in a distant basin, skipping 5 consecutive families.
+
+**Fix demonstrated:** Replace the sequential staircase with a magnitude-band sweep: divide [0, M_max] into 0.5 deg/s bands, run 10 random-start L-BFGS-B bridge solves per band. Cost: ~240 bridge solves, ~10 min on 8 cores. Embarrassingly parallel.
+
+> ⚡ **KEY FINDING (2026-03-11):** The staircase gap on leg 1 is a search failure, not missing physics. Solutions exist at every winding number on both legs. Combined with Series 07b (L-conservation), this means the complete pipeline — enumerate windings per leg via band-sweep, then select correct pair via L-consistency — is now validated in principle.
+
+See `07_winding_enumeration/FINDINGS.md` for valley tables, band results, and landscape interpretation.
+
+---
+
 ## 3. Superseded Work
 
 ### Global Optimisers on 6D Joint Space (Series 01)
@@ -362,13 +386,18 @@ See `07_L_conservation/FINDINGS.md` for detailed analysis and plots.
 ### Lo-fi Intermediate Brightness Scoring (Series 05, micro-13)
 - **Tried:** Score graph paths by lo-fi brightness at intermediate epochs between peaks.
 - **Why abandoned:** Lo-fi scores are nearly uniform across all feasible paths — no discrimination. Truth path ranked ~10th percentile.
-- **Status:** Hi-fi rescoring (micro-14) also failed to clearly discriminate (truth rank ~13k/121k). **This remains the key open problem.**
+- **Status:** Hi-fi rescoring (micro-14) also failed to clearly discriminate (truth rank ~13k/121k). Superseded by L-conservation filter (Series 07b).
 
 ### Multi-Epoch LC Shape Scoring (Series 07a, micro21+22a)
 - **Tried:** Score micro17 staircase windings by lo-fi MSE at all ~78 intermediate epochs between peaks. Also tested with lo-fi reference (no shadow mismatch) and subsampling.
 - **Why abandoned:** All staircase omegas have 13-25° direction error — the bridge only constrains endpoints, not the rotation axis. Every winding's intermediate trajectory is wrong, so multi-epoch scoring can't identify the correct one. Correct step ranks #3/8 at best.
 - **Key insight:** The problem is omega *direction*, not winding *number*. Scoring is sound but requires correct omega direction first.
 - **Replaced by:** L-conservation winding filter (Series 07b), which avoids intermediate brightness entirely.
+
+### Sequential Staircase Heuristic (Series 07, micro17/micro18)
+- **Tried:** Find winding solutions by sequentially stepping: after finding ω_k, set lower bound = |ω_k|, initial guess = ω_k + (2π/dt) × rotation_axis.
+- **Why abandoned:** The heuristic assumes a constant rotation axis across windings. Under Euler dynamics with triaxial inertia, the axis shifts with |ω|. On leg 1 (dt=721s), the staircase jumped from 0.25 to 3.28 dps, missing 5 of 12 winding families including the true ω at ~2.08 dps.
+- **Replaced by:** Magnitude-band sweep with multi-start random directions (Series 07c, micro20). 10 random starts per 0.5 dps band finds all families reliably.
 
 ### Residual-Based Candidate Ranking (Series 02, `exp_residual_vs_error`)
 - **Tried:** Rank candidates by full-LC residual, hope truth is near the top.
@@ -428,6 +457,17 @@ See `07_L_conservation/FINDINGS.md` for detailed analysis and plots.
 - **Tried:** Injected true ω into both legs' staircase candidates, tested L = R(q)·(I·ω) conservation at shared peak nodes
 - **Found:** L-conservation uniquely identifies correct winding pair: rank 1/64, gap = 113 kg·m²/s (9 orders of magnitude). Shared-node attitude error is mathematically irrelevant (R cancels). Endpoint error up to 10 deg → still 100% correct. Three legs provide redundancy but 2 are sufficient.
 - **Decision:** L-conservation is the winding selector. The remaining problem is staircase coverage: leg 1 misses the true winding (jumps from 0.25 to 3.28 dps). Fix: denser staircase stepping, adaptive barrier gaps, or bidirectional search.
+
+### 2026-03-11: Three parallel branches complete — pipeline path clear (micro19-25)
+- **Tried:** Three parallel investigation branches:
+  - *Winding enumeration (07c):* Dense |ω| sweep 0-6 dps at 0.02 dps resolution + multi-start band search on leg 1
+  - *Multi-epoch LC scoring (07a):* Score 8 staircase windings by lo-fi MSE at all intermediate epochs + nudge robustness
+  - *L-conservation (07b):* Oracle L-consistency + endpoint nudge sensitivity + three-leg extension
+- **Found:**
+  - *07c:* Staircase gap on leg 1 is a **search failure** — solutions exist at ~2.08 dps for both legs. Multi-start (10 random dirs per 0.5 dps band) recovers all missing families. Original staircase missed 5 of 12 bands.
+  - *07a:* Multi-epoch scoring is a **dead end**. All staircase ωs have 13-25° direction error (bridge constrains endpoints only, not rotation axis). Correct winding ranks #3/8 at best. Not a fidelity issue — the axis is wrong.
+  - *07b:* L-conservation is **the winding discriminator**. 9 orders of magnitude gap with oracle data. 100% correct at 10° endpoint error. Shared-node error is mathematically irrelevant (R cancels). T (energy) adds nothing beyond L.
+- **Decision:** The pipeline architecture is: (1) iso-brightness candidates at peaks → (2) band-sweep winding enumeration per leg → (3) L-conservation filter to select correct winding pair → (4) local L-BFGS-B joint refinement. Next: build and test this as an integrated pipeline with non-oracle candidates.
 
 ### 2026-03-01: Omega basin characterisation
 - **Tried:** Systematic omega basin study (magnitude, direction, q-degradation) at lo-fi and hi-fi fidelity
