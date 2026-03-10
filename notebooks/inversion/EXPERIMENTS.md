@@ -7,15 +7,19 @@
 ## 1. Resume Point
 
 - **ACTIVE THREAD:** Integration — band-sweep enumeration + L-conservation pipeline (2026-03-11)
-- **LAST COMPLETED:** Three parallel investigation branches (2026-03-11):
-  - **Series 07c (winding enumeration):** micro19 mapped ALL winding valleys on both legs — true ω exists everywhere, staircase gap was a search failure. micro20 demonstrated multi-start fix (10 random starts per 0.5 deg/s band recovers all families).
-  - **Series 07a (multi-epoch scoring):** micro21/22a — **DEAD END.** All staircase ωs have 13-25° direction error; multi-epoch brightness can't discriminate. Not a fidelity problem — rotation axis is wrong.
-  - **Series 07b (L-conservation):** micro23/24/25 — **STRONG POSITIVE.** L-conservation identifies true winding pair rank 1/64, gap = 9 orders of magnitude. Robust to 10° endpoint error (100% correct, 210 trials). Shared-node error is mathematically irrelevant (R cancels).
-- **RUNNING:** micro15 (α=0.1, 101 pairs), micro15b_alpha10 (α=10), micro16c (trough-constrained bridge) — these are stale/superseded by findings above.
-- **BLOCKING:** No hard blockers. Both pieces (enumeration + filtering) are validated independently with oracle data.
-- **NEXT STEP:** Integration experiment — combine band-sweep winding enumeration (micro20) with L-conservation filter (micro23) in a single pipeline. Test with: (a) oracle attitudes, (b) nudged attitudes, (c) real iso-brightness candidates from micro10.
-- **SCALING CONCERN:** With N q candidates per peak, the ω enumeration step is O(N²) per leg (all q pairs). Full band-sweep (120 bridge solves/pair) is infeasible beyond ~100 candidates/peak. For step (c) with ~2K candidates/peak, a **two-phase approach** is needed: (1) cheap single min-ω bridge solve per pair to screen/rank, (2) full band-sweep enumeration only on surviving pairs. The screening criterion is TBD — needs its own micro-experiment.
-- **OPEN QUESTION:** Does the integrated pipeline work end-to-end with non-oracle attitude candidates (~1-2° from truth)? And can a cheap single-bridge screen reliably identify the correct q pairs from thousands of candidates?
+- **LAST COMPLETED:** Series 08 integration round (3 parallel workers, 2026-03-11). Key findings:
+  - **micro26 (oracle pipeline):** magnitude-only dedup defeats L-conservation (true pair rank 423/1088). Direction-aware dedup needed.
+  - **micro27 (bridge screening):** bridge solves are ~11s each at dt~500s (not 160ms from bench at dt=50s). Single-bridge screening infeasible at scale. Cheap alternatives (geodesic, PA-mode) don't discriminate.
+  - **micro28 (nudged pipeline):** PA-mode bridges are fundamentally wrong (different winding topology). Only tumbling-mode works. Oracle sweep + warm-start refinement approach identified but not yet completed.
+  - **micro26b (direction-aware dedup):** written but interrupted before producing results.
+- **RUNNING:** Nothing. All stale processes from prior session are dead.
+- **BLOCKING:** Need direction-aware dedup to validate L-conservation in the integrated pipeline (micro26b was the fix but didn't complete).
+- **NEXT STEP:** Re-run micro26b (direction-aware dedup) or redesign the pipeline with direction-aware candidate management. If L-conservation works with proper dedup, proceed to nudged attitudes (micro28 v4 approach).
+- **SCALING CONCERN:** Bridge solves are **~11s each** at dt~500s (70x the 160ms bench estimate). Full band-sweep (130 solves/leg) takes ~17 min/leg with Pool(8). This is feasible for oracle testing but will be a hard constraint for scaling to many candidate pairs. The two-phase screening idea needs a cheap metric that doesn't require solving the bridge (geodesic and PA-mode both failed in micro27).
+- **OPEN QUESTIONS:**
+  1. Does direction-aware dedup fix the L-conservation failure in the integrated pipeline?
+  2. Can bridge solve cost be reduced (relaxed tolerances, bounded search, warm starts)?
+  3. What cheap screening metric can replace single-bridge solves for pruning N² pairs?
 
 ---
 
@@ -362,6 +366,34 @@ See `07_winding_enumeration/FINDINGS.md` for valley tables, band results, and la
 
 ---
 
+### Series 08 — Integration Pipeline (2026-03-11)
+
+First attempt to wire band-sweep enumeration (micro20) + L-conservation filter (micro23) into an end-to-end pipeline. Three parallel workers tackled oracle pipeline, bridge screening, and nudged attitudes.
+
+```
+micro26 ─── Oracle pipeline (band-sweep + L-conservation)
+├── micro26b ─── Direction-aware dedup fix (incomplete)
+├── micro27 ─── Single-bridge screening feasibility
+└── micro28 ─── Nudged attitudes (PA-mode failed, v4 incomplete)
+```
+
+| Script | Question | Key Result | Status |
+|--------|----------|------------|--------|
+| `micro26_integration_oracle.py` | Does band-sweep + L-conservation recover truth with oracle attitudes? | **NO — rank 423/1088.** Magnitude-only dedup keeps one arbitrary direction per \|ω\| band; the kept direction at true \|ω\| was wrong, so L doesn't match between legs. L-conservation physics is sound; dedup strategy defeats it. | DONE |
+| `micro26b_direction_aware_dedup.py` | Does direction-aware dedup (angular distance < 5°) fix the L-conservation failure? | Written but interrupted before producing results. | INCOMPLETE |
+| `micro27_bridge_screening.py` | Can a single cheap bridge solve per pair screen N² pairs? | **Infeasible.** Bridge solves are ~11s each at dt~500s (70× the 160ms bench at dt=50s). Cheap alternatives tested: geodesic metric (instant but doesn't discriminate), PA-mode (5ms but wrong minima), bounded L-BFGS-B (275ms but doesn't converge). No viable cheap screening metric found. | DONE |
+| `micro28_integration_nudged.py` | Does pipeline work with 1-5° attitude perturbations? | PA-mode bridge is fundamentally wrong (different winding topology, 0/30 correct). Oracle sweep + warm-start refinement (v4) is the right approach but was not completed (~35 min runtime). | INCOMPLETE |
+
+**Key findings:**
+1. **Magnitude-only dedup is incompatible with L-conservation.** At each |ω|, multiple directionally-distinct bridge solutions exist. Keeping one arbitrary direction per magnitude band discards the correct direction. Must keep all directionally-distinct solutions.
+2. **Bridge solve cost scales with dt.** At dt=555s (leg 0), each solve takes ~11s (148 L-BFGS-B evals × 74ms per `propagate_attitude` call). At dt=50s (bench), it's ~160ms. Cost is dominated by ODE integration step count, which scales with time span.
+3. **PA-mode cannot substitute for tumbling-mode.** Principal-axis bridge solutions have different omega directions and winding topology than Euler dynamics solutions. L-conservation requires tumbling-mode solutions.
+4. **Runtime:** Full band-sweep (130 solves/leg) takes ~17 min/leg with Pool(8). Feasible for oracle testing but a hard constraint for scaling.
+
+See `08_integration/FINDINGS.md` for detailed micro26 analysis.
+
+---
+
 ## 3. Superseded Work
 
 ### Global Optimisers on 6D Joint Space (Series 01)
@@ -404,6 +436,21 @@ See `07_winding_enumeration/FINDINGS.md` for valley tables, band results, and la
 - **Tried:** Rank candidates by full-LC residual, hope truth is near the top.
 - **Why abandoned:** Weak correlation between residual and attitude error. Truth not reliably in top 200 across random test cases.
 - **Replaced by:** Peak-anchored constraints (brightness + derivative at peaks).
+
+### Magnitude-Only Dedup for Bridge Solutions (Series 08, micro26)
+- **Tried:** After band-sweep bridge enumeration, dedup candidates by |ω| within 0.05 deg/s — keep one solution per magnitude.
+- **Why abandoned:** At each |ω|, multiple directionally-distinct bridge solutions exist. Keeping one arbitrary direction discards the correct omega direction for the true winding. L-conservation then fails (rank 423/1088).
+- **Replaced by:** Direction-aware dedup (micro26b): two omegas are duplicates only if |ω| within 0.05 deg/s AND angular distance < 5°.
+
+### Single-Bridge Screening for Pair Pruning (Series 08, micro27)
+- **Tried:** One cheap bridge solve per (q_A, q_B) pair to screen N² pairs before expensive full band-sweep. Tested: full L-BFGS-B (11s/solve), PA-mode (5ms but wrong minima), geodesic metric (instant but no discrimination), geodesic+Euler propagation (2ms but no discrimination).
+- **Why abandoned:** No cheap metric discriminates true pairs. Full bridge solves at dt~500s are ~11s each (70× the 160ms bench at dt=50s). 2500 pairs would take ~57 min. Cheap alternatives find wrong solutions or don't discriminate.
+- **Status:** The two-phase screening concept needs a fundamentally different cheap metric, not a cheaper bridge solve.
+
+### PA-Mode Bridge Substitution (Series 08, micro28)
+- **Tried:** Replace tumbling-mode Euler dynamics in bridge solves with principal-axis closed-form propagation (763× faster per call).
+- **Why abandoned:** PA-mode solutions have different omega directions and winding topology than Euler dynamics. L-conservation requires tumbling-mode solutions. 0/30 trials correct with PA-mode.
+- **Status:** No shortcut for Euler dynamics — tumbling-mode bridge is required.
 
 ---
 
@@ -469,6 +516,14 @@ See `07_winding_enumeration/FINDINGS.md` for valley tables, band results, and la
   - *07a:* Multi-epoch scoring is a **dead end**. All staircase ωs have 13-25° direction error (bridge constrains endpoints only, not rotation axis). Correct winding ranks #3/8 at best. Not a fidelity issue — the axis is wrong.
   - *07b:* L-conservation is **the winding discriminator**. 9 orders of magnitude gap with oracle data. 100% correct at 10° endpoint error. Shared-node error is mathematically irrelevant (R cancels). T (energy) adds nothing beyond L.
 - **Decision:** The pipeline architecture is: (1) iso-brightness candidates at peaks → (2) band-sweep winding enumeration per leg → (3) L-conservation filter to select correct winding pair → (4) local L-BFGS-B joint refinement. Next: build and test this as an integrated pipeline with non-oracle candidates.
+
+### 2026-03-11: Integration round reveals dedup bug and bridge cost (micro26-28)
+- **Tried:** Three parallel workers: (1) oracle pipeline with band-sweep + L-conservation, (2) single-bridge screening for pair pruning, (3) nudged attitudes with PA-mode shortcut.
+- **Found:**
+  - *micro26:* Magnitude-only dedup defeats L-conservation — keeps wrong direction at true |ω|, rank 423/1088. L-conservation physics still valid; dedup strategy is the bug.
+  - *micro27:* Bridge solves at dt~500s cost ~11s each (not 160ms). No cheap screening metric found (geodesic, PA-mode both fail).
+  - *micro28:* PA-mode bridges are fundamentally wrong (different winding topology, 0/30 correct). Tumbling-mode is required.
+- **Decision:** Fix dedup to be direction-aware (micro26b). Accept bridge solve cost (~17 min/leg). Abandon PA-mode shortcuts and single-bridge screening. Focus on validating the pipeline with proper dedup before scaling.
 
 ### 2026-03-01: Omega basin characterisation
 - **Tried:** Systematic omega basin study (magnitude, direction, q-degradation) at lo-fi and hi-fi fidelity
