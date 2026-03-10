@@ -1,0 +1,29 @@
+{
+  "peaks_4": [
+    15,
+    183,
+    260,
+    360
+  ],
+  "dts": [
+    1212.0,
+    555.5,
+    721.4
+  ],
+  "true_triple": [
+    3,
+    3,
+    3
+  ],
+  "true_score": 0.0,
+  "true_rank_3leg": 1,
+  "true_rank_2leg": 1,
+  "gap_3leg": 113.165734,
+  "best_triple": [
+    3,
+    3,
+    3
+  ],
+  "best_score": 0.0,
+  "runtime_s": 90.0
+}
