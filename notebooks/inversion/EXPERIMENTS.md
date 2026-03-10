@@ -302,6 +302,23 @@ Roberto's Feb 27 direction: address the scoring discrimination failure by changi
 
 ---
 
+### Series 07a — Multi-Epoch LC Shape Scoring (2026-03-10)
+
+Branch: `exp/multi-epoch-winding-score`. Tests whether evaluating brightness at MULTIPLE intermediate epochs between peaks can discriminate the correct winding from micro17's staircase family.
+
+| Script | Question | Key Result | Status |
+|--------|----------|------------|--------|
+| `micro21_multi_epoch_winding_score.py` | Does multi-epoch lo-fi MSE identify the correct winding? | **NO — correct step ranks #3/8 (vs observed) and #5/8 (vs lo-fi ref).** All staircase omegas have 13-25° direction error. Removing shadow mismatch makes ranking worse, not better. Subsampling never recovers correct winding. | DONE |
+| `micro22a_winding_score_nudged_qA.py` | Is ranking stable under q_A perturbation? | **Stable but wrong.** Rank stays at 3/8 for 0-3° nudge, slightly degrades at 5°. Attitude precision is not the bottleneck. | DONE |
+
+**Root cause:** The staircase explores ω along one fixed rotation axis (rotvec(q_A⁻¹·q_B)/dt) which is 13-25° off from the true ω direction at peak A. All 8 winding solutions have the wrong direction, so all intermediate trajectories are wrong. Multi-epoch scoring IS discriminating between windings (MSE range 2.0-4.0) but NONE match the observed LC because the rotation axis is wrong.
+
+**Conclusion:** Multi-epoch scoring would work if the omega direction were correct. The staircase implementation is the bottleneck, not the scoring concept. This motivates the L-conservation approach (Series 07b) which avoids intermediate brightness evaluation entirely.
+
+See `07_multi_epoch_scoring/FINDINGS.md` for detailed analysis, ranking tables, and LC overlay plot.
+
+---
+
 ### Series 07b — L-Conservation Winding Filter (2026-03-10)
 
 Branch: `exp/L-conservation-winding-filter`. Tests whether angular momentum conservation L = R(q)·(I·ω) can discriminate the correct winding pair at shared peak nodes. micro18 failed because leg 1's staircase missed the true ω — this series injects truth to test the principle.
@@ -346,6 +363,12 @@ See `07_L_conservation/FINDINGS.md` for detailed analysis and plots.
 - **Tried:** Score graph paths by lo-fi brightness at intermediate epochs between peaks.
 - **Why abandoned:** Lo-fi scores are nearly uniform across all feasible paths — no discrimination. Truth path ranked ~10th percentile.
 - **Status:** Hi-fi rescoring (micro-14) also failed to clearly discriminate (truth rank ~13k/121k). **This remains the key open problem.**
+
+### Multi-Epoch LC Shape Scoring (Series 07a, micro21+22a)
+- **Tried:** Score micro17 staircase windings by lo-fi MSE at all ~78 intermediate epochs between peaks. Also tested with lo-fi reference (no shadow mismatch) and subsampling.
+- **Why abandoned:** All staircase omegas have 13-25° direction error — the bridge only constrains endpoints, not the rotation axis. Every winding's intermediate trajectory is wrong, so multi-epoch scoring can't identify the correct one. Correct step ranks #3/8 at best.
+- **Key insight:** The problem is omega *direction*, not winding *number*. Scoring is sound but requires correct omega direction first.
+- **Replaced by:** L-conservation winding filter (Series 07b), which avoids intermediate brightness entirely.
 
 ### Residual-Based Candidate Ranking (Series 02, `exp_residual_vs_error`)
 - **Tried:** Rank candidates by full-LC residual, hope truth is near the top.
