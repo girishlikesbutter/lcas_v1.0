@@ -14,7 +14,8 @@
 - **RUNNING:** micro15 (α=0.1, 101 pairs), micro15b_alpha10 (α=10), micro16c (trough-constrained bridge) — these are stale/superseded by findings above.
 - **BLOCKING:** No hard blockers. Both pieces (enumeration + filtering) are validated independently with oracle data.
 - **NEXT STEP:** Integration experiment — combine band-sweep winding enumeration (micro20) with L-conservation filter (micro23) in a single pipeline. Test with: (a) oracle attitudes, (b) nudged attitudes, (c) real iso-brightness candidates from micro10.
-- **OPEN QUESTION:** Does the integrated pipeline work end-to-end with non-oracle attitude candidates (~1-2° from truth)?
+- **SCALING CONCERN:** With N q candidates per peak, the ω enumeration step is O(N²) per leg (all q pairs). Full band-sweep (120 bridge solves/pair) is infeasible beyond ~100 candidates/peak. For step (c) with ~2K candidates/peak, a **two-phase approach** is needed: (1) cheap single min-ω bridge solve per pair to screen/rank, (2) full band-sweep enumeration only on surviving pairs. The screening criterion is TBD — needs its own micro-experiment.
+- **OPEN QUESTION:** Does the integrated pipeline work end-to-end with non-oracle attitude candidates (~1-2° from truth)? And can a cheap single-bridge screen reliably identify the correct q pairs from thousands of candidates?
 
 ---
 
