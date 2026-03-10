@@ -1,0 +1,291 @@
+{
+  "fidelity": "lofi",
+  "peak_idx": 1,
+  "n_epochs": 20,
+  "levels": {
+    "0.5": {
+      "n_converged": 4,
+      "median_omega_error_dps": 0.03255,
+      "median_direction_error_deg": 0.8562,
+      "median_mse": 0.00764035,
+      "trials": [
+        {
+          "q_offset_deg": 0.5,
+          "trial": 0,
+          "omega_error_dps": 0.032165,
+          "direction_error_deg": 0.8444,
+          "magnitude_error_dps": 0.009791,
+          "mse": 0.00799373,
+          "converged": true,
+          "nit": 10,
+          "nfev": 64
+        },
+        {
+          "q_offset_deg": 0.5,
+          "trial": 1,
+          "omega_error_dps": 0.036163,
+          "direction_error_deg": 0.8922,
+          "magnitude_error_dps": 0.016216,
+          "mse": 0.00721348,
+          "converged": true,
+          "nit": 11,
+          "nfev": 60
+        },
+        {
+          "q_offset_deg": 0.5,
+          "trial": 2,
+          "omega_error_dps": 0.032936,
+          "direction_error_deg": 0.868,
+          "magnitude_error_dps": 0.009631,
+          "mse": 0.0075782,
+          "converged": true,
+          "nit": 12,
+          "nfev": 72
+        },
+        {
+          "q_offset_deg": 0.5,
+          "trial": 3,
+          "omega_error_dps": 0.030765,
+          "direction_error_deg": 0.7249,
+          "magnitude_error_dps": 0.016026,
+          "mse": 0.0077025,
+          "converged": true,
+          "nit": 11,
+          "nfev": 60
+        }
+      ]
+    },
+    "1": {
+      "n_converged": 4,
+      "median_omega_error_dps": 0.030201,
+      "median_direction_error_deg": 0.7755,
+      "median_mse": 0.00740157,
+      "trials": [
+        {
+          "q_offset_deg": 1.0,
+          "trial": 0,
+          "omega_error_dps": 0.035794,
+          "direction_error_deg": 0.9211,
+          "magnitude_error_dps": 0.012877,
+          "mse": 0.00675029,
+          "converged": true,
+          "nit": 13,
+          "nfev": 72
+        },
+        {
+          "q_offset_deg": 1.0,
+          "trial": 1,
+          "omega_error_dps": 0.028543,
+          "direction_error_deg": 0.7839,
+          "magnitude_error_dps": 0.001635,
+          "mse": 0.00843083,
+          "converged": true,
+          "nit": 10,
+          "nfev": 64
+        },
+        {
+          "q_offset_deg": 1.0,
+          "trial": 2,
+          "omega_error_dps": 0.023717,
+          "direction_error_deg": 0.6071,
+          "magnitude_error_dps": 0.008777,
+          "mse": 0.00769429,
+          "converged": true,
+          "nit": 11,
+          "nfev": 64
+        },
+        {
+          "q_offset_deg": 1.0,
+          "trial": 3,
+          "omega_error_dps": 0.03186,
+          "direction_error_deg": 0.7671,
+          "magnitude_error_dps": 0.015572,
+          "mse": 0.00710885,
+          "converged": true,
+          "nit": 12,
+          "nfev": 68
+        }
+      ]
+    },
+    "2": {
+      "n_converged": 2,
+      "median_omega_error_dps": 0.036455,
+      "median_direction_error_deg": 0.8995,
+      "median_mse": 0.00956587,
+      "trials": [
+        {
+          "q_offset_deg": 2.0,
+          "trial": 0,
+          "omega_error_dps": 0.039694,
+          "direction_error_deg": 0.9562,
+          "magnitude_error_dps": 0.019431,
+          "mse": 0.00693597,
+          "converged": true,
+          "nit": 14,
+          "nfev": 76
+        },
+        {
+          "q_offset_deg": 2.0,
+          "trial": 1,
+          "omega_error_dps": 0.03974,
+          "direction_error_deg": 1.038,
+          "magnitude_error_dps": 0.012768,
+          "mse": 0.01062461,
+          "converged": false,
+          "nit": 13,
+          "nfev": 72
+        },
+        {
+          "q_offset_deg": 2.0,
+          "trial": 2,
+          "omega_error_dps": 0.023105,
+          "direction_error_deg": 0.6308,
+          "magnitude_error_dps": 0.002879,
+          "mse": 0.01001294,
+          "converged": false,
+          "nit": 10,
+          "nfev": 64
+        },
+        {
+          "q_offset_deg": 2.0,
+          "trial": 3,
+          "omega_error_dps": 0.033215,
+          "direction_error_deg": 0.8428,
+          "magnitude_error_dps": 0.012572,
+          "mse": 0.00911881,
+          "converged": true,
+          "nit": 14,
+          "nfev": 72
+        }
+      ]
+    },
+    "5": {
+      "n_converged": 0,
+      "median_omega_error_dps": 0.039392,
+      "median_direction_error_deg": 0.8844,
+      "median_mse": 0.01418317,
+      "trials": [
+        {
+          "q_offset_deg": 5.0,
+          "trial": 0,
+          "omega_error_dps": 0.425641,
+          "direction_error_deg": 11.2861,
+          "magnitude_error_dps": 0.162193,
+          "mse": 0.02202623,
+          "converged": false,
+          "nit": 14,
+          "nfev": 88
+        },
+        {
+          "q_offset_deg": 5.0,
+          "trial": 1,
+          "omega_error_dps": 0.032437,
+          "direction_error_deg": 0.2803,
+          "magnitude_error_dps": 0.030819,
+          "mse": 0.01045449,
+          "converged": false,
+          "nit": 15,
+          "nfev": 76
+        },
+        {
+          "q_offset_deg": 5.0,
+          "trial": 2,
+          "omega_error_dps": 0.046348,
+          "direction_error_deg": 1.0521,
+          "magnitude_error_dps": 0.025806,
+          "mse": 0.01553087,
+          "converged": false,
+          "nit": 18,
+          "nfev": 104
+        },
+        {
+          "q_offset_deg": 5.0,
+          "trial": 3,
+          "omega_error_dps": 0.032131,
+          "direction_error_deg": 0.7168,
+          "magnitude_error_dps": 0.018623,
+          "mse": 0.01283547,
+          "converged": false,
+          "nit": 13,
+          "nfev": 76
+        }
+      ]
+    },
+    "10": {
+      "n_converged": 0,
+      "median_omega_error_dps": 0.120063,
+      "median_direction_error_deg": 3.1268,
+      "median_mse": 0.02154883,
+      "trials": [
+        {
+          "q_offset_deg": 10.0,
+          "trial": 0,
+          "omega_error_dps": 0.063821,
+          "direction_error_deg": 1.6189,
+          "magnitude_error_dps": 0.023818,
+          "mse": 0.01995871,
+          "converged": false,
+          "nit": 15,
+          "nfev": 100
+        },
+        {
+          "q_offset_deg": 10.0,
+          "trial": 1,
+          "omega_error_dps": 0.131019,
+          "direction_error_deg": 3.2577,
+          "magnitude_error_dps": 0.059438,
+          "mse": 0.02816055,
+          "converged": false,
+          "nit": 17,
+          "nfev": 136
+        },
+        {
+          "q_offset_deg": 10.0,
+          "trial": 2,
+          "omega_error_dps": 0.237728,
+          "direction_error_deg": 5.8612,
+          "magnitude_error_dps": 0.116883,
+          "mse": 0.0221712,
+          "converged": false,
+          "nit": 16,
+          "nfev": 104
+        },
+        {
+          "q_offset_deg": 10.0,
+          "trial": 3,
+          "omega_error_dps": 0.109107,
+          "direction_error_deg": 2.9959,
+          "magnitude_error_dps": 0.003774,
+          "mse": 0.02092647,
+          "converged": false,
+          "nit": 15,
+          "nfev": 156
+        }
+      ]
+    }
+  },
+  "total_converged": 10,
+  "total_trials": 20,
+  "config": {
+    "q_offsets_deg": [
+      0.5,
+      1,
+      2,
+      5,
+      10
+    ],
+    "n_trials": 4,
+    "maxiter": 100,
+    "seed": 42,
+    "mse_threshold": 0.01,
+    "n_observations_full": 500,
+    "n_epochs_window": 20,
+    "noise_sigma": 0.05,
+    "true_omega_dps": [
+      0.429582,
+      -0.392722,
+      2.000841
+    ]
+  },
+  "total_time_s": 56.4
+}

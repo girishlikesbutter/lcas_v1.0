@@ -1,0 +1,48 @@
+{
+  "peaks": {
+    "p1": 183,
+    "p2": 260,
+    "dt_s": 555.5110222101212
+  },
+  "candidates": {
+    "peak1": {
+      "n_bright": 36,
+      "n_deriv": 2,
+      "n_final": 3
+    },
+    "peak2": {
+      "n_bright": 52,
+      "n_deriv": 5,
+      "n_final": 6
+    }
+  },
+  "true_pair": {
+    "error_deg": 1.1478100962561628,
+    "rank": 5,
+    "total_pairs": 18,
+    "bridge_omega_deg_s": [
+      -1.501527063816037,
+      -1.131337140542601,
+      1.233139313617922
+    ],
+    "true_omega_deg_s": [
+      0.5356588812491136,
+      0.23186801234170282,
+      1.999525175835978
+    ],
+    "omega_error_deg_s": 2.5682293809994894
+  },
+  "false_pairs": {
+    "min_deg": 0.00043260029237590474,
+    "median_deg": 6.296489368062073
+  },
+  "separation_deg": -1.147377495963787,
+  "config": {
+    "n_samples": 10000,
+    "bright_tol_pct": 3,
+    "deriv_mult": 10,
+    "max_cands": 20,
+    "n_starts": 3,
+    "maxiter": 15
+  }
+}

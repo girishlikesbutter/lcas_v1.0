@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, geometry, graphicx, algorithm, algpseudocode}
+\geometry{a4paper, margin=1in}
+
+\title{Trellis Graph Formulation for Resident Space Object Attitude Recovery}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+The inversion of a highly non-linear, continuous light curve to recover initial attitude ($q_0$) and angular velocity ($\omega_0$) is notoriously ill-posed. Standard Mixed-Integer Non-Linear Programming (MINLP) solvers struggle with the non-analytical nature of Euler rigid body dynamics and the combinatorial explosion of discrete attitude states. 
+
+Instead, we map the inversion as a Directed Acyclic Graph (DAG) using dynamic programming. We discretize the state space at highly constrained observation points (light curve peaks) and evaluate the continuous, non-linear forward model strictly as transition costs (edges) between these discrete nodes.
+
+\section{Problem Formulation}
+
+\subsection{State Space Discretization (Nodes)}
+Let the measured light curve $L_{meas}(t)$ exhibit a set of distinct brightness peaks at times $\{t_1, t_2, \dots, t_N\}$. 
+
+At each peak time $t_k$, we generate $M$ attitude candidates that satisfy the instantaneous brightness constraint given the observer/sun viewing geometry. Let the set of quaternion candidates at stage $k$ be:
+\begin{equation}
+    \mathcal{Q}_k = \left\{ q_{k}^{(1)}, q_{k}^{(2)}, \dots, q_{k}^{(M)} \right\}
+\end{equation}
+These candidates represent the nodes in our trellis graph. The total number of nodes is $N \times M$.
+
+\subsection{Transition Dynamics (Edges)}
+An edge exists between node $i$ at stage $k$ (denoted $q_k^{(i)}$) and node $j$ at stage $k+1$ (denoted $q_{k+1}^{(j)}$) only if a physically valid angular velocity $\omega_k^{(i,j)}$ can transition the system between these states over the interval $\Delta t = t_{k+1} - t_k$.
+
+The relative rotation from $q_k^{(i)}$ to $q_{k+1}^{(j)}$ is:
+\begin{equation}
+    \Delta q = \left( q_k^{(i)} \right)^{-1} \otimes q_{k+1}^{(j)}
+\end{equation}
+From $\Delta q$, we extract the principal rotation angle $\Phi$ and the eigenaxis $\hat{e}$. A zeroth-order approximation of the constant angular velocity required is:
+\begin{equation}
+    \bar{\omega} = \frac{\Phi}{\Delta t} \hat{e}
+\end{equation}
+
+To rigorously test this transition against the non-analytical Euler dynamics, we use $\bar{\omega}$ as an initial condition and numerically integrate the coupled kinematic and dynamic equations from $t_k$ to $t_{k+1}$:
+\begin{align}
+    \dot{q} &= \frac{1}{2} \Xi(q) \omega \\
+    I \dot{\omega} &+ \omega \times (I \omega) = 0 \quad \text{(Assuming torque-free motion)}
+\end{align}
+If the propagated attitude at $t_{k+1}$ deviates from the target node $q_{k+1}^{(j)}$ beyond a defined tolerance $\epsilon$, the transition is dynamically infeasible, and the edge is pruned. 
+
+\subsection{Edge Cost Function}
+For dynamically feasible edges, we evaluate the forward light curve model $F(q(t), \omega(t))$ over the interval $[t_k, t_{k+1}]$. The cost of transitioning from node $i$ to node $j$ is the continuous residual between the modeled and measured light curves:
+\begin{equation}
+    C_k(i, j) = \int_{t_k}^{t_{k+1}} \left\| L_{meas}(t) - F(q_{prop}(t), \omega_{prop}(t)) \right\|^2 dt
+\end{equation}
+where $q_{prop}(t)$ and $\omega_{prop}(t)$ are the outputs of the numerical integration.
+
+\section{Graph Search via Dynamic Programming}
+With nodes and edge costs defined, we seek the path that minimizes the total accumulated cost across all $N$ stages. We employ the Viterbi algorithm. Let $V_k(i)$ be the minimum accumulated cost to reach node $i$ at stage $k$.
+
+\textbf{Initialization (First Peak):}
+\begin{equation}
+    V_1(i) = 0 \quad \forall i \in \{1, \dots, M\}
+\end{equation}
+
+\textbf{Forward Recursion:}
+For $k = 1$ to $N-1$:
+\begin{equation}
+    V_{k+1}(j) = \min_{1 \le i \le M} \left[ V_k(i) + C_k(i, j) \right] \quad \forall j \in \{1, \dots, M\}
+\end{equation}
+We store the optimal predecessor for back-tracking:
+\begin{equation}
+    P_{k+1}(j) = \arg\min_{1 \le i \le M} \left[ V_k(i) + C_k(i, j) \right]
+\end{equation}
+
+\textbf{Termination \& Back-tracking:}
+The optimal final state is $j^* = \arg\min_j V_N(j)$. The optimal discrete trajectory $(q_1^*, \dots, q_N^*)$ is recovered by tracing backwards through $P$.
+
+\section{Continuous Polish (Warm Start)}
+The dynamic programming solution yields an optimal sequence of discrete quaternion nodes and the corresponding angular velocities. Because the true state lies in a continuous space, this discrete solution inherently contains grid error. 
+
+To resolve this, we use the recovered $q_1^*$ and $\omega_1^*$ as the ``warm start'' initial guess for a standard continuous, unconstrained non-linear optimizer (e.g., Levenberg-Marquardt). Because the guess is guaranteed to be in the correct global valley (having bypassed the MINLP local optima traps), the continuous optimizer converges rapidly to the true initial state $q_0, \omega_0$.
+
+\end{document}

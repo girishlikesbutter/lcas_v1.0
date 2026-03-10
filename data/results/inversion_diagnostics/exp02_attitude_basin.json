@@ -1,0 +1,493 @@
+{
+  "levels": {
+    "1": {
+      "n_converged": 8,
+      "median_error_deg": 0.1501,
+      "max_error_deg": 0.1501,
+      "trials": [
+        {
+          "delta_deg": 1,
+          "trial": 0,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 1,
+          "trial": 1,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 1,
+          "trial": 2,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 1,
+          "trial": 3,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 5,
+          "nfev": 32,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 1,
+          "trial": 4,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 1,
+          "trial": 5,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 1,
+          "trial": 6,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 5,
+          "nfev": 32,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 1,
+          "trial": 7,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 32,
+          "fun": 0.14789
+        }
+      ]
+    },
+    "2": {
+      "n_converged": 8,
+      "median_error_deg": 0.1501,
+      "max_error_deg": 0.1501,
+      "trials": [
+        {
+          "delta_deg": 2,
+          "trial": 0,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 2,
+          "trial": 1,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 2,
+          "trial": 2,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 40,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 2,
+          "trial": 3,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 2,
+          "trial": 4,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 2,
+          "trial": 5,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 2,
+          "trial": 6,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 6,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 2,
+          "trial": 7,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 40,
+          "fun": 0.14789
+        }
+      ]
+    },
+    "5": {
+      "n_converged": 8,
+      "median_error_deg": 0.1501,
+      "max_error_deg": 0.1501,
+      "trials": [
+        {
+          "delta_deg": 5,
+          "trial": 0,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 5,
+          "trial": 1,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 44,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 5,
+          "trial": 2,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 40,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 5,
+          "trial": 3,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 40,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 5,
+          "trial": 4,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 5,
+          "trial": 5,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 5,
+          "trial": 6,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 44,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 5,
+          "trial": 7,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 40,
+          "fun": 0.14789
+        }
+      ]
+    },
+    "10": {
+      "n_converged": 8,
+      "median_error_deg": 0.1501,
+      "max_error_deg": 0.1501,
+      "trials": [
+        {
+          "delta_deg": 10,
+          "trial": 0,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 9,
+          "nfev": 44,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 10,
+          "trial": 1,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 36,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 10,
+          "trial": 2,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 40,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 10,
+          "trial": 3,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 40,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 10,
+          "trial": 4,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 9,
+          "nfev": 44,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 10,
+          "trial": 5,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 40,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 10,
+          "trial": 6,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 40,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 10,
+          "trial": 7,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 40,
+          "fun": 0.14789
+        }
+      ]
+    },
+    "15": {
+      "n_converged": 8,
+      "median_error_deg": 0.1501,
+      "max_error_deg": 0.1501,
+      "trials": [
+        {
+          "delta_deg": 15,
+          "trial": 0,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 44,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 15,
+          "trial": 1,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 44,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 15,
+          "trial": 2,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 9,
+          "nfev": 48,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 15,
+          "trial": 3,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 10,
+          "nfev": 64,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 15,
+          "trial": 4,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 10,
+          "nfev": 56,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 15,
+          "trial": 5,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 9,
+          "nfev": 44,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 15,
+          "trial": 6,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 40,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 15,
+          "trial": 7,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 44,
+          "fun": 0.14789
+        }
+      ]
+    },
+    "20": {
+      "n_converged": 8,
+      "median_error_deg": 0.1501,
+      "max_error_deg": 0.1501,
+      "trials": [
+        {
+          "delta_deg": 20,
+          "trial": 0,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 10,
+          "nfev": 52,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 20,
+          "trial": 1,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 11,
+          "nfev": 64,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 20,
+          "trial": 2,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 14,
+          "nfev": 72,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 20,
+          "trial": 3,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 8,
+          "nfev": 44,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 20,
+          "trial": 4,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 9,
+          "nfev": 48,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 20,
+          "trial": 5,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 7,
+          "nfev": 48,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 20,
+          "trial": 6,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 9,
+          "nfev": 48,
+          "fun": 0.14789
+        },
+        {
+          "delta_deg": 20,
+          "trial": 7,
+          "error_deg": 0.1501,
+          "converged": true,
+          "nit": 10,
+          "nfev": 52,
+          "fun": 0.14789
+        }
+      ]
+    }
+  },
+  "config": {
+    "n_trials": 8,
+    "maxiter": 100,
+    "convergence_deg": 1.0,
+    "levels_deg": [
+      1,
+      2,
+      5,
+      10,
+      15,
+      20
+    ],
+    "seed": 42
+  },
+  "total_time_s": 120.4
+}

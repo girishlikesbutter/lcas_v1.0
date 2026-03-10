@@ -262,11 +262,57 @@ Key points to cover:
 
 ---
 
+## MICRO-EXPERIMENT SERIES (Peak Anchoring)
+
+### Micro-13: Roberto's Full Graph Pipeline (2026-02-27)
+**File**: `notebooks/inversion/micro13_graph_pipeline.py`
+**Commit**: 83314f5
+**Runtime**: 2712s (~45 min)
+
+**Design**: 3-peak graph pipeline (50 candidates × 3 peaks, L-BFGS-B bridge optimisation
+with full Euler dynamics, intermediate lo-fi brightness scoring, shortest-path search).
+
+**Results**:
+```
+Stage 1 — Candidate generation (1M SO(3) per peak):
+  Peak 1 (ep 183): 1,447 hits → 50 cands, nearest = 3.89°
+  Peak 2 (ep 260): 1,400 hits → 50 cands, nearest = 7.13°
+  Peak 3 (ep 360): 2,987 hits → 50 cands, nearest = 0.56°
+
+Stage 2 — Bridge optimisation (L-BFGS-B, Euler dynamics):
+  Leg 0 (dt=555s): 2462/2500 feasible (<5° mismatch) = 98.5%
+  Leg 1 (dt=721s): 2464/2500 feasible = 98.6%
+
+Stage 3 — Intermediate brightness scoring:
+  Leg 0: RMS median=2.44, min=1.13 (truth bridge RMS=1.53)
+  Leg 1: RMS median=2.27, min=1.32 (truth bridge RMS=2.25)
+
+Stage 4 — Graph search:
+  Valid paths: 121,326 / 125,000 (97%)
+  Truth path rank: #11,979 / 121,326  ← NO DISCRIMINATION
+  Top-10 paths: all have 20-179° attitude errors
+```
+
+**Key Findings**:
+1. Bridge optimisation connects ~98.5% of arbitrary pairs — 3 free ω DOF trivially
+   connect any two attitudes (confirms micro-04)
+2. Intermediate lo-fi brightness scoring provides ZERO discrimination —
+   the ~0.15 mag/epoch lo-fi vs hi-fi systematic offset dominates the cost
+3. Truth path is ranked ~10th percentile, indistinguishable from random
+
+**Implication**: The graph pipeline needs either:
+- Hi-fi intermediate scoring (expensive but eliminates systematic offset)
+- Shape-based / relative scoring (ignore absolute brightness offset)
+- A different discriminating signal (e.g., conservation constraints)
+
+---
+
 ## GIT COMMIT LOG
 
 | Time | Commit | Files |
 |------|--------|-------|
-| Phase 1 | (pending) | exp00_timing.py, exp01_sanity.py, progress_tracker.md, exp00_timing.json, exp01_sanity.json |
+| Phase 1 | 56dbc4f | exp00_timing.py, exp01_sanity.py, progress_tracker.md, exp00_timing.json, exp01_sanity.json |
+| Micro-13 | 83314f5 | micro13_graph_pipeline.py, micro13_*.npz, micro13_graph_pipeline.json |
 
 ---
 

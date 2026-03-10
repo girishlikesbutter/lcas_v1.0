@@ -19,14 +19,14 @@ import os
 import subprocess
 import numpy as np
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 RESULTS_DIR = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 VENV_PYTHON = str(PROJECT_ROOT / ".venv" / "bin" / "python")
 
 # We'll run individual strategy scripts as subprocesses
-STRATEGY_SCRIPT = PROJECT_ROOT / "notebooks" / "inversion" / "exp3_single_strategy.py"
+STRATEGY_SCRIPT = PROJECT_ROOT / "notebooks" / "inversion" / "01_global_search" / "exp3_single_strategy.py"
 
 strategies = [
     {"name": "de_large", "budget": 20000, "popsize": 50, "seed": 42},

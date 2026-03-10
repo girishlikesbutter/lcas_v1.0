@@ -1,0 +1,326 @@
+# Architecture 6: Epoch Chaining / Forward Propagation
+
+title: {
+  label: "Architecture 6: Epoch Chaining / Forward Propagation\nChain attitude candidates across consecutive epochs via Euler equations & omega-consistency filtering.\nExponential culling via forward/backward passes narrows candidates to 0-5 survivors."
+  near: top-center
+  shape: text
+  style.font-size: 24
+  style.bold: true
+}
+
+classes: {
+  init: {
+    style.fill: "#4A90D9"
+    style.stroke: "#2C5F8A"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 12
+    style.font-size: 14
+    style.bold: true
+  }
+  propagation: {
+    style.fill: "#5CB85C"
+    style.stroke: "#3D7A3D"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 12
+    style.font-size: 14
+    style.bold: true
+  }
+  optimization: {
+    style.fill: "#F0AD4E"
+    style.stroke: "#C08A2E"
+    style.font-color: "#000000"
+    style.border-radius: 12
+    style.font-size: 14
+    style.bold: true
+  }
+  brdf: {
+    style.fill: "#9B59B6"
+    style.stroke: "#6C3483"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 12
+    style.font-size: 14
+    style.bold: true
+  }
+  output: {
+    style.fill: "#F1C40F"
+    style.stroke: "#B8960C"
+    style.font-color: "#000000"
+    style.border-radius: 12
+    style.font-size: 16
+    style.bold: true
+  }
+  note: {
+    shape: text
+    style.font-size: 12
+    style.font-color: "#555555"
+    style.italic: true
+  }
+}
+
+inputs: "INPUTS\n\nObserved light curve (500 epochs, dt~7.2s)\nSatellite mesh (Intelsat 901, ~10k facets)\nEuler dynamics propagator\nConservation laws (T, L constants)\nFFT omega bound" {
+  shape: parallelogram
+  style.fill: "#D6EAF8"
+  style.stroke: "#2980B9"
+  style.font-size: 14
+}
+
+block1: "BLOCK 1: Select Chain of Consecutive Epochs\n\nChoose 7-10 consecutive epochs with good\nbrightness variation (max range), or brightness-\nseparated epochs with large mag differences (>0.5 mag).\n\nOutput: Chain epoch indices [i1, i2, ... i10]\nwith observed brightness values\n\nTiming: Negligible" {
+  class: init
+}
+n1: "7-10 epochs selected, dt ~ 7.2s" { class: note }
+
+block2: "BLOCK 2: Isobrightness Sampling at Each Epoch\n\nPer epoch: N_SEEDS = 5,000-10,000 random SO(3) seeds.\nL-BFGS-B on brightness-matching objective:\nmin (predicted_B - target_B)^2 over 3 attitude params\n(axis-angle). Lo-fi evaluation. maxiter=50.\nParallelized (8 cores).\n\nOutput per epoch: 50-500 candidate attitudes\nmatching observed brightness within tolerance\n\nTiming: ~20s/epoch x 10 epochs (parallel, 8 cores)" {
+  class: optimization
+}
+n2: "~100 candidates per epoch (50-500 range)\nTotal: ~700-5000 across chain" { class: note }
+
+chain: "EPOCH CHAIN VISUALIZATION" {
+  style.fill: "#FAFAFA"
+  style.stroke: "#BDC3C7"
+  style.border-radius: 8
+  style.font-size: 16
+  style.bold: true
+
+  e0: "Epoch 0\n~100 cands" {
+    style.fill: "#AED6F1"
+    style.stroke: "#2980B9"
+    style.border-radius: 8
+  }
+  e1: "Epoch 1\n~100 cands" {
+    style.fill: "#AED6F1"
+    style.stroke: "#2980B9"
+    style.border-radius: 8
+  }
+  e2: "Epoch 2\n~100 cands" {
+    style.fill: "#AED6F1"
+    style.stroke: "#2980B9"
+    style.border-radius: 8
+  }
+  e3: "Epoch 3\n~100 cands" {
+    style.fill: "#AED6F1"
+    style.stroke: "#2980B9"
+    style.border-radius: 8
+  }
+  edots: "* * *" {
+    style.fill: "#FAFAFA"
+    style.stroke: "#BDC3C7"
+    style.font-size: 20
+  }
+  e9: "Epoch 9\n~100 cands" {
+    style.fill: "#AED6F1"
+    style.stroke: "#2980B9"
+    style.border-radius: 8
+  }
+
+  fwd01: e0 -> e1: "Fwd: 99% culled" {
+    style.stroke: "#27AE60"
+    style.font-size: 11
+    style.stroke-width: 3
+  }
+  fwd12: e1 -> e2: "Fwd: 99% culled" {
+    style.stroke: "#27AE60"
+    style.font-size: 11
+    style.stroke-width: 3
+  }
+  fwd23: e2 -> e3: "Fwd: 99% culled" {
+    style.stroke: "#27AE60"
+    style.font-size: 11
+    style.stroke-width: 3
+  }
+  fwd3d: e3 -> edots {
+    style.stroke: "#27AE60"
+    style.stroke-width: 3
+  }
+  fwdd9: edots -> e9 {
+    style.stroke: "#27AE60"
+    style.stroke-width: 3
+  }
+
+  bk10: e1 -> e0: "Bkwd" {
+    style.stroke: "#E74C3C"
+    style.font-size: 10
+    style.stroke-width: 2
+    style.stroke-dash: 5
+  }
+  bk21: e2 -> e1: "Bkwd" {
+    style.stroke: "#E74C3C"
+    style.font-size: 10
+    style.stroke-width: 2
+    style.stroke-dash: 5
+  }
+  bk32: e3 -> e2: "Bkwd" {
+    style.stroke: "#E74C3C"
+    style.font-size: 10
+    style.stroke-width: 2
+    style.stroke-dash: 5
+  }
+}
+
+block3: "BLOCK 3: Forward Chain - Rotation-Angle Culling\n\nFor each pair (q_j, q_{j+1}):\n  Compute quaternion rotation angle\n  Cull if angle > omega_bound x dt\n  Vectorized: dot-product matrix\n\nLoop over chain links j = 0 to N_CHAIN - 2\n\nKEY: After K links, survival rate\n~ (1 - cull_rate)^K = exponential narrowing\n\nTiming: ~1s per link, ~10s total" {
+  class: propagation
+}
+n3: "~90-99% culled per link\n100x100 = 10,000 pairs -> ~100-1000 survive" { class: note }
+
+block4: "BLOCK 4: Backward Chain - Connectivity Check\n\nPropagate survival constraints backward:\nA candidate at epoch j survives only if\nit has >=1 valid partner at epoch j+1\nthat itself survived the forward pass.\n\nEnsures full-path connectivity through\nALL chain epochs.\n\nOutput: Bidirectionally-filtered candidate sets.\nEach survivor has a valid path through all epochs.\n\nTiming: ~2s (backward sweep)" {
+  class: propagation
+  style.fill: "#82E0AA"
+}
+n4: "Survivors further reduced.\nOnly end-to-end valid paths remain." { class: note }
+
+block5: "BLOCK 5: Derive Omega & Consistency Check\n\nFor each pair (q_j, q_{j+1}):\n  omega = rot_vec(q_{j+1} * q_j^-1) / dt\n\nFor triplets: check omega_12 ~ omega_23\nwithin tolerance (0.05 deg/s)\n\nUses KD-tree for efficient spatial matching\nin 3D omega space.\n\nKey filter: ||omega_12 - omega_23|| < threshold\n\nTiming: ~5s (KD-tree build + query)" {
+  class: optimization
+  style.fill: "#FAD7A0"
+}
+n5: "~10-50 consistent triplets/paths\nwith derived omega estimates" { class: note }
+
+block6: "BLOCK 6: Energy & Momentum Conservation Filter\n\nFor each candidate with derived omega:\n  T = 0.5 * omega^T * I * omega  (kinetic energy)\n  L = R(q) * (I * omega)  (ang. momentum, inertial)\n\nCheck: T_epoch1 ~ T_epoch2  (within 1%)\nCheck: L_dir_epoch1 ~ L_dir_epoch2  (within 1 deg)\n\nOutput: Physically consistent candidates\nsatisfying torque-free conservation laws\n\nTiming: ~1s" {
+  class: propagation
+  style.fill: "#76D7C4"
+  style.stroke: "#1ABC9C"
+}
+n6: "0-5 survivors\nPhysics-based post-filter" { class: note }
+
+block7: "BLOCK 7: Propagate & Score Full Light Curve\n\nFor each surviving (q0, omega0):\n  Propagate attitude over full 500-epoch window\n  Generate lo-fi or hi-fi light curve\n  RMS residual vs. observed\n\nOutput: Ranked solution candidates\n\nTiming: ~0.2s/cand (lo-fi) or ~60s/cand (hi-fi)" {
+  class: brdf
+}
+
+solution: "BEST SOLUTION\n\n(q0, omega0) with lowest RMS residual\n\nSuccess criterion:\nAttitude error < 5 deg\nOmega error < 0.1 deg/s" {
+  class: output
+}
+
+forward_model: "SHARED FORWARD MODEL" {
+  style.fill: "#F8F9FA"
+  style.stroke: "#7F8C8D"
+  style.border-radius: 12
+  style.font-size: 14
+  style.stroke-width: 2
+  style.stroke-dash: 4
+
+  fm_label: "Forward Model (used by Blocks 2, 7)\nGiven (q0, omega0) -> predicted LC -> residual" {
+    shape: text
+    style.font-size: 14
+    style.bold: true
+  }
+
+  sub_a: "A: Attitude Propagation\nEuler eqns (DOP853)\nq0, omega0 -> q(t), omega(t)\n77ms / 500 epochs" {
+    style.fill: "#5CB85C"
+    style.stroke: "#3D7A3D"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 8
+    style.font-size: 12
+  }
+  sub_b: "B: Body-Frame Vectors\nR(q) -> k1 (sun), k2 (obs)\nin body frame" {
+    style.fill: "#5CB85C"
+    style.stroke: "#3D7A3D"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 8
+    style.font-size: 12
+  }
+  sub_c: "C: Shadow Computation\n(Hi-Fi ONLY)\nRay-mesh intersection\n60s / 500 epochs" {
+    style.fill: "#D9534F"
+    style.stroke: "#A94442"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 8
+    style.font-size: 12
+  }
+  sub_d: "D: BRDF Flux\nAshikhmin-Shirley BRDF\nPer-facet flux -> total" {
+    style.fill: "#9B59B6"
+    style.stroke: "#6C3483"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 8
+    style.font-size: 12
+  }
+  sub_e: "E: Mag Conversion\nflux -> apparent magnitude" {
+    style.fill: "#9B59B6"
+    style.stroke: "#6C3483"
+    style.font-color: "#FFFFFF"
+    style.border-radius: 8
+    style.font-size: 12
+  }
+  sub_f: "F: Residual\nMSE vs. observed LC" {
+    style.fill: "#F1C40F"
+    style.stroke: "#B8960C"
+    style.font-color: "#000000"
+    style.border-radius: 8
+    style.font-size: 12
+  }
+
+  sub_a -> sub_b
+  sub_b -> sub_c: "hi-fi" {
+    style.stroke: "#D9534F"
+    style.stroke-dash: 4
+  }
+  sub_b -> sub_d: "lo-fi" {
+    style.stroke: "#9B59B6"
+  }
+  sub_c -> sub_d: "lit_status"
+  sub_d -> sub_e
+  sub_e -> sub_f
+
+  fm_timing: "Timing: Lo-fi 221ms (1x) | Hi-fi 60s (272x)" {
+    shape: text
+    style.font-size: 13
+    style.font-color: "#C0392B"
+    style.bold: true
+  }
+}
+
+funnel: "CANDIDATE FUNNEL\n\n5k-10k seeds/epoch -> ~100 cands/epoch (Block 2)\n100x100 pairs -> ~100-1000 survive per link (Block 3)\nAfter full chain -> ~10-50 paths (Block 4+5)\nConservation filter -> 0-5 survivors (Block 6)\nFull LC ranking -> 1 solution (Block 7)" {
+  style.fill: "#FDEDEC"
+  style.stroke: "#E74C3C"
+  style.border-radius: 12
+  style.font-size: 14
+  style.bold: true
+}
+
+# === CONNECTIONS ===
+inputs -> block1: "Observed LC, 500 epochs" {
+  style.stroke-width: 2
+}
+block1 -> block2: "7-10 chain epoch indices" {
+  style.stroke-width: 2
+}
+block2 -> chain: "~100 candidates per epoch" {
+  style.stroke-width: 2
+  style.stroke: "#F0AD4E"
+}
+chain -> block3: "Candidate sets at each epoch" {
+  style.stroke-width: 2
+  style.stroke: "#27AE60"
+}
+block3 -> block4: "Forward-pass survivors" {
+  style.stroke-width: 2
+  style.stroke: "#27AE60"
+}
+block4 -> block5: "Bidirectionally filtered sets" {
+  style.stroke-width: 2
+  style.stroke: "#F0AD4E"
+}
+block5 -> block6: "~10-50 consistent triplets" {
+  style.stroke-width: 2
+  style.stroke: "#1ABC9C"
+}
+block6 -> block7: "0-5 physically consistent survivors" {
+  style.stroke-width: 2
+  style.stroke: "#9B59B6"
+}
+block7 -> solution: "Ranked solutions" {
+  style.stroke-width: 3
+  style.stroke: "#F1C40F"
+}
+
+block2 -> forward_model: "uses (lo-fi)" {
+  style.stroke-dash: 5
+  style.stroke: "#7F8C8D"
+}
+block7 -> forward_model: "uses (lo-fi / hi-fi)" {
+  style.stroke-dash: 5
+  style.stroke: "#7F8C8D"
+}
+
+footer: "Test Case: Intelsat 901 (~10k facets) | True: q0 from axis=[0.6,0.3,0.8]/norm, angle=45 deg | omega0=[0.5,-0.3,2.0] deg/s | 3600s window, 500 epochs\nKey Strength: Exponential culling - each chain link eliminates ~90-99%. 10 links -> survival ~ 1e-10 to 1e-20 of initial space." {
+  near: bottom-center
+  shape: text
+  style.font-size: 13
+  style.font-color: "#2C3E50"
+}

@@ -11,7 +11,7 @@ from scipy.spatial.transform import Rotation
 from scipy.optimize import minimize
 from multiprocessing import Pool
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 import os; os.chdir(PROJECT_ROOT)
 

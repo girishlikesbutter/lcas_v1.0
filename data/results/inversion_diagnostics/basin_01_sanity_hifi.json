@@ -1,0 +1,36 @@
+{
+  "fidelity": "hifi",
+  "peak_idx": 1,
+  "n_epochs": 20,
+  "mse_at_truth": 0.00249996,
+  "mse_after_opt": 0.00220336,
+  "omega_error_dps": 0.0040025,
+  "magnitude_error_dps": 0.00218705,
+  "direction_error_deg": 0.092122,
+  "mag_true_dps": 2.08378,
+  "mag_found_dps": 2.085967,
+  "omega_true": [
+    0.429582,
+    -0.392722,
+    2.000841
+  ],
+  "omega_found": [
+    0.429604,
+    -0.396414,
+    2.002387
+  ],
+  "nit": 13,
+  "nfev": 136,
+  "success": true,
+  "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+  "opt_time_s": 233.4,
+  "passed": true,
+  "config": {
+    "maxiter": 100,
+    "seed": 42,
+    "n_observations_full": 500,
+    "n_epochs_window": 20,
+    "noise_sigma": 0.05
+  },
+  "total_time_s": 283.0
+}

@@ -1,0 +1,77 @@
+{
+  "perfect_bridge": {
+    "peak1_epoch": 15,
+    "peak2_epoch": 79,
+    "peak1_time_s": 108.216432929039,
+    "peak2_time_s": 569.9398798942566,
+    "bridge_span_s": 461.7234469652176,
+    "arrival_error_deg": 1.6549713985090844e-08,
+    "L_conservation_pct": 1.2935021534319636e-08,
+    "T_conservation_pct": 2.1258264094897456e-09
+  },
+  "perturbed_bridges": {
+    "0.01": {
+      "delta_omega_deg_s": 0.01,
+      "n_trials": 20,
+      "mean_err_deg": 2.9815,
+      "min_err_deg": 1.0924,
+      "max_err_deg": 5.0213,
+      "median_err_deg": 2.7995,
+      "std_err_deg": 1.1559
+    },
+    "0.05": {
+      "delta_omega_deg_s": 0.05,
+      "n_trials": 20,
+      "mean_err_deg": 14.5941,
+      "min_err_deg": 5.7752,
+      "max_err_deg": 24.1266,
+      "median_err_deg": 14.8991,
+      "std_err_deg": 5.3177
+    },
+    "0.1": {
+      "delta_omega_deg_s": 0.1,
+      "n_trials": 20,
+      "mean_err_deg": 30.6503,
+      "min_err_deg": 6.3254,
+      "max_err_deg": 49.8322,
+      "median_err_deg": 29.9197,
+      "std_err_deg": 14.793
+    },
+    "0.2": {
+      "delta_omega_deg_s": 0.2,
+      "n_trials": 20,
+      "mean_err_deg": 54.5157,
+      "min_err_deg": 12.2148,
+      "max_err_deg": 97.3814,
+      "median_err_deg": 55.1332,
+      "std_err_deg": 21.7659
+    },
+    "0.5": {
+      "delta_omega_deg_s": 0.5,
+      "n_trials": 20,
+      "mean_err_deg": 127.4748,
+      "min_err_deg": 31.1998,
+      "max_err_deg": 179.7515,
+      "median_err_deg": 140.8663,
+      "std_err_deg": 43.9439
+    }
+  },
+  "config": {
+    "seed": 42,
+    "omega_perturb_deg_s": [
+      0.01,
+      0.05,
+      0.1,
+      0.2,
+      0.5
+    ],
+    "n_random_dirs": 20,
+    "n_observations": 500,
+    "true_omega_deg": [
+      0.5,
+      -0.3,
+      2.0
+    ],
+    "bridge_span_s": 461.7234469652176
+  }
+}

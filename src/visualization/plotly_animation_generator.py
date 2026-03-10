@@ -72,7 +72,8 @@ def create_interactive_3d_animation(
     j2000_opacity: float = 0.3,
     body_opacity: float = 0.9,
     save: bool = True,
-    color_mode: str = 'lit_status'
+    color_mode: str = 'lit_status',
+    output_path: Optional[Path] = None
 ) -> Optional[Path]:
     """
     Create an interactive 3D animation with satellite visualization and light curve.
@@ -210,8 +211,12 @@ def create_interactive_3d_animation(
     )
 
     # Save as HTML file if save=True
-    output_path = None
-    if save:
+    if output_path is not None:
+        # Explicit output path — save directly, creating parent dirs
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.write_html(str(output_path), auto_play=False, include_plotlyjs='cdn')
+        print(f"Animation saved: {output_path}")
+    elif save:
         date_dir = _get_date_output_dir(Path(output_dir))
         num_points = len(animation_data)
         output_filename = _get_animation_filename(num_points)

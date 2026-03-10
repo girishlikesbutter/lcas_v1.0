@@ -1,0 +1,286 @@
+direction: down
+
+# Title
+title: "Architecture 7: Peak-Anchored Graph Pipeline\nGraph-based inversion anchoring attitudes at LC peaks,\nconnecting via optimized bridges, finding lowest-cost paths." {
+  shape: text
+  style.font-size: 28
+  style.font-color: "#222"
+}
+
+# Observed LC Input
+observed_lc: "OBSERVED LIGHT CURVE\n500 epochs, hi-fi + noise (sigma=0.05 mag)\nIntelsat 901 (~10k facets)" {
+  shape: parallelogram
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.font-size: 16
+}
+
+title -> observed_lc: {style.opacity: 0}
+
+# Block 1: Peak Detection
+peak_detect: "Block 1: Identify Light Curve Peaks\nscipy.signal.find_peaks (prominence threshold)\nInterpolate sub-sample peak time (dB/dt = 0)\nOutput: 3 peak epoch indices [183, 260, 360]" {
+  style.fill: "#BBDEFB"
+  style.stroke: "#1565C0"
+  style.border-radius: 12
+  style.font-size: 18
+}
+
+observed_lc -> peak_detect: "500 brightness values" {
+  style.stroke: "#1565C0"
+}
+
+# Three Peak Anchor Nodes
+peak1: "PEAK 1\nepoch 183" {
+  style.fill: "#C5CAE9"
+  style.stroke: "#283593"
+  style.border-radius: 8
+  style.font-size: 18
+  style.bold: true
+}
+peak2: "PEAK 2\nepoch 260" {
+  style.fill: "#C5CAE9"
+  style.stroke: "#283593"
+  style.border-radius: 8
+  style.font-size: 18
+  style.bold: true
+}
+peak3: "PEAK 3\nepoch 360" {
+  style.fill: "#C5CAE9"
+  style.stroke: "#283593"
+  style.border-radius: 8
+  style.font-size: 18
+  style.bold: true
+}
+
+peak_detect -> peak1: {style.stroke: "#283593"}
+peak_detect -> peak2: {style.stroke: "#283593"}
+peak_detect -> peak3: {style.stroke: "#283593"}
+
+# Block 2: Dense SO(3) Sampling per peak
+samp_p1: "Peak 1 Sampling\n1M random SO(3) attitudes\nBatch 100k x 10 rounds (lo-fi)\nKeep within 1% brightness\n~1400-3000 matches\nSELECT TOP 50 by residual\n+ brightness gradient g" {
+  style.fill: "#C8E6C9"
+  style.stroke: "#2E7D32"
+  style.border-radius: 8
+  style.font-size: 15
+}
+samp_p2: "Peak 2 Sampling\n1M random SO(3) attitudes\nBatch 100k x 10 rounds (lo-fi)\nKeep within 1% brightness\n~1400-3000 matches\nSELECT TOP 50 by residual\n+ brightness gradient g" {
+  style.fill: "#C8E6C9"
+  style.stroke: "#2E7D32"
+  style.border-radius: 8
+  style.font-size: 15
+}
+samp_p3: "Peak 3 Sampling\n1M random SO(3) attitudes\nBatch 100k x 10 rounds (lo-fi)\nKeep within 1% brightness\n~1400-3000 matches\nSELECT TOP 50 by residual\n+ brightness gradient g" {
+  style.fill: "#C8E6C9"
+  style.stroke: "#2E7D32"
+  style.border-radius: 8
+  style.font-size: 15
+}
+
+peak1 -> samp_p1: "target brightness" {style.stroke: "#2E7D32"}
+peak2 -> samp_p2: "target brightness" {style.stroke: "#2E7D32"}
+peak3 -> samp_p3: "target brightness" {style.stroke: "#2E7D32"}
+
+# Count annotation
+count_sampling: "1M -> 50 per peak (150 candidates total, truth injected at idx 0)" {
+  shape: text
+  style.font-size: 16
+  style.font-color: "#2E7D32"
+}
+
+# Block 3: Bridge Optimization
+leg0: "Leg 0: Peak 1 -> Peak 2\n50 x 50 = 2,500 BRIDGES\nL-BFGS-B over omega (3 params)\nObj: ||R(q_start,omega,dt) - q_end||^2\n  + lambda_grad*(g.omega)^2\nInit guess: omega0 = logq(q_end*q_start^-1)/dt\nPrune if arrival error > 5 deg\n~98-99% feasible | Parallel x8 cores" {
+  style.fill: "#FFE0B2"
+  style.stroke: "#E65100"
+  style.border-radius: 8
+  style.font-size: 15
+}
+leg1: "Leg 1: Peak 2 -> Peak 3\n50 x 50 = 2,500 BRIDGES\nL-BFGS-B over omega (3 params)\nObj: ||R(q_start,omega,dt) - q_end||^2\n  + lambda_grad*(g.omega)^2\nInit guess: omega0 = logq(q_end*q_start^-1)/dt\nPrune if arrival error > 5 deg\n~98-99% feasible | Parallel x8 cores" {
+  style.fill: "#FFE0B2"
+  style.stroke: "#E65100"
+  style.border-radius: 8
+  style.font-size: 15
+}
+
+samp_p1 -> leg0: "50 candidates (q)" {style.stroke: "#E65100"}
+samp_p2 -> leg0: "50 candidates (q)" {style.stroke: "#E65100"}
+samp_p2 -> leg1: "50 candidates (q)" {style.stroke: "#E65100"}
+samp_p3 -> leg1: "50 candidates (q)" {style.stroke: "#E65100"}
+
+# Physics constraint callout
+grad_penalty: "PHYSICS CONSTRAINT: g . omega ~ 0\nAt peaks dB/dt ~ 0 so brightness gradient g\nis perpendicular to angular velocity omega.\nGradient penalty enforces this." {
+  shape: text
+  style.font-size: 15
+  style.font-color: "#BF360C"
+}
+
+leg0 -> grad_penalty: {style.stroke: "#E65100"; style.stroke-dash: 4}
+
+# Bridge count
+count_bridges: "50 x 50 = 2,500 bridges per leg (5,000 total)" {
+  shape: text
+  style.font-size: 16
+  style.font-color: "#E65100"
+}
+
+# Block 4: Intermediate Brightness Scoring
+score_leg0: "Score Leg 0 Bridges\nPropagate q_start by omega through\n10 INTERMEDIATE EPOCHS\nEvaluate brightness (lo-fi or hi-fi)\nRMS residual vs. observed\n+ omega magnitude penalty:\ncost = RMS + lambda_rate*max(0,|omega|-prior)^2" {
+  style.fill: "#E1BEE7"
+  style.stroke: "#6A1B9A"
+  style.border-radius: 8
+  style.font-size: 15
+}
+score_leg1: "Score Leg 1 Bridges\nPropagate q_start by omega through\n10 INTERMEDIATE EPOCHS\nEvaluate brightness (lo-fi or hi-fi)\nRMS residual vs. observed\n+ omega magnitude penalty:\ncost = RMS + lambda_rate*max(0,|omega|-prior)^2" {
+  style.fill: "#E1BEE7"
+  style.stroke: "#6A1B9A"
+  style.border-radius: 8
+  style.font-size: 15
+}
+
+leg0 -> score_leg0: "~2,450 feasible bridges + omega" {style.stroke: "#6A1B9A"}
+leg1 -> score_leg1: "~2,450 feasible bridges + omega" {style.stroke: "#6A1B9A"}
+
+# Critical note
+critical_note: "CRITICAL DISCRIMINATING STEP\nIntermediate brightness scoring is where\nlo-fi vs hi-fi matters most.\nLo-fi misses shadow effects -> wrong ranking." {
+  shape: text
+  style.font-size: 16
+  style.font-color: "#6A1B9A"
+}
+
+score_leg0 -> critical_note: {style.stroke: "#6A1B9A"; style.stroke-dash: 4}
+
+# Block 5: Graph Construction
+graph: "Block 5: Build Path Graph & Shortest Path\nPath cost for 3-node path (i,j,k):\ncost[i,j,k] = bridge_cost[0][i,j] + bridge_cost[1][j,k]\nEnumerate all 50x50x50 = 125,000 PATHS\nSort by total cost -> ranked path list" {
+  style.fill: "#FFF8E1"
+  style.stroke: "#F57F17"
+  style.border-radius: 12
+  style.font-size: 18
+}
+
+score_leg0 -> graph: "50x50 cost matrix (Leg 0)" {style.stroke: "#F57F17"}
+score_leg1 -> graph: "50x50 cost matrix (Leg 1)" {style.stroke: "#F57F17"}
+
+count_paths: "125,000 candidate paths enumerated" {
+  shape: text
+  style.font-size: 16
+  style.font-color: "#F57F17"
+}
+
+# Key Finding
+lofi_finding: "KEY FINDING: LO-FI SCORING FAILS\nTruth at rank #11,979 / 121,326 (lo-fi)\nSystematic 0.15 mag lo-fi/hi-fi offset dominates.\nLo-fi cannot discriminate the correct path." {
+  style.fill: "#FFEBEE"
+  style.stroke: "#C62828"
+  style.border-radius: 8
+  style.font-size: 20
+  style.font-color: "#B71C1C"
+  style.bold: true
+}
+
+graph -> lofi_finding: "lo-fi ranked paths" {
+  style.stroke: "#C62828"
+  style.stroke-dash: 4
+}
+
+# Block 6: Hi-Fi Rescore
+hifi_rescore: "Block 6: Rescore Bridges with Hi-Fi Model\nRepeat Block 4 with ray-traced shadows\n~60x slower but captures shadow effects\nRecompute bridge costs -> rebuild graph -> re-rank\nLo-fi: 221ms/eval vs Hi-fi: 60,136ms/eval (272x)" {
+  style.fill: "#FFCDD2"
+  style.stroke: "#C62828"
+  style.border-radius: 12
+  style.font-size: 18
+}
+
+graph -> hifi_rescore: "all feasible bridges (from checkpoint)" {
+  style.stroke: "#C62828"
+}
+
+# Final Output
+solution: "BEST PATH -> SOLUTION\n(q0 at Peak1, omega_leg1, q at Peak2, omega_leg2, q at Peak3)\nFinal (q0, omega0) estimate\nSuccess: att_error < 5 deg AND omega_error < 0.1 deg/s" {
+  style.fill: "#FFF9C4"
+  style.stroke: "#F9A825"
+  style.border-radius: 12
+  style.font-size: 18
+  style.font-color: "#4E342E"
+}
+
+hifi_rescore -> solution: "hi-fi re-ranked paths" {
+  style.stroke: "#F9A825"
+  style.stroke-width: 3
+}
+
+# Candidate Funnel Summary
+count_summary: "CANDIDATE FUNNEL:\n1M SO(3)/peak -> 50 cands/peak -> 2,500 bridges/leg\n-> 125,000 paths -> 1 best path" {
+  shape: text
+  style.font-size: 16
+  style.font-color: "#37474F"
+}
+
+# Forward Model sub-block
+forward_model: {
+  label: "Shared Forward Model (used by all evaluation blocks)"
+  style.fill: "#ECEFF1"
+  style.stroke: "#546E7A"
+  style.border-radius: 12
+  style.font-size: 18
+
+  propagate: "A: Attitude Propagation\nEuler eqns (DOP853)\n(q0,omega0)->q(t) for N epochs\n~77ms / 500 epochs" {
+    style.fill: "#C8E6C9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 8
+    style.font-size: 14
+  }
+
+  body_vectors: "B: Body-Frame Vectors\nR = rot(q(t))\nk1 = R^T * sun_dir (SPICE)\nk2 = R^T * obs_dir (SPICE)" {
+    style.fill: "#C8E6C9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 8
+    style.font-size: 14
+  }
+
+  shadows: "C: Shadow Computation\n(Hi-Fi only)\nRay-mesh intersection per facet\n~60s / 500 epochs" {
+    style.fill: "#FFCDD2"
+    style.stroke: "#C62828"
+    style.border-radius: 8
+    style.font-size: 14
+  }
+
+  brdf: "D: BRDF Flux Calc\nAshikhmin-Shirley BRDF\nPer-facet flux summation\n-> total flux" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+    style.border-radius: 8
+    style.font-size: 14
+  }
+
+  mag_convert: "E: Magnitude Conversion\nm = m_sun + 5*log10(d) - 2.5*log10(F)" {
+    style.fill: "#E1BEE7"
+    style.stroke: "#6A1B9A"
+    style.border-radius: 8
+    style.font-size: 14
+  }
+
+  residual_block: "F: Residual\nMSE = mean((pred-obs)^2)" {
+    style.fill: "#FFF9C4"
+    style.stroke: "#F9A825"
+    style.border-radius: 8
+    style.font-size: 14
+  }
+
+  propagate -> body_vectors
+  body_vectors -> shadows: "hi-fi path"
+  body_vectors -> brdf: "k1, k2"
+  shadows -> brdf: "lit_status mask"
+  brdf -> mag_convert: "total flux"
+  mag_convert -> residual_block: "predicted LC"
+}
+
+# Timing summary
+timing: "TIMING SUMMARY\nLo-fi: 221 ms/eval (1x)\nHi-fi: 60,136 ms/eval (272x)\nPropagation: 77 ms / 500 epochs\nShadows: ~60s / 500 epochs (hi-fi)" {
+  shape: text
+  style.font-size: 15
+  style.font-color: "#546E7A"
+}
+
+# Color Legend
+legend: "COLOR LEGEND\nBlue = Init/Configuration\nGreen = Orbital/Propagation\nOrange = Optimization\nRed = Ray Tracing/Shadows\nPurple = BRDF/Brightness\nGold = Outputs/Solutions" {
+  shape: text
+  style.font-size: 15
+  style.font-color: "#455A64"
+}

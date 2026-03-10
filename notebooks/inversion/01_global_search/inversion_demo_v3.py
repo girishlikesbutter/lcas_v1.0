@@ -37,7 +37,7 @@ from scipy.optimize import minimize, differential_evolution
 
 # Project setup
 if '__file__' in globals():
-    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 else:
     PROJECT_ROOT = Path.cwd().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))

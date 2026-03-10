@@ -1,0 +1,11 @@
+{
+  "omega_space": {
+    "0.005": {
+      "n_converged": 8,
+      "median_error_dps": 0.001632,
+      "trials": [
+        {
+          "delta_dps": 0.005,
+          "trial": 0,
+          "omega_error_dps": 0.001633,
+          "converged": 

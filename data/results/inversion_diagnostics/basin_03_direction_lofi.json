@@ -1,0 +1,484 @@
+{
+  "fidelity": "lofi",
+  "peak_idx": 1,
+  "n_epochs": 20,
+  "levels": {
+    "0.5": {
+      "n_converged": 4,
+      "median_omega_error_dps": 0.006116,
+      "median_direction_error_deg": 0.1682,
+      "median_mse": 0.00791337,
+      "trials": [
+        {
+          "offset_deg": 0.5,
+          "phi_idx": 0,
+          "phi_init_deg": 0.0,
+          "theta_found_deg": 0.1409,
+          "omega_error_dps": 0.005125,
+          "direction_error_deg": 0.1409,
+          "mse": 0.00794343,
+          "converged": true,
+          "nit": 4,
+          "nfev": 21
+        },
+        {
+          "offset_deg": 0.5,
+          "phi_idx": 1,
+          "phi_init_deg": 90.0,
+          "theta_found_deg": 0.1954,
+          "omega_error_dps": 0.007105,
+          "direction_error_deg": 0.1954,
+          "mse": 0.00788331,
+          "converged": true,
+          "nit": 24,
+          "nfev": 90
+        },
+        {
+          "offset_deg": 0.5,
+          "phi_idx": 2,
+          "phi_init_deg": 180.0,
+          "theta_found_deg": 0.141,
+          "omega_error_dps": 0.005127,
+          "direction_error_deg": 0.141,
+          "mse": 0.00794344,
+          "converged": true,
+          "nit": 4,
+          "nfev": 24
+        },
+        {
+          "offset_deg": 0.5,
+          "phi_idx": 3,
+          "phi_init_deg": 270.0,
+          "theta_found_deg": 0.1954,
+          "omega_error_dps": 0.007106,
+          "direction_error_deg": 0.1954,
+          "mse": 0.00788331,
+          "converged": true,
+          "nit": 24,
+          "nfev": 93
+        }
+      ]
+    },
+    "1": {
+      "n_converged": 4,
+      "median_omega_error_dps": 0.005126,
+      "median_direction_error_deg": 0.1409,
+      "median_mse": 0.00794343,
+      "trials": [
+        {
+          "offset_deg": 1,
+          "phi_idx": 0,
+          "phi_init_deg": 0.0,
+          "theta_found_deg": 0.141,
+          "omega_error_dps": 0.005127,
+          "direction_error_deg": 0.141,
+          "mse": 0.00794342,
+          "converged": true,
+          "nit": 6,
+          "nfev": 30
+        },
+        {
+          "offset_deg": 1,
+          "phi_idx": 1,
+          "phi_init_deg": 90.0,
+          "theta_found_deg": 0.0603,
+          "omega_error_dps": 0.002194,
+          "direction_error_deg": 0.0603,
+          "mse": 0.00836657,
+          "converged": true,
+          "nit": 7,
+          "nfev": 30
+        },
+        {
+          "offset_deg": 1,
+          "phi_idx": 2,
+          "phi_init_deg": 180.0,
+          "theta_found_deg": 0.1409,
+          "omega_error_dps": 0.005125,
+          "direction_error_deg": 0.1409,
+          "mse": 0.00794343,
+          "converged": true,
+          "nit": 4,
+          "nfev": 21
+        },
+        {
+          "offset_deg": 1,
+          "phi_idx": 3,
+          "phi_init_deg": 270.0,
+          "theta_found_deg": 0.1954,
+          "omega_error_dps": 0.007107,
+          "direction_error_deg": 0.1954,
+          "mse": 0.00788331,
+          "converged": true,
+          "nit": 23,
+          "nfev": 93
+        }
+      ]
+    },
+    "2": {
+      "n_converged": 2,
+      "median_omega_error_dps": 0.058307,
+      "median_direction_error_deg": 1.6034,
+      "median_mse": 0.00984375,
+      "trials": [
+        {
+          "offset_deg": 2,
+          "phi_idx": 0,
+          "phi_init_deg": 0.0,
+          "theta_found_deg": 0.141,
+          "omega_error_dps": 0.005128,
+          "direction_error_deg": 0.141,
+          "mse": 0.00794339,
+          "converged": true,
+          "nit": 8,
+          "nfev": 36
+        },
+        {
+          "offset_deg": 2,
+          "phi_idx": 1,
+          "phi_init_deg": 90.0,
+          "theta_found_deg": 3.0658,
+          "omega_error_dps": 0.111486,
+          "direction_error_deg": 3.0658,
+          "mse": 0.01174404,
+          "converged": false,
+          "nit": 11,
+          "nfev": 48
+        },
+        {
+          "offset_deg": 2,
+          "phi_idx": 2,
+          "phi_init_deg": 180.0,
+          "theta_found_deg": 0.141,
+          "omega_error_dps": 0.005128,
+          "direction_error_deg": 0.141,
+          "mse": 0.00794347,
+          "converged": true,
+          "nit": 5,
+          "nfev": 30
+        },
+        {
+          "offset_deg": 2,
+          "phi_idx": 3,
+          "phi_init_deg": 270.0,
+          "theta_found_deg": 3.0658,
+          "omega_error_dps": 0.111486,
+          "direction_error_deg": 3.0658,
+          "mse": 0.01174404,
+          "converged": false,
+          "nit": 8,
+          "nfev": 57
+        }
+      ]
+    },
+    "5": {
+      "n_converged": 2,
+      "median_omega_error_dps": 0.059297,
+      "median_direction_error_deg": 1.6306,
+      "median_mse": 0.00984292,
+      "trials": [
+        {
+          "offset_deg": 5,
+          "phi_idx": 0,
+          "phi_init_deg": 0.0,
+          "theta_found_deg": 0.1954,
+          "omega_error_dps": 0.007107,
+          "direction_error_deg": 0.1954,
+          "mse": 0.00788331,
+          "converged": true,
+          "nit": 16,
+          "nfev": 69
+        },
+        {
+          "offset_deg": 5,
+          "phi_idx": 1,
+          "phi_init_deg": 90.0,
+          "theta_found_deg": 11.4194,
+          "omega_error_dps": 0.414623,
+          "direction_error_deg": 11.4194,
+          "mse": 0.08018389,
+          "converged": false,
+          "nit": 15,
+          "nfev": 66
+        },
+        {
+          "offset_deg": 5,
+          "phi_idx": 2,
+          "phi_init_deg": 180.0,
+          "theta_found_deg": 0.1417,
+          "omega_error_dps": 0.005152,
+          "direction_error_deg": 0.1417,
+          "mse": 0.0079418,
+          "converged": true,
+          "nit": 7,
+          "nfev": 30
+        },
+        {
+          "offset_deg": 5,
+          "phi_idx": 3,
+          "phi_init_deg": 270.0,
+          "theta_found_deg": 3.0658,
+          "omega_error_dps": 0.111486,
+          "direction_error_deg": 3.0658,
+          "mse": 0.01174404,
+          "converged": false,
+          "nit": 10,
+          "nfev": 45
+        }
+      ]
+    },
+    "10": {
+      "n_converged": 3,
+      "median_omega_error_dps": 0.005116,
+      "median_direction_error_deg": 0.1406,
+      "median_mse": 0.00829221,
+      "trials": [
+        {
+          "offset_deg": 10,
+          "phi_idx": 0,
+          "phi_init_deg": 0.0,
+          "theta_found_deg": 0.1954,
+          "omega_error_dps": 0.007107,
+          "direction_error_deg": 0.1954,
+          "mse": 0.00788331,
+          "converged": true,
+          "nit": 15,
+          "nfev": 69
+        },
+        {
+          "offset_deg": 10,
+          "phi_idx": 1,
+          "phi_init_deg": 90.0,
+          "theta_found_deg": 0.0596,
+          "omega_error_dps": 0.002166,
+          "direction_error_deg": 0.0596,
+          "mse": 0.00836896,
+          "converged": true,
+          "nit": 9,
+          "nfev": 36
+        },
+        {
+          "offset_deg": 10,
+          "phi_idx": 2,
+          "phi_init_deg": 180.0,
+          "theta_found_deg": 0.0859,
+          "omega_error_dps": 0.003124,
+          "direction_error_deg": 0.0859,
+          "mse": 0.00821546,
+          "converged": true,
+          "nit": 12,
+          "nfev": 75
+        },
+        {
+          "offset_deg": 10,
+          "phi_idx": 3,
+          "phi_init_deg": 270.0,
+          "theta_found_deg": 11.4194,
+          "omega_error_dps": 0.414623,
+          "direction_error_deg": 11.4194,
+          "mse": 0.08018389,
+          "converged": false,
+          "nit": 11,
+          "nfev": 48
+        }
+      ]
+    },
+    "20": {
+      "n_converged": 2,
+      "median_omega_error_dps": 0.059296,
+      "median_direction_error_deg": 1.6306,
+      "median_mse": 0.00981368,
+      "trials": [
+        {
+          "offset_deg": 20,
+          "phi_idx": 0,
+          "phi_init_deg": 0.0,
+          "theta_found_deg": 42.7059,
+          "omega_error_dps": 1.51746,
+          "direction_error_deg": 42.7059,
+          "mse": 0.17305823,
+          "converged": false,
+          "nit": 18,
+          "nfev": 99
+        },
+        {
+          "offset_deg": 20,
+          "phi_idx": 1,
+          "phi_init_deg": 90.0,
+          "theta_found_deg": 719.8046,
+          "omega_error_dps": 0.007106,
+          "direction_error_deg": 0.1954,
+          "mse": 0.00788331,
+          "converged": true,
+          "nit": 20,
+          "nfev": 87
+        },
+        {
+          "offset_deg": 20,
+          "phi_idx": 2,
+          "phi_init_deg": 180.0,
+          "theta_found_deg": 3.0658,
+          "omega_error_dps": 0.111486,
+          "direction_error_deg": 3.0658,
+          "mse": 0.01174404,
+          "converged": false,
+          "nit": 16,
+          "nfev": 111
+        },
+        {
+          "offset_deg": 20,
+          "phi_idx": 3,
+          "phi_init_deg": 270.0,
+          "theta_found_deg": 0.1954,
+          "omega_error_dps": 0.007106,
+          "direction_error_deg": 0.1954,
+          "mse": 0.00788331,
+          "converged": true,
+          "nit": 25,
+          "nfev": 105
+        }
+      ]
+    },
+    "45": {
+      "n_converged": 0,
+      "median_omega_error_dps": 1.535108,
+      "median_direction_error_deg": 43.2279,
+      "median_mse": 0.54821752,
+      "trials": [
+        {
+          "offset_deg": 45,
+          "phi_idx": 0,
+          "phi_init_deg": 0.0,
+          "theta_found_deg": 42.7059,
+          "omega_error_dps": 1.51746,
+          "direction_error_deg": 42.7059,
+          "mse": 0.17305823,
+          "converged": false,
+          "nit": 12,
+          "nfev": 45
+        },
+        {
+          "offset_deg": 45,
+          "phi_idx": 1,
+          "phi_init_deg": 90.0,
+          "theta_found_deg": 43.7498,
+          "omega_error_dps": 1.552756,
+          "direction_error_deg": 43.7498,
+          "mse": 0.9233768,
+          "converged": false,
+          "nit": 7,
+          "nfev": 30
+        },
+        {
+          "offset_deg": 45,
+          "phi_idx": 2,
+          "phi_init_deg": 180.0,
+          "theta_found_deg": 65.3022,
+          "omega_error_dps": 2.248491,
+          "direction_error_deg": 65.3022,
+          "mse": 1.46039173,
+          "converged": false,
+          "nit": 11,
+          "nfev": 42
+        },
+        {
+          "offset_deg": 45,
+          "phi_idx": 3,
+          "phi_init_deg": 270.0,
+          "theta_found_deg": 11.4194,
+          "omega_error_dps": 0.414623,
+          "direction_error_deg": 11.4194,
+          "mse": 0.08018389,
+          "converged": false,
+          "nit": 15,
+          "nfev": 75
+        }
+      ]
+    },
+    "90": {
+      "n_converged": 0,
+      "median_omega_error_dps": 2.060806,
+      "median_direction_error_deg": 59.3597,
+      "median_mse": 0.7545345,
+      "trials": [
+        {
+          "offset_deg": 90,
+          "phi_idx": 0,
+          "phi_init_deg": 0.0,
+          "theta_found_deg": 53.4172,
+          "omega_error_dps": 1.873123,
+          "direction_error_deg": 53.4172,
+          "mse": 0.26018949,
+          "converged": false,
+          "nit": 16,
+          "nfev": 84
+        },
+        {
+          "offset_deg": 90,
+          "phi_idx": 1,
+          "phi_init_deg": 90.0,
+          "theta_found_deg": 40.5267,
+          "omega_error_dps": 1.443374,
+          "direction_error_deg": 40.5267,
+          "mse": 0.99412761,
+          "converged": false,
+          "nit": 15,
+          "nfev": 96
+        },
+        {
+          "offset_deg": 90,
+          "phi_idx": 2,
+          "phi_init_deg": 180.0,
+          "theta_found_deg": 65.3022,
+          "omega_error_dps": 2.24849,
+          "direction_error_deg": 65.3022,
+          "mse": 1.46039173,
+          "converged": false,
+          "nit": 10,
+          "nfev": 39
+        },
+        {
+          "offset_deg": 90,
+          "phi_idx": 3,
+          "phi_init_deg": 270.0,
+          "theta_found_deg": 173.4861,
+          "omega_error_dps": 4.160828,
+          "direction_error_deg": 173.4861,
+          "mse": 0.51494139,
+          "converged": false,
+          "nit": 11,
+          "nfev": 57
+        }
+      ]
+    }
+  },
+  "total_converged": 17,
+  "total_trials": 32,
+  "basin_radius_deg": 2,
+  "config": {
+    "offsets_deg": [
+      0.5,
+      1,
+      2,
+      5,
+      10,
+      20,
+      45,
+      90
+    ],
+    "n_phi": 4,
+    "maxiter": 100,
+    "seed": 42,
+    "mse_threshold": 0.01,
+    "n_observations_full": 500,
+    "n_epochs_window": 20,
+    "noise_sigma": 0.05,
+    "true_omega_dps": [
+      0.429582,
+      -0.392722,
+      2.000841
+    ],
+    "true_mag_dps": 2.08378
+  },
+  "total_time_s": 54.6
+}

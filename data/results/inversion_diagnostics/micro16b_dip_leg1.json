@@ -1,0 +1,26 @@
+{
+  "config": {
+    "leg": 1,
+    "peak_A": 260,
+    "peak_B": 360,
+    "trough_idx": 338,
+    "trough_offset": 78,
+    "trough_interior": true,
+    "t_trough_s": 562.7254509925842,
+    "n_pairs_tested": 101,
+    "n_workers": 8
+  },
+  "observed_brightness_at_trough": 14.529599430659763,
+  "true_brightness_at_trough": 14.508952857945982,
+  "true_pair_score": 1.534986187645508,
+  "true_pair_rank": 36,
+  "true_pair_rank_out_of": 101,
+  "random_score_mean": 2.490587775517013,
+  "random_score_std": 2.1063187984688883,
+  "true_pair": {
+    "i": 49,
+    "j": 49,
+    "pred": 12.994613243014255
+  },
+  "runtime_s": 70.0
+}
