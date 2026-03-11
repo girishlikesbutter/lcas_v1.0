@@ -1,0 +1,87 @@
+{
+  "peaks": [
+    {
+      "peak_idx": 183,
+      "m_target": 7.168932631268177,
+      "n_seeds": 1000,
+      "n_converged": 705,
+      "n_unique": 691,
+      "nearest_to_truth_deg": 6.943185399914632,
+      "nearest_to_truth_hifi_residual": 0.24165253625495176,
+      "survival_counts": {
+        "0.2": 610,
+        "0.1": 578,
+        "0.05": 568,
+        "0.025": 566,
+        "0.01": 549
+      },
+      "nearest_survives": {
+        "0.2": false,
+        "0.1": false,
+        "0.05": false,
+        "0.025": false,
+        "0.01": false
+      },
+      "lofi_time_s": 223.3,
+      "hifi_time_s": 6.3
+    },
+    {
+      "peak_idx": 260,
+      "m_target": 6.993509592643965,
+      "n_seeds": 1000,
+      "n_converged": 697,
+      "n_unique": 680,
+      "nearest_to_truth_deg": 5.8565410593546545,
+      "nearest_to_truth_hifi_residual": 0.10880291006561116,
+      "survival_counts": {
+        "0.2": 600,
+        "0.1": 565,
+        "0.05": 548,
+        "0.025": 546,
+        "0.01": 532
+      },
+      "nearest_survives": {
+        "0.2": true,
+        "0.1": false,
+        "0.05": false,
+        "0.025": false,
+        "0.01": false
+      },
+      "lofi_time_s": 206.6,
+      "hifi_time_s": 5.9
+    },
+    {
+      "peak_idx": 360,
+      "m_target": 7.529851068704017,
+      "n_seeds": 1000,
+      "n_converged": 957,
+      "n_unique": 918,
+      "nearest_to_truth_deg": 2.6872030311252817,
+      "nearest_to_truth_hifi_residual": 7.200863054279694e-06,
+      "survival_counts": {
+        "0.2": 743,
+        "0.1": 673,
+        "0.05": 643,
+        "0.025": 633,
+        "0.01": 618
+      },
+      "nearest_survives": {
+        "0.2": true,
+        "0.1": true,
+        "0.05": true,
+        "0.025": true,
+        "0.01": true
+      },
+      "lofi_time_s": 132.3,
+      "hifi_time_s": 11.0
+    }
+  ],
+  "thresholds": [
+    0.2,
+    0.1,
+    0.05,
+    0.025,
+    0.01
+  ],
+  "runtime_s": 713.0
+}
