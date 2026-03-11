@@ -109,8 +109,8 @@ The 4-panel diagnostic plot summarises the results:
 
 - **Panel 1 (top):** Hi-fi lightcurve with detected peaks marked in red.
 - **Panel 2:** n . PAB alignment traces for the top-5 normal groups. Alignment oscillates as the satellite tumbles, and spikes to near 1.0 coincide with brightness peaks.
-- **Panel 3:** Stacked fractional flux. At glint epochs, a single color fills the entire bar, showing one facet group dominates.
-- **Panel 4:** Decomposition at the 8 most prominent peaks. Bars show fractional flux; diamonds show n . PAB alignment.
+- **Panel 3:** Dominant group's fractional flux at every epoch (thin black line) with colored markers at detected peaks. At specular glint epochs, the dominant fraction spikes above the 95% threshold (red dashed line), showing a single facet group captures virtually all the reflected light. Between glints, the fraction drops to 0.3–0.6 as multiple groups contribute.
+- **Panel 4:** Two-regime scatter: peak magnitude (x) vs dominant group fractional flux (y). Each point is one detected peak, colored by which normal group dominates. Specular glints (mag < 9, left) cluster above the 95% line. Diffuse peaks (mag > 11, right) have dominant fractions below 85%, with no single group controlling the brightness.
 
 ### Two Distinct Brightness Regimes
 

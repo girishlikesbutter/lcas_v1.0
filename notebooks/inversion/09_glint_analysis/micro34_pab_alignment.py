@@ -27,6 +27,7 @@ os.chdir(PROJECT_ROOT)
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from scipy.spatial.transform import Rotation
 from scipy.signal import argrelmin
 
@@ -293,75 +294,78 @@ ax2.set_title('Panel 2: PAB alignment for top-5 normal groups (by max alignment)
 ax2.legend(fontsize=7, loc='upper right', ncol=2)
 ax2.grid(True, alpha=0.3)
 
-# --- Panel 3: Stacked area chart of fractional flux (top-5 by frac) ---
+# --- Panel 3: Dominant-group fractional flux at all epochs ---
 ax3 = axes[2]
-# Stack the top-5 fractional fluxes
-stacked_fracs = np.array([frac_flux[g, :] for g in top5_by_frac])
-labels_frac = []
-for g in top5_by_frac:
-    info = group_info[g]
-    labels_frac.append(f"G{g} {','.join(info['components'])}")
+dominant_frac = np.max(frac_flux, axis=0)       # (n_obs,)
+dominant_group_idx = np.argmax(frac_flux, axis=0)  # (n_obs,)
 
-ax3.stackplot(epoch_idx_arr, stacked_fracs, colors=colors, alpha=0.7,
-              labels=labels_frac)
-# Add "other" on top
-other_frac = 1.0 - stacked_fracs.sum(axis=0)
-ax3.fill_between(epoch_idx_arr, stacked_fracs.sum(axis=0),
-                 stacked_fracs.sum(axis=0) + other_frac,
-                 color='gray', alpha=0.3, label='Other groups')
+# Assign consistent colors to groups that dominate at any peak
+unique_dom_groups = sorted(set(dominant_group_idx[peak_indices]))
+cmap_tab = plt.cm.tab10
+group_color_map = {g: cmap_tab(i % 10) for i, g in enumerate(unique_dom_groups)}
+
+# Thin line showing dominant fraction at every epoch
+ax3.plot(epoch_idx_arr, dominant_frac, 'k-', linewidth=0.4, alpha=0.4)
+ax3.axhline(0.95, color='red', linewidth=0.8, linestyle='--', alpha=0.4)
+
+# Colored markers at peak epochs
 for pidx in peak_indices:
-    ax3.axvline(pidx, color='red', linewidth=0.5, alpha=0.4)
+    g = dominant_group_idx[pidx]
+    c = group_color_map.get(g, 'gray')
+    ax3.scatter(pidx, dominant_frac[pidx], color=c, s=35, zorder=5,
+                edgecolors='black', linewidth=0.4)
+
+# Build shared legend for Panels 3 and 4
+legend_handles = []
+for g in unique_dom_groups:
+    info = group_info[g]
+    legend_handles.append(Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor=group_color_map[g],
+                                  markeredgecolor='black', markersize=7,
+                                  label=f"G{g} {','.join(info['components'])}"))
+legend_handles.append(Line2D([0], [0], color='red', linestyle='--',
+                              alpha=0.5, label='95% dominance'))
+
+ax3.legend(handles=legend_handles, fontsize=6, loc='lower right', ncol=2)
 ax3.set_xlabel('Epoch index')
-ax3.set_ylabel('Fractional flux')
-ax3.set_title('Panel 3: Fractional flux by normal group (top-5 by max frac)')
-ax3.legend(fontsize=7, loc='upper right', ncol=2)
-ax3.set_ylim(0, 1.05)
+ax3.set_ylabel('Max single-group flux fraction')
+ax3.set_title('Panel 3: Dominant group captures nearly all flux at glint epochs')
+ax3.set_ylim(0, 1.08)
 ax3.grid(True, alpha=0.3)
 
-# --- Panel 4: Grouped bar chart at each peak ---
+# --- Panel 4: Two-regime scatter — magnitude vs dominant fraction ---
 ax4 = axes[3]
 
-# Use union of top5_by_alignment and top5_by_frac for the bar chart
-# We show top-5 by frac at each peak, with both frac and alignment
-bar_width = 0.12
-n_peaks = len(peak_indices)
-# Limit to at most 8 peaks for readability
-if n_peaks > 8:
-    # Pick 8 most prominent (lowest magnitude)
-    prominences = CTX.true_lc[peak_indices]
-    most_prominent = np.argsort(prominences)[:8]
-    display_peaks = peak_indices[most_prominent]
-    display_peaks.sort()
-else:
-    display_peaks = peak_indices
+peak_mags = CTX.true_lc[peak_indices]
+peak_dom_fracs = dominant_frac[peak_indices]
+peak_dom_groups = dominant_group_idx[peak_indices]
 
-n_display = len(display_peaks)
-x_positions = np.arange(n_display)
+for pidx_i, pidx in enumerate(peak_indices):
+    g = peak_dom_groups[pidx_i]
+    c = group_color_map.get(g, 'gray')
+    ax4.scatter(peak_mags[pidx_i], peak_dom_fracs[pidx_i],
+                color=c, s=60, edgecolors='black', linewidth=0.5, zorder=5)
 
-# For each displayed peak, show the top-5 contributing groups
-for rank, g in enumerate(top5_by_frac):
-    frac_at_peaks = [frac_flux[g, pidx] for pidx in display_peaks]
-    offset = (rank - 2) * bar_width
-    bars = ax4.bar(x_positions + offset, frac_at_peaks, bar_width,
-                   color=colors[rank], alpha=0.8,
-                   label=f"G{g} {','.join(group_info[g]['components'])}")
+# Annotate specular glints (mag < 9) with epoch number
+for pidx_i, pidx in enumerate(peak_indices):
+    if peak_mags[pidx_i] < 9.0:
+        ax4.annotate(str(pidx), (peak_mags[pidx_i], peak_dom_fracs[pidx_i]),
+                     fontsize=6, xytext=(4, 4), textcoords='offset points')
 
-# Overlay n.PAB alignment as markers on secondary y-axis
-ax4r = ax4.twinx()
-for rank, g in enumerate(top5_by_frac):
-    align_at_peaks = [alignment[g, pidx] for pidx in display_peaks]
-    ax4r.scatter(x_positions + (rank - 2) * bar_width, align_at_peaks,
-                 color=colors[rank], marker='D', s=30, edgecolors='black',
-                 linewidth=0.5, zorder=5)
-ax4r.set_ylabel('n . PAB alignment (diamonds)', fontsize=9)
+# Regime boundaries
+ax4.axvline(9.0, color='gray', linestyle=':', linewidth=1, alpha=0.5)
+ax4.axhline(0.95, color='red', linestyle='--', linewidth=0.8, alpha=0.4)
+ax4.text(7.8, 0.45, 'Specular\nglints', fontsize=11, color='#d62728',
+         alpha=0.6, ha='center', fontstyle='italic')
+ax4.text(12.5, 0.45, 'Diffuse\npeaks', fontsize=11, color='gray',
+         alpha=0.6, ha='center', fontstyle='italic')
 
-ax4.set_xticks(x_positions)
-ax4.set_xticklabels([str(p) for p in display_peaks], fontsize=8)
-ax4.set_xlabel('Peak epoch index')
-ax4.set_ylabel('Fractional flux (bars)')
-ax4.set_title('Panel 4: Flux fraction (bars) and n.PAB alignment (diamonds) at peaks')
-ax4.legend(fontsize=7, loc='upper left', ncol=2)
-ax4.grid(True, alpha=0.3, axis='y')
+ax4.legend(handles=legend_handles[:-1], fontsize=6, loc='lower left', ncol=2)
+ax4.set_xlabel('Peak magnitude (lower = brighter)')
+ax4.set_ylabel('Dominant group fractional flux')
+ax4.set_title('Panel 4: Specular glints vs diffuse peaks — two distinct regimes')
+ax4.set_ylim(0, 1.08)
+ax4.grid(True, alpha=0.3)
 
 fig.suptitle('Micro-34: PAB Alignment Diagnostic at Lightcurve Peaks', fontsize=14)
 
