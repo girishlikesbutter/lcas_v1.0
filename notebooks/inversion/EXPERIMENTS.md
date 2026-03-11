@@ -6,20 +6,17 @@
 
 ## 1. Resume Point
 
-- **ACTIVE THREAD:** Integration — band-sweep enumeration + L-conservation pipeline (2026-03-11)
-- **LAST COMPLETED:** Series 08 integration round (3 parallel workers, 2026-03-11). Key findings:
-  - **micro26 (oracle pipeline):** magnitude-only dedup defeats L-conservation (true pair rank 423/1088). Direction-aware dedup needed.
-  - **micro27 (bridge screening):** bridge solves are ~11s each at dt~500s (not 160ms from bench at dt=50s). Single-bridge screening infeasible at scale. Cheap alternatives (geodesic, PA-mode) don't discriminate.
-  - **micro28 (nudged pipeline):** PA-mode bridges are fundamentally wrong (different winding topology). Only tumbling-mode works. Oracle sweep + warm-start refinement approach identified but not yet completed.
-  - **micro26b (direction-aware dedup):** written but interrupted before producing results.
-- **RUNNING:** Nothing. All stale processes from prior session are dead.
-- **BLOCKING:** Need direction-aware dedup to validate L-conservation in the integrated pipeline (micro26b was the fix but didn't complete).
-- **NEXT STEP:** Re-run micro26b (direction-aware dedup) or redesign the pipeline with direction-aware candidate management. If L-conservation works with proper dedup, proceed to nudged attitudes (micro28 v4 approach).
-- **SCALING CONCERN:** Bridge solves are **~11s each** at dt~500s (70x the 160ms bench estimate). Full band-sweep (130 solves/leg) takes ~17 min/leg with Pool(8). This is feasible for oracle testing but will be a hard constraint for scaling to many candidate pairs. The two-phase screening idea needs a cheap metric that doesn't require solving the bridge (geodesic and PA-mode both failed in micro27).
+- **ACTIVE THREAD:** Glint analysis — PAB alignment as attitude constraint (2026-03-12)
+- **LAST COMPLETED:** Series 09 micro34 (PAB alignment diagnostic, 2026-03-12). Key findings:
+  - **micro34 (PAB alignment):** Brightness peaks ARE specular glints. At the 3 known peaks (epochs 183, 260, 360), a single facet-normal group captures >96% of total flux with n·PAB > 0.993. IS-901 has only 14 unique normal directions across 3840 facets. Each glint reveals which facet normal was aligned with the PAB — constraining q to a 1-DOF circle on SO(3).
+- **RUNNING:** Nothing.
+- **BLOCKING:** Nothing — new research direction opened by micro34.
+- **NEXT STEP:** Exploit PAB-alignment constraint for attitude candidate pruning. At a glint epoch, require that some facet normal aligns with PAB_inertial — this constrains q far more than iso-brightness matching alone. Also: characterise glint shapes per component (width, intensity, asymmetry) to identify which component is glinting from the LC shape alone.
 - **OPEN QUESTIONS:**
-  1. Does direction-aware dedup fix the L-conservation failure in the integrated pipeline?
-  2. Can bridge solve cost be reduced (relaxed tolerances, bounded search, warm starts)?
-  3. What cheap screening metric can replace single-bridge solves for pruning N² pairs?
+  1. Can we identify which component is glinting purely from LC shape (glint width, intensity profile)?
+  2. How much does the PAB-alignment constraint reduce the iso-brightness candidate set at glint epochs?
+  3. Does the PAB constraint transfer to non-oracle settings (noisy LC, approximate peak detection)?
+  4. Can different articulation angles be distinguished by glint shape for the same component?
 
 ---
 
@@ -366,31 +363,59 @@ See `07_winding_enumeration/FINDINGS.md` for valley tables, band results, and la
 
 ---
 
-### Series 08 — Integration Pipeline (2026-03-11)
+### Series 08 — Integration Pipeline (2026-03-11 → 2026-03-12)
 
-First attempt to wire band-sweep enumeration (micro20) + L-conservation filter (micro23) into an end-to-end pipeline. Three parallel workers tackled oracle pipeline, bridge screening, and nudged attitudes.
+Wiring band-sweep enumeration (micro20) + L-conservation filter (micro23) into an end-to-end pipeline. Two rounds of parallel workers.
 
 ```
 micro26 ─── Oracle pipeline (band-sweep + L-conservation)
-├── micro26b ─── Direction-aware dedup fix (incomplete)
+├── micro26b ─── Direction-aware dedup fix (incomplete, superseded by micro26c)
+├── micro26c ─── Direction-aware dedup (completed) → true ω NOT found on leg 1
 ├── micro27 ─── Single-bridge screening feasibility
-└── micro28 ─── Nudged attitudes (PA-mode failed, v4 incomplete)
+├── micro28 ─── Nudged attitudes (PA-mode failed, v4 incomplete)
+├── micro29 ─── Peak-shape omega filter (weak, 11-30% kill rate)
+└── micro30 ─── Hi-fi pruning of lo-fi candidates (seed failure — needs 10K seeds)
 ```
 
 | Script | Question | Key Result | Status |
 |--------|----------|------------|--------|
 | `micro26_integration_oracle.py` | Does band-sweep + L-conservation recover truth with oracle attitudes? | **NO — rank 423/1088.** Magnitude-only dedup keeps one arbitrary direction per \|ω\| band; the kept direction at true \|ω\| was wrong, so L doesn't match between legs. L-conservation physics is sound; dedup strategy defeats it. | DONE |
-| `micro26b_direction_aware_dedup.py` | Does direction-aware dedup (angular distance < 5°) fix the L-conservation failure? | Written but interrupted before producing results. | INCOMPLETE |
+| `micro26b_direction_aware_dedup.py` | Does direction-aware dedup (angular distance < 5°) fix the L-conservation failure? | Written but interrupted before producing results. | SUPERSEDED by micro26c |
+| `micro26c_oracle_direction_dedup.py` | With direction-aware dedup, does L-conservation work? | **NO — but not because of dedup.** Dedup correctly kept 54/49 candidates (vs 34/32). The true omega is NOT in leg 1's candidate set — nearest has 125° direction error (completely different vector). With 10 starts per band at dt=721s (~4 revolutions), the bridge solver never discovers the true omega direction on leg 1. Leg 0 (dt=555s, ~3 rev) finds it exactly. | DONE |
 | `micro27_bridge_screening.py` | Can a single cheap bridge solve per pair screen N² pairs? | **Infeasible.** Bridge solves are ~11s each at dt~500s (70× the 160ms bench at dt=50s). Cheap alternatives tested: geodesic metric (instant but doesn't discriminate), PA-mode (5ms but wrong minima), bounded L-BFGS-B (275ms but doesn't converge). No viable cheap screening metric found. | DONE |
 | `micro28_integration_nudged.py` | Does pipeline work with 1-5° attitude perturbations? | PA-mode bridge is fundamentally wrong (different winding topology, 0/30 correct). Oracle sweep + warm-start refinement (v4) is the right approach but was not completed (~35 min runtime). | INCOMPLETE |
+| `micro29_peak_shape_filter.py` | Can peak-shape consistency (brightness is local max at peak ± 1 epoch) filter wrong-winding candidates? | **Weak.** Kills 11% (leg 0) to 30% (leg 1). At ±1 epoch (7.2s), even wrong omegas barely change attitude, so the peak shape is preserved. True omega survives on leg 0. Not useful standalone. | DONE |
+| `micro30_hifi_pruning.py` | Does hi-fi (shadow) evaluation prune lo-fi iso-brightness candidates? | **Inconclusive due to seed failure.** With 1000 seeds (should be 10K), nearest candidates at peaks 183/260 were 5.9–6.9° from truth — outside the ~5° convergence basin — so hi-fi correctly kills them. At peak 360 (nearest 2.69°), hi-fi residual ≈ 0 and truth survives all thresholds. Needs re-run with 10K seeds. | REDO |
+
+**Key findings (cumulative across both rounds):**
+1. **Bridge solver coverage is THE bottleneck.** On leg 1 (dt=721s, ~4 revolutions), 10 random starts per band fails to find the true omega direction. The bridge problem has many directionally-distinct local minima at each |ω|, and the true omega's basin of attraction is narrow. Leg 0 (dt=555s, ~3 rev) works reliably.
+2. **Direction-aware dedup works correctly** but doesn't help when the true omega was never found. Dedup is solved; candidate generation is not.
+3. **Magnitude-only dedup is incompatible with L-conservation.** At each |ω|, multiple directionally-distinct bridge solutions exist. Keeping one arbitrary direction discards the correct direction. (Series 08a finding, confirmed by micro26c.)
+4. **Bridge solve cost scales with dt.** ~11s per solve at dt~500s. Cost is dominated by ODE integration step count. Scales linearly with n_starts: 10 starts = 3 min/leg, 50 = 15 min/leg, 100 = 30 min/leg.
+5. **Peak-shape filter is too weak** for standalone use. Hi-fi pruning is promising but needs proper seed counts to evaluate.
+6. **PA-mode cannot substitute for tumbling-mode.** (Series 08a finding, unchanged.)
+
+See `08_integration/FINDINGS.md` for detailed micro26/micro26c analysis.
+
+---
+
+### Series 09 — Glint Analysis (2026-03-12)
+
+New research direction: exploit specular glint physics for attitude constraints. The BRDF specular term peaks when facet normal **n** aligns with the Phase Angle Bisector PAB = (k1+k2)/|k1+k2|. If we can identify which facet is glinting at a brightness peak, q is constrained to a 1-DOF circle on SO(3) — far more powerful than iso-brightness matching.
+
+```
+micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
+```
+
+| Script | Question | Key Result | Status |
+|--------|----------|------------|--------|
+| `micro34_pab_alignment.py` | Do brightness peaks coincide with high n·PAB alignment? Is a single facet group responsible? | **YES.** At the 3 known peaks (ep 183/260/360), one normal group captures >96% of flux with n·PAB > 0.993. IS-901 has 14 unique normals across 3840 facets. Two regimes: specular glints (mag < 9, single group dominates) vs diffuse humps (mag 11-13, large Bus faces win on area). Antenna dish (9.8 m²) outshines 97 m² Bus faces at glint geometry. | DONE |
 
 **Key findings:**
-1. **Magnitude-only dedup is incompatible with L-conservation.** At each |ω|, multiple directionally-distinct bridge solutions exist. Keeping one arbitrary direction per magnitude band discards the correct direction. Must keep all directionally-distinct solutions.
-2. **Bridge solve cost scales with dt.** At dt=555s (leg 0), each solve takes ~11s (148 L-BFGS-B evals × 74ms per `propagate_attitude` call). At dt=50s (bench), it's ~160ms. Cost is dominated by ODE integration step count, which scales with time span.
-3. **PA-mode cannot substitute for tumbling-mode.** Principal-axis bridge solutions have different omega directions and winding topology than Euler dynamics solutions. L-conservation requires tumbling-mode solutions.
-4. **Runtime:** Full band-sweep (130 solves/leg) takes ~17 min/leg with Pool(8). Feasible for oracle testing but a hard constraint for scaling.
-
-See `08_integration/FINDINGS.md` for detailed micro26 analysis.
+1. **Glints are unambiguous.** At bright peaks (mag < 9), a single facet-normal group captures >96% of total flux. The specular BRDF concentration (n_phong 200-240) overwhelms area differences by orders of magnitude.
+2. **14 unique normals** on IS-901 (after articulation). The glint-producing groups are: z-faces (Bus/SP, 22.75 m², n_phong=240), AD_East main face (9.8 m², n_phong=200), AD side faces (1.12 m², n_phong=200).
+3. **Two regimes:** Specular glints (sharp spikes, one face dominates, high n·PAB) vs diffuse peaks (broad humps, large Bus ±X faces win on area, moderate n·PAB). 53.5% of peaks have dominant-flux group = top-alignment group; the mismatches are all diffuse-regime peaks.
+4. **Small facets dominate at glints.** The AD_East face (9.8 m²) produces brighter peaks than the Bus ±X faces (97.3 m²) when it achieves near-perfect PAB alignment. Area is irrelevant in the specular regime.
 
 ---
 
@@ -451,6 +476,15 @@ See `08_integration/FINDINGS.md` for detailed micro26 analysis.
 - **Tried:** Replace tumbling-mode Euler dynamics in bridge solves with principal-axis closed-form propagation (763× faster per call).
 - **Why abandoned:** PA-mode solutions have different omega directions and winding topology than Euler dynamics. L-conservation requires tumbling-mode solutions. 0/30 trials correct with PA-mode.
 - **Status:** No shortcut for Euler dynamics — tumbling-mode bridge is required.
+
+### Peak-Shape Omega Filter (Series 08b, micro29)
+- **Tried:** At each brightness peak, propagate candidate omega ±1 epoch (7.2s). If the predicted brightness doesn't form a local max at the peak, reject the candidate.
+- **Why abandoned:** ±1 epoch is too short. Even wrong-winding omegas barely change the attitude over 7.2s, so the peak shape is preserved for nearly all candidates. Kill rate only 11-30%.
+- **Status:** Too weak for standalone use. Marginal value at best.
+
+### Cross-Leg Seeding (Series 08b, discussion)
+- **Considered:** Use leg 0's omega solutions, propagated forward by Euler dynamics, as privileged initial guesses for leg 1's bridge solver.
+- **Why rejected (without testing):** In the real pipeline, we don't know which of leg 0's ~54 candidates is the true omega. We'd have to propagate all 54 forward — adding 54 seeds across all bands is negligible compared to the ~130 random starts already being done. The real problem is insufficient random coverage, not lack of informed seeds from an unknown source.
 
 ---
 
@@ -524,6 +558,20 @@ See `08_integration/FINDINGS.md` for detailed micro26 analysis.
   - *micro27:* Bridge solves at dt~500s cost ~11s each (not 160ms). No cheap screening metric found (geodesic, PA-mode both fail).
   - *micro28:* PA-mode bridges are fundamentally wrong (different winding topology, 0/30 correct). Tumbling-mode is required.
 - **Decision:** Fix dedup to be direction-aware (micro26b). Accept bridge solve cost (~17 min/leg). Abandon PA-mode shortcuts and single-bridge screening. Focus on validating the pipeline with proper dedup before scaling.
+
+### 2026-03-12: Bridge solver coverage identified as THE bottleneck (micro26c, micro29, micro30)
+- **Tried:** Three parallel workers: (1) direction-aware dedup in full pipeline, (2) peak-shape pre-filter, (3) hi-fi pruning of lo-fi iso-brightness candidates.
+- **Found:**
+  - *micro26c:* Direction-aware dedup works correctly (54/49 vs 34/32 candidates). But the true omega is **absent from leg 1's candidate set** — nearest candidate has 125° direction error, which is a completely different omega vector. 10 random starts per band at dt=721s (~4 rev) is insufficient. Leg 0 (dt=555s, ~3 rev) finds truth exactly.
+  - *micro29:* Peak-shape filter too weak (11-30% kill rate). ±1 epoch (7.2s) is too short for wrong omegas to break peak shape.
+  - *micro30:* Hi-fi pruning inconclusive — only 1000 seeds used (should be 10K), so nearest candidates at 2/3 peaks were 5.9-6.9° from truth (a seed coverage failure, not a pruning failure). At the one peak with a close candidate (2.69°), hi-fi preserves it perfectly.
+  - *Cross-leg seeding idea rejected:* In the real pipeline we don't know which leg 0 candidate is correct, so we can't selectively seed leg 1. The real fix is more random starts.
+- **Decision:** The pipeline's blocking failure is candidate generation, not dedup or filtering. Next: sweep n_starts per band on leg 1 to find the minimum for reliable coverage. If 50 starts works (15 min/leg), pipeline is viable. Also redo micro30 with 10K seeds to properly evaluate hi-fi pruning.
+
+### 2026-03-12: PAB alignment confirmed — glints reveal facet normals (micro34)
+- **Tried:** Diagnostic on all 500 epochs: computed n·PAB for each of 14 unique facet-normal groups, decomposed per-facet flux at every epoch.
+- **Found:** Brightness peaks ARE specular glints. At bright peaks (mag < 9), a single facet group captures >96% of flux with n·PAB > 0.993. Two regimes: specular glints (one face dominates) vs diffuse humps (large Bus faces win on area). IS-901 has only 14 unique normal directions. Antenna dish (9.8 m²) outshines 97 m² Bus faces at glint geometry due to specular concentration.
+- **Decision:** New research direction: exploit PAB-alignment as attitude constraint. Each glint constrains q to a 1-DOF circle on SO(3) (for the identified facet normal). Next: (1) quantify candidate reduction from PAB constraint at glint epochs, (2) characterise glint shapes per component for blind component identification.
 
 ### 2026-03-01: Omega basin characterisation
 - **Tried:** Systematic omega basin study (magnitude, direction, q-degradation) at lo-fi and hi-fi fidelity
