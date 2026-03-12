@@ -255,6 +255,21 @@ for rank, g in enumerate(top5_by_frac):
           f"r_s={info['mean_r_s']:.3f}, n_phong={info['mean_n_phong']:.0f}")
 
 # ===========================================================================
+# Save intermediate arrays for standalone plotting
+# ===========================================================================
+npz_path = RESULTS_DIR / "micro34_pab_alignment.npz"
+np.savez_compressed(str(npz_path),
+    true_lc=CTX.true_lc,
+    peak_indices=peak_indices,
+    alignment=alignment,
+    frac_flux=frac_flux,
+    unique_normals=unique_normals,
+    top5_by_alignment=top5_by_alignment,
+    top5_by_frac=top5_by_frac,
+)
+print(f"Arrays saved: {npz_path}")
+
+# ===========================================================================
 # Plot: 4-panel figure
 # ===========================================================================
 print("\nGenerating 4-panel plot...")
@@ -484,6 +499,18 @@ results = {
             'n_phong': float(group_info[g]['mean_n_phong']),
         }
         for g in top5_by_frac
+    ],
+    'all_groups': [
+        {
+            'group_id': info['group_id'],
+            'normal': info['normal'].tolist(),
+            'components': info['components'],
+            'n_facets': info['n_facets'],
+            'total_area': info['total_area'],
+            'mean_r_s': info['mean_r_s'],
+            'mean_n_phong': info['mean_n_phong'],
+        }
+        for info in group_info
     ],
     'peak_summary': peak_summary,
     'hifi_time_s': float(t_hifi_elapsed),

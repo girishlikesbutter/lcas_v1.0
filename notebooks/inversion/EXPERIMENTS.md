@@ -7,16 +7,19 @@
 ## 1. Resume Point
 
 - **ACTIVE THREAD:** Glint analysis — PAB alignment as attitude constraint (2026-03-12)
-- **LAST COMPLETED:** Series 09 micro34 (PAB alignment diagnostic, 2026-03-12). Key findings:
-  - **micro34 (PAB alignment):** Brightness peaks ARE specular glints. At the 3 known peaks (epochs 183, 260, 360), a single facet-normal group captures >96% of total flux with n·PAB > 0.993. IS-901 has only 14 unique normal directions across 3840 facets. Each glint reveals which facet normal was aligned with the PAB — constraining q to a 1-DOF circle on SO(3).
+- **LAST COMPLETED:** Series 09 micro35/36/37 (multi-trajectory robustness, PAB candidate filter, BRDF glint profiles, 2026-03-12). Key findings:
+  - **micro35 (multi-trajectory):** Specular glint finding holds across 30 random trajectories. 439 bright peaks total, 89.3% pass strict specular criteria (frac > 0.77, n·PAB > 0.99). All "counterexamples" are near-misses (n·PAB > 0.984, frac > 0.54). Lowering thresholds to frac > 0.5, n·PAB > 0.98 captures 100%. Every trajectory has 3-26 bright glints. All 10 major normal groups produce glints.
+  - **micro36 (PAB filter):** ISO-brightness candidates are NOT random — at glint epochs, they are already pre-selected for PAB alignment (all within 4.4-7.5 deg, vs 27.9 deg median for random SO(3)). Matching brightness at a glint IS a proxy for PAB alignment. PAB filter at 5 deg threshold still kills 89.4% (600 survivors from 5643), truth survives at 4.62 deg.
+  - **micro37 (BRDF profiles):** n_phong is the dominant control on specular lobe width. FWHM: n_phong=200 → 9.5 deg, n_phong=500 → 6.0 deg. Phase angle has negligible effect. r_s controls amplitude, not width.
 - **RUNNING:** Nothing.
-- **BLOCKING:** Nothing — new research direction opened by micro34.
-- **NEXT STEP:** Exploit PAB-alignment constraint for attitude candidate pruning. At a glint epoch, require that some facet normal aligns with PAB_inertial — this constrains q far more than iso-brightness matching alone. Also: characterise glint shapes per component (width, intensity, asymmetry) to identify which component is glinting from the LC shape alone.
+- **BLOCKING:** Nothing.
+- **NEXT STEP:** Investigate PAB-circle candidate generation (analytically construct 1-DOF quaternion circles per normal, sample densely, check brightness). Also: test component identification from glint shape (FWHM, recurrence period) without oracle. Bridge solver coverage sweep (n_starts on leg 1) remains an open task from Series 08.
 - **OPEN QUESTIONS:**
-  1. Can we identify which component is glinting purely from LC shape (glint width, intensity profile)?
-  2. How much does the PAB-alignment constraint reduce the iso-brightness candidate set at glint epochs?
+  1. Can we identify which component is glinting purely from LC shape (glint width, intensity profile)? *(not yet tested — micro37 gives the BRDF profiles but component ID from observed LC shape is untested)*
+  2. ~~How much does the PAB-alignment constraint reduce the iso-brightness candidate set at glint epochs?~~ **ANSWERED (micro36):** 89.4% kill at 5 deg threshold. But iso-brightness and PAB are partially redundant at glints.
   3. Does the PAB constraint transfer to non-oracle settings (noisy LC, approximate peak detection)?
   4. Can different articulation angles be distinguished by glint shape for the same component?
+  5. Can PAB-circle candidate generation (analytic 1-DOF circles per normal) replace or improve on iso-brightness search at glint epochs?
 
 ---
 
@@ -405,17 +408,25 @@ New research direction: exploit specular glint physics for attitude constraints.
 
 ```
 micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
+├── micro35 ─── Multi-trajectory robustness (30 random q0, omega0)
+├── micro36 ─── PAB filter on iso-brightness candidates (epoch 183)
+└── micro37 ─── BRDF specular lobe characterization (synthetic plate)
 ```
 
 | Script | Question | Key Result | Status |
 |--------|----------|------------|--------|
 | `micro34_pab_alignment.py` | Do brightness peaks coincide with high n·PAB alignment? Is a single facet group responsible? | **YES.** At the 3 known peaks (ep 183/260/360), one normal group captures >96% of flux with n·PAB > 0.993. IS-901 has 14 unique normals across 3840 facets. Two regimes: specular glints (mag < 9, single group dominates) vs diffuse humps (mag 11-13, large Bus faces win on area). Antenna dish (9.8 m²) outshines 97 m² Bus faces at glint geometry. | DONE |
+| `micro35_multi_trajectory_pab.py` | Does the specular glint finding hold across many different trajectories? | **YES.** 30 random (q0, omega0) pairs. 439 bright peaks total, 89.3% pass strict criteria (frac>0.77, n·PAB>0.99). All 47 "counterexamples" are near-misses (n·PAB>0.984). 100% pass with relaxed thresholds (frac>0.5, n·PAB>0.98). Every trajectory has 3-26 bright glints. All 10 major normal groups glint. | DONE |
+| `micro36_pab_candidate_filter.py` | Can PAB alignment filter iso-brightness candidates at glint epochs? | **Partially.** All 5643 iso-brightness candidates at ep 183 already have tight PAB alignment (4.4-7.5 deg vs 27.9 deg for random SO(3)). Iso-brightness matching at glints IS a proxy for PAB alignment. 5 deg threshold kills 89.4% (→600 survivors); truth survives at 4.62 deg. | DONE |
+| `micro37_brdf_glint_profile.py` | How does specular lobe width depend on BRDF params and phase angle? | n_phong dominates: FWHM = 19.4°(n=50), 9.5°(n=200), 4.3°(n=1000). r_s controls amplitude not width. Phase angle negligible. Area scales linearly. For IS-901 components, ~10 deg captures specular-dominated region. | DONE |
 
-**Key findings:**
-1. **Glints are unambiguous.** At bright peaks (mag < 9), a single facet-normal group captures >96% of total flux. The specular BRDF concentration (n_phong 200-240) overwhelms area differences by orders of magnitude.
-2. **14 unique normals** on IS-901 (after articulation). The glint-producing groups are: z-faces (Bus/SP, 22.75 m², n_phong=240), AD_East main face (9.8 m², n_phong=200), AD side faces (1.12 m², n_phong=200).
-3. **Two regimes:** Specular glints (sharp spikes, one face dominates, high n·PAB) vs diffuse peaks (broad humps, large Bus ±X faces win on area, moderate n·PAB). 53.5% of peaks have dominant-flux group = top-alignment group; the mismatches are all diffuse-regime peaks.
-4. **Small facets dominate at glints.** The AD_East face (9.8 m²) produces brighter peaks than the Bus ±X faces (97.3 m²) when it achieves near-perfect PAB alignment. Area is irrelevant in the specular regime.
+**Key findings (cumulative):**
+1. **Glints are unambiguous and universal.** Across 30 random trajectories, bright peaks (mag < 9) are specular glints driven by single-facet PAB alignment. The finding is not trajectory-specific.
+2. **14 unique normals** on IS-901 (after articulation). All 10 major groups produce glints across different trajectories. Faster tumblers produce more glints (3-26 per 3600s window).
+3. **Two regimes persist universally:** Specular glints (sharp spikes, one face dominates, high n·PAB) vs diffuse peaks (broad humps, large Bus ±X faces win on area, moderate n·PAB).
+4. **PAB and iso-brightness are partially redundant at glint epochs.** Iso-brightness candidates are already pre-selected for PAB alignment. The PAB filter provides an additional 10x reduction at 5 deg threshold but is not independent of iso-brightness.
+5. **Specular lobe width is ~10 deg for IS-901 materials** (n_phong 200-267). This sets the angular threshold for PAB-based filtering. Phase angle has negligible effect on lobe shape.
+6. **Practical threshold:** 5 deg PAB alignment kills 89% of iso-brightness candidates while preserving truth. Tighter thresholds possible at sharper glints (epoch 360: truth at 1.56 deg).
 
 ---
 
@@ -572,6 +583,14 @@ micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
 - **Tried:** Diagnostic on all 500 epochs: computed n·PAB for each of 14 unique facet-normal groups, decomposed per-facet flux at every epoch.
 - **Found:** Brightness peaks ARE specular glints. At bright peaks (mag < 9), a single facet group captures >96% of flux with n·PAB > 0.993. Two regimes: specular glints (one face dominates) vs diffuse humps (large Bus faces win on area). IS-901 has only 14 unique normal directions. Antenna dish (9.8 m²) outshines 97 m² Bus faces at glint geometry due to specular concentration.
 - **Decision:** New research direction: exploit PAB-alignment as attitude constraint. Each glint constrains q to a 1-DOF circle on SO(3) (for the identified facet normal). Next: (1) quantify candidate reduction from PAB constraint at glint epochs, (2) characterise glint shapes per component for blind component identification.
+
+### 2026-03-12: Glint analysis deepened — robustness, filtering, BRDF profiles (micro35-37)
+- **Tried:** Three parallel experiments: (1) 30 random trajectories to stress-test micro34's glint finding, (2) PAB alignment as post-filter on 5643 iso-brightness candidates at epoch 183, (3) BRDF specular lobe characterization on synthetic flat plate.
+- **Found:**
+  - *micro35:* Specular glint finding is universal — 89.3% of 439 bright peaks across 30 random trajectories pass strict specular criteria, remaining 11% are near-misses (n·PAB > 0.984). Every trajectory has glints (3-26 per window). All major normal groups participate.
+  - *micro36:* Iso-brightness candidates are NOT random — all 5643 fall within 4.4-7.5 deg of some normal (vs 27.9 deg median for random SO(3)). Matching brightness at a glint epoch already implies PAB alignment. PAB filter at 5 deg threshold still provides useful 10x reduction (5643 → 600), truth survives at 4.62 deg.
+  - *micro37:* n_phong dominates lobe width (FWHM ~9.5 deg for n_phong=200). Phase angle negligible. r_s affects peak brightness, not lobe shape. For IS-901 materials, ~10 deg captures the specular-dominated region.
+- **Decision:** PAB is a valid post-filter (10x reduction) but not a replacement for iso-brightness candidate generation. Next: (1) test PAB-circle analytic candidate generation (1-DOF circles per normal), (2) component identification from glint shape, (3) bridge solver n_starts sweep on leg 1 (still open from Series 08).
 
 ### 2026-03-01: Omega basin characterisation
 - **Tried:** Systematic omega basin study (magnitude, direction, q-degradation) at lo-fi and hi-fi fidelity
