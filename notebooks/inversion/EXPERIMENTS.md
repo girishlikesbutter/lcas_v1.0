@@ -6,20 +6,21 @@
 
 ## 1. Resume Point
 
-- **ACTIVE THREAD:** Glint analysis — PAB alignment as attitude constraint (2026-03-12)
-- **LAST COMPLETED:** Series 09 micro35/36/37 (multi-trajectory robustness, PAB candidate filter, BRDF glint profiles, 2026-03-12). Key findings:
-  - **micro35 (multi-trajectory):** Specular glint finding holds across 30 random trajectories. 439 bright peaks total, 89.3% pass strict specular criteria (frac > 0.77, n·PAB > 0.99). All "counterexamples" are near-misses (n·PAB > 0.984, frac > 0.54). Lowering thresholds to frac > 0.5, n·PAB > 0.98 captures 100%. Every trajectory has 3-26 bright glints. All 10 major normal groups produce glints.
-  - **micro36 (PAB filter):** ISO-brightness candidates are NOT random — at glint epochs, they are already pre-selected for PAB alignment (all within 4.4-7.5 deg, vs 27.9 deg median for random SO(3)). Matching brightness at a glint IS a proxy for PAB alignment. PAB filter at 5 deg threshold still kills 89.4% (600 survivors from 5643), truth survives at 4.62 deg.
-  - **micro37 (BRDF profiles):** n_phong is the dominant control on specular lobe width. FWHM: n_phong=200 → 9.5 deg, n_phong=500 → 6.0 deg. Phase angle has negligible effect. r_s controls amplitude, not width.
+- **ACTIVE THREAD:** Glint-based omega estimation — recurrence constraint (2026-03-13)
+- **LAST COMPLETED:** Series 09b micro38/39/40 (PAB-seeded candidates, component identification, bridge n_starts sweep, 2026-03-13). Key findings:
+  - **micro38 (PAB-seeded candidates):** 30K PAB-circle seeds → 10,860 unique candidates, nearest to truth@183 = 5.00 deg. Random SO(3) seeds (micro10, 10K seeds) get nearest = 0.50 deg — 10x closer. **PAB seeding worse than random in this form.** Root cause: seeds diluted across 14 normals (only 1 correct), optimizer discards PAB structure. Concept is valid but needs redesign: identify glinting normal first (known geometry + magnitude lookup), concentrate all seeds on that one circle.
+  - **micro39 (component ID):** Rule-based magnitude classifier (ARI=0.83) vastly outperforms hierarchical shape clustering (ARI=0.36). With known satellite geometry/BRDF, observed glint magnitude directly identifies the source normal group. AD_East (6/6 correct), z-faces (2/2), singletons lumped together but distinguishable from the dominant groups.
+  - **micro40 (bridge n_starts, PARTIAL):** Only n_starts=10 completed before kill. 49 candidates after dedup, nearest to truth 2.67 deg (found). Wall time: 19 min for ONE oracle pair. **Bridge cost is prohibitive at scale:** 50×50 non-oracle pairs × 19 min = ~23 days. Band-sweep bridging cannot scale to the real pipeline.
 - **RUNNING:** Nothing.
-- **BLOCKING:** Nothing.
-- **NEXT STEP:** Investigate PAB-circle candidate generation (analytically construct 1-DOF quaternion circles per normal, sample densely, check brightness). Also: test component identification from glint shape (FWHM, recurrence period) without oracle. Bridge solver coverage sweep (n_starts on leg 1) remains an open task from Series 08.
+- **BLOCKING:** Bridge solver cost makes the current pipeline architecture (iso-brightness → band-sweep bridging → L-conservation) infeasible for non-oracle settings.
+- **NEXT STEP:** Test glint-recurrence omega estimation. If the same normal glints at epochs t1, t2, ..., the recurrence intervals constrain |omega × n| (the precession rate of n around omega). Multiple normals give multiple projections of omega. This could bypass bridging entirely. Also: redesign PAB candidate generation with focused single-normal seeding (identify normal from magnitude, concentrate all seeds on that circle).
 - **OPEN QUESTIONS:**
-  1. Can we identify which component is glinting purely from LC shape (glint width, intensity profile)? *(not yet tested — micro37 gives the BRDF profiles but component ID from observed LC shape is untested)*
+  1. ~~Can we identify which component is glinting purely from LC shape?~~ **ANSWERED (micro39):** Yes, via magnitude thresholds with known geometry. ARI=0.83. Shape clustering is weak (ARI=0.36).
   2. ~~How much does the PAB-alignment constraint reduce the iso-brightness candidate set at glint epochs?~~ **ANSWERED (micro36):** 89.4% kill at 5 deg threshold. But iso-brightness and PAB are partially redundant at glints.
-  3. Does the PAB constraint transfer to non-oracle settings (noisy LC, approximate peak detection)?
-  4. Can different articulation angles be distinguished by glint shape for the same component?
-  5. Can PAB-circle candidate generation (analytic 1-DOF circles per normal) replace or improve on iso-brightness search at glint epochs?
+  3. ~~Can PAB-circle candidate generation replace iso-brightness search?~~ **ANSWERED (micro38):** Not in current form (diluted across 14 normals, optimizer discards PAB constraint). Redesign needed: focused single-normal seeding + direct phi-scan.
+  4. Does the PAB constraint transfer to non-oracle settings (noisy LC, approximate peak detection)?
+  5. Can different articulation angles be distinguished by glint shape for the same component?
+  6. Can glint recurrence intervals constrain omega without bridging? (multiple recurrences from same normal → |omega × n|; multiple normals → full omega vector)
 
 ---
 
@@ -410,7 +411,10 @@ New research direction: exploit specular glint physics for attitude constraints.
 micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
 ├── micro35 ─── Multi-trajectory robustness (30 random q0, omega0)
 ├── micro36 ─── PAB filter on iso-brightness candidates (epoch 183)
-└── micro37 ─── BRDF specular lobe characterization (synthetic plate)
+│   └── micro38 ─── PAB-seeded iso-brightness candidates (14 normals × circles)
+├── micro37 ─── BRDF specular lobe characterization (synthetic plate)
+│   └── micro39 ─── Blind component identification from glint shape
+└── micro40 ─── Bridge solver n_starts sweep (leg 1) [PARTIAL, in 08_integration/]
 ```
 
 | Script | Question | Key Result | Status |
@@ -419,6 +423,9 @@ micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
 | `micro35_multi_trajectory_pab.py` | Does the specular glint finding hold across many different trajectories? | **YES.** 30 random (q0, omega0) pairs. 439 bright peaks total, 89.3% pass strict criteria (frac>0.77, n·PAB>0.99). All 47 "counterexamples" are near-misses (n·PAB>0.984). 100% pass with relaxed thresholds (frac>0.5, n·PAB>0.98). Every trajectory has 3-26 bright glints. All 10 major normal groups glint. | DONE |
 | `micro36_pab_candidate_filter.py` | Can PAB alignment filter iso-brightness candidates at glint epochs? | **Partially.** All 5643 iso-brightness candidates at ep 183 already have tight PAB alignment (4.4-7.5 deg vs 27.9 deg for random SO(3)). Iso-brightness matching at glints IS a proxy for PAB alignment. 5 deg threshold kills 89.4% (→600 survivors); truth survives at 4.62 deg. | DONE |
 | `micro37_brdf_glint_profile.py` | How does specular lobe width depend on BRDF params and phase angle? | n_phong dominates: FWHM = 19.4°(n=50), 9.5°(n=200), 4.3°(n=1000). r_s controls amplitude not width. Phase angle negligible. Area scales linearly. For IS-901 components, ~10 deg captures specular-dominated region. | DONE |
+| `micro38_pab_seeded_candidates.py` | Does PAB-circle seeding produce better iso-brightness candidates than random SO(3)? | **NO (in this form).** 30K PAB seeds → 10,860 candidates, nearest to truth@183 = 5.00 deg. Random SO(3) (micro10, 10K seeds) gets 0.50 deg — 10x closer. Root cause: seeds diluted across 14 normals (only 1 correct), L-BFGS-B discards PAB structure. Concept valid but implementation defeated by 14x dilution. Needs redesign: identify normal from magnitude, focus all seeds on one circle, scan phi directly. | DONE |
+| `micro39_glint_identification.py` | Can we identify the glinting normal group from observed LC shape alone? | **Yes, via magnitude.** Rule-based classifier (mag thresholds): ARI=0.83. Hierarchical clustering on shape features (FWHM, slopes, recurrence): ARI=0.36. With known satellite geometry+BRDF, observed glint magnitude maps directly to source normal group. AD_East identified 6/6 correctly. | DONE |
+| `micro40_bridge_nstarts_sweep.py` | How many random starts per band are needed for reliable bridge coverage on leg 1? | **PARTIAL — killed after n_starts=10.** 49 candidates, nearest to truth 2.67 deg (found this time, cf. micro26c which missed at n_starts=10 with different RNG). Wall time: 19 min/pair. Confirms n_starts=10 is marginal (sometimes finds, sometimes misses). **Bridge cost prohibitive at scale:** 2500 non-oracle pairs × 19 min = ~23 days. | PARTIAL |
 
 **Key findings (cumulative):**
 1. **Glints are unambiguous and universal.** Across 30 random trajectories, bright peaks (mag < 9) are specular glints driven by single-facet PAB alignment. The finding is not trajectory-specific.
@@ -427,6 +434,9 @@ micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
 4. **PAB and iso-brightness are partially redundant at glint epochs.** Iso-brightness candidates are already pre-selected for PAB alignment. The PAB filter provides an additional 10x reduction at 5 deg threshold but is not independent of iso-brightness.
 5. **Specular lobe width is ~10 deg for IS-901 materials** (n_phong 200-267). This sets the angular threshold for PAB-based filtering. Phase angle has negligible effect on lobe shape.
 6. **Practical threshold:** 5 deg PAB alignment kills 89% of iso-brightness candidates while preserving truth. Tighter thresholds possible at sharper glints (epoch 360: truth at 1.56 deg).
+7. **Component identification works with known geometry.** Glint magnitude + known BRDF/area → source normal group. No need for blind shape clustering.
+8. **PAB-circle seeding needs redesign.** Diluting across 14 normals defeats the purpose. Focused single-normal seeding (after component ID) + direct phi-scan is the right approach.
+9. **Band-sweep bridging is cost-prohibitive at scale.** ~19 min per oracle pair. N² non-oracle pairs makes the current pipeline architecture infeasible. Need fundamentally different omega estimation (e.g. glint recurrence constraints).
 
 ---
 
@@ -492,6 +502,11 @@ micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
 - **Tried:** At each brightness peak, propagate candidate omega ±1 epoch (7.2s). If the predicted brightness doesn't form a local max at the peak, reject the candidate.
 - **Why abandoned:** ±1 epoch is too short. Even wrong-winding omegas barely change the attitude over 7.2s, so the peak shape is preserved for nearly all candidates. Kill rate only 11-30%.
 - **Status:** Too weak for standalone use. Marginal value at best.
+
+### PAB-Circle Seeding (14 normals, diluted) (Series 09, micro38)
+- **Tried:** Generate 30K seeds on PAB-alignment circles for all 14 facet normals, run L-BFGS-B iso-brightness optimization from each. Compare candidate quality to micro10's random SO(3) seeds.
+- **Why abandoned:** Seeds diluted across 14 normals — only ~2K on the correct circle. L-BFGS-B discards PAB structure immediately. Result: nearest to truth = 5.00 deg (vs 0.50 deg for random with 3x fewer seeds). 0.36 candidates/seed efficiency (vs 0.56 random).
+- **Status:** Concept is valid (concentrating seeds near truth should help) but implementation is wrong. Needs redesign: (1) identify glinting normal from magnitude + known geometry (micro39 shows this works), (2) focus all seeds on one circle, (3) scan phi directly instead of unconstrained L-BFGS-B.
 
 ### Cross-Leg Seeding (Series 08b, discussion)
 - **Considered:** Use leg 0's omega solutions, propagated forward by Euler dynamics, as privileged initial guesses for leg 1's bridge solver.
@@ -591,6 +606,14 @@ micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
   - *micro36:* Iso-brightness candidates are NOT random — all 5643 fall within 4.4-7.5 deg of some normal (vs 27.9 deg median for random SO(3)). Matching brightness at a glint epoch already implies PAB alignment. PAB filter at 5 deg threshold still provides useful 10x reduction (5643 → 600), truth survives at 4.62 deg.
   - *micro37:* n_phong dominates lobe width (FWHM ~9.5 deg for n_phong=200). Phase angle negligible. r_s affects peak brightness, not lobe shape. For IS-901 materials, ~10 deg captures the specular-dominated region.
 - **Decision:** PAB is a valid post-filter (10x reduction) but not a replacement for iso-brightness candidate generation. Next: (1) test PAB-circle analytic candidate generation (1-DOF circles per normal), (2) component identification from glint shape, (3) bridge solver n_starts sweep on leg 1 (still open from Series 08).
+
+### 2026-03-13: PAB seeding failed, component ID works, bridge cost prohibitive (micro38-40)
+- **Tried:** Three experiments: (1) PAB-circle seeded iso-brightness candidates (30K seeds across 14 normals), (2) blind component identification from glint shape, (3) bridge solver n_starts coverage sweep on leg 1.
+- **Found:**
+  - *micro38:* PAB seeding is WORSE than random in current form (5.00 deg nearest vs 0.50 deg for random). 14x dilution across normals + optimizer discarding PAB structure. But the underlying principle (concentrate seeds near correct PAB circle) is sound — needs redesign with known-geometry normal identification.
+  - *micro39:* Component identification from magnitude works (ARI=0.83) when satellite geometry/BRDF is known. Shape-based clustering fails (ARI=0.36). With known model, observed glint magnitude directly identifies source normal.
+  - *micro40:* n_starts=10 is marginal (found truth this run, missed in micro26c). 19 min/pair makes N² non-oracle bridging infeasible (~23 days for 2500 pairs).
+- **Decision:** The band-sweep bridging architecture is cost-prohibitive for non-oracle settings. New direction: exploit glint **recurrence** to estimate omega without bridging. If the same normal glints at multiple epochs, the recurrence intervals constrain |omega × n|. Multiple normals give multiple projections → full omega vector. Also redesign PAB seeding: identify normal from magnitude, focus all seeds on one circle, scan phi directly.
 
 ### 2026-03-01: Omega basin characterisation
 - **Tried:** Systematic omega basin study (magnitude, direction, q-degradation) at lo-fi and hi-fi fidelity
