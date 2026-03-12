@@ -1,0 +1,170 @@
+{
+  "experiment": "micro36_pab_candidate_filter",
+  "target_epoch": 183,
+  "target_mag": 7.144809010506018,
+  "n_candidates": 5643,
+  "n_unique_normals": 14,
+  "truth_alignment": {
+    "183": {
+      "best_alignment": 0.9967538645354732,
+      "best_angle_deg": 4.617835961427284,
+      "best_group": 7
+    },
+    "260": {
+      "best_alignment": 0.9969274295677549,
+      "best_angle_deg": 4.492621347922324,
+      "best_group": 6
+    },
+    "360": {
+      "best_alignment": 0.999630018625342,
+      "best_angle_deg": 1.5586225384364627,
+      "best_group": 1
+    }
+  },
+  "candidate_alignment_stats": {
+    "min_n_dot_pab": 0.9914262526870586,
+    "max_n_dot_pab": 0.9971033962592041,
+    "mean_angle_deg": 6.6960765203979955,
+    "median_angle_deg": 7.24627730099984
+  },
+  "random_baseline_stats": {
+    "mean_angle_deg": 26.936505019326145,
+    "median_angle_deg": 27.87696795218959
+  },
+  "sweep_results": [
+    {
+      "theta_max_deg": 1.0,
+      "cos_threshold": 0.9998476951563913,
+      "n_survivors_iso": 0,
+      "kill_rate_iso": 1.0,
+      "n_survivors_random": 8,
+      "kill_rate_random": 0.998582314371788,
+      "selectivity": 0.0
+    },
+    {
+      "theta_max_deg": 2.0,
+      "cos_threshold": 0.9993908270190958,
+      "n_survivors_iso": 0,
+      "kill_rate_iso": 1.0,
+      "n_survivors_random": 27,
+      "kill_rate_random": 0.9952153110047847,
+      "selectivity": 0.0
+    },
+    {
+      "theta_max_deg": 3.0,
+      "cos_threshold": 0.9986295347545738,
+      "n_survivors_iso": 0,
+      "kill_rate_iso": 1.0,
+      "n_survivors_random": 53,
+      "kill_rate_random": 0.9906078327130958,
+      "selectivity": 0.0
+    },
+    {
+      "theta_max_deg": 4.0,
+      "cos_threshold": 0.9975640502598242,
+      "n_survivors_iso": 0,
+      "kill_rate_iso": 1.0,
+      "n_survivors_random": 88,
+      "kill_rate_random": 0.9844054580896686,
+      "selectivity": 0.0
+    },
+    {
+      "theta_max_deg": 5.0,
+      "cos_threshold": 0.9961946980917455,
+      "n_survivors_iso": 600,
+      "kill_rate_iso": 0.8936735778841042,
+      "n_survivors_random": 134,
+      "kill_rate_random": 0.9762537657274499,
+      "selectivity": 4.477611940298508
+    },
+    {
+      "theta_max_deg": 6.0,
+      "cos_threshold": 0.9945218953682733,
+      "n_survivors_iso": 1339,
+      "kill_rate_iso": 0.7627148679780259,
+      "n_survivors_random": 197,
+      "kill_rate_random": 0.9650894914052809,
+      "selectivity": 6.7969543147208125
+    },
+    {
+      "theta_max_deg": 8.0,
+      "cos_threshold": 0.9902680687415704,
+      "n_survivors_iso": 5643,
+      "kill_rate_iso": 0.0,
+      "n_survivors_random": 392,
+      "kill_rate_random": 0.9305334042176148,
+      "selectivity": 14.395408163265305
+    },
+    {
+      "theta_max_deg": 10.0,
+      "cos_threshold": 0.984807753012208,
+      "n_survivors_iso": 5643,
+      "kill_rate_iso": 0.0,
+      "n_survivors_random": 573,
+      "kill_rate_random": 0.8984582668793195,
+      "selectivity": 9.848167539267015
+    },
+    {
+      "theta_max_deg": 15.0,
+      "cos_threshold": 0.9659258262890683,
+      "n_survivors_iso": 5643,
+      "kill_rate_iso": 0.0,
+      "n_survivors_random": 1069,
+      "kill_rate_random": 0.8105617579301789,
+      "selectivity": 5.278765201122544
+    },
+    {
+      "theta_max_deg": 20.0,
+      "cos_threshold": 0.9396926207859084,
+      "n_survivors_iso": 5643,
+      "kill_rate_iso": 0.0,
+      "n_survivors_random": 1656,
+      "kill_rate_random": 0.7065390749601276,
+      "selectivity": 3.407608695652174
+    },
+    {
+      "theta_max_deg": 30.0,
+      "cos_threshold": 0.8660254037844387,
+      "n_survivors_iso": 5643,
+      "kill_rate_iso": 0.0,
+      "n_survivors_random": 3187,
+      "kill_rate_random": 0.43522948786106685,
+      "selectivity": 1.7706306871666144
+    },
+    {
+      "theta_max_deg": 45.0,
+      "cos_threshold": 0.7071067811865476,
+      "n_survivors_iso": 5643,
+      "kill_rate_iso": 0.0,
+      "n_survivors_random": 5475,
+      "kill_rate_random": 0.029771398192450782,
+      "selectivity": 1.0306849315068494
+    },
+    {
+      "theta_max_deg": 60.0,
+      "cos_threshold": 0.5000000000000001,
+      "n_survivors_iso": 5643,
+      "kill_rate_iso": 0.0,
+      "n_survivors_random": 5643,
+      "kill_rate_random": 0.0,
+      "selectivity": 1.0
+    },
+    {
+      "theta_max_deg": 90.0,
+      "cos_threshold": 6.123233995736766e-17,
+      "n_survivors_iso": 5643,
+      "kill_rate_iso": 0.0,
+      "n_survivors_random": 5643,
+      "kill_rate_random": 0.0,
+      "selectivity": 1.0
+    }
+  ],
+  "recommended_threshold": {
+    "theta_deg": 5.0,
+    "kill_rate_iso": 0.8936735778841042,
+    "n_survivors_iso": 600,
+    "kill_rate_random": 0.9762537657274499,
+    "rationale": "Smallest threshold angle > truth alignment (4.62 deg) that guarantees truth survives"
+  },
+  "total_time_s": 79.01840829849243
+}

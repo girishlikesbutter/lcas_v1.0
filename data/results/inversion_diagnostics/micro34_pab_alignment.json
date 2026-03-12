@@ -221,6 +221,234 @@
       "n_phong": 266.6666666666667
     }
   ],
+  "all_groups": [
+    {
+      "group_id": 0,
+      "normal": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "components": [
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "n_facets": 384,
+      "total_area": 97.299999833107,
+      "mean_r_s": 0.36666666666666664,
+      "mean_n_phong": 266.6666666666667
+    },
+    {
+      "group_id": 1,
+      "normal": [
+        -0.9659,
+        -0.2588,
+        0.0
+      ],
+      "components": [
+        "AD_East"
+      ],
+      "n_facets": 128,
+      "total_area": 9.799999833106995,
+      "mean_r_s": 0.4000000000000001,
+      "mean_n_phong": 200.0
+    },
+    {
+      "group_id": 2,
+      "normal": [
+        -0.9659,
+        0.2588,
+        0.0
+      ],
+      "components": [
+        "AD_West"
+      ],
+      "n_facets": 128,
+      "total_area": 9.799999833106995,
+      "mean_r_s": 0.4000000000000001,
+      "mean_n_phong": 200.0
+    },
+    {
+      "group_id": 3,
+      "normal": [
+        -0.2588,
+        -0.9659,
+        0.0
+      ],
+      "components": [
+        "AD_West"
+      ],
+      "n_facets": 128,
+      "total_area": 1.1200002479553177,
+      "mean_r_s": 0.4000000000000001,
+      "mean_n_phong": 200.0
+    },
+    {
+      "group_id": 4,
+      "normal": [
+        -0.2588,
+        0.9659,
+        0.0
+      ],
+      "components": [
+        "AD_East"
+      ],
+      "n_facets": 128,
+      "total_area": 1.1200002479553177,
+      "mean_r_s": 0.4000000000000001,
+      "mean_n_phong": 200.0
+    },
+    {
+      "group_id": 5,
+      "normal": [
+        0.0,
+        -1.0,
+        0.0
+      ],
+      "components": [
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "n_facets": 384,
+      "total_area": 16.92999948456884,
+      "mean_r_s": 0.36666666666666664,
+      "mean_n_phong": 266.6666666666667
+    },
+    {
+      "group_id": 6,
+      "normal": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "components": [
+        "AD_East",
+        "AD_West",
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "n_facets": 640,
+      "total_area": 22.750000339001417,
+      "mean_r_s": 0.38,
+      "mean_n_phong": 240.0
+    },
+    {
+      "group_id": 7,
+      "normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "components": [
+        "AD_East",
+        "AD_West",
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "n_facets": 640,
+      "total_area": 22.750000339001417,
+      "mean_r_s": 0.38,
+      "mean_n_phong": 240.0
+    },
+    {
+      "group_id": 8,
+      "normal": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "components": [
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "n_facets": 384,
+      "total_area": 16.92999948456884,
+      "mean_r_s": 0.36666666666666664,
+      "mean_n_phong": 266.6666666666667
+    },
+    {
+      "group_id": 9,
+      "normal": [
+        0.2588,
+        -0.9659,
+        0.0
+      ],
+      "components": [
+        "AD_East"
+      ],
+      "n_facets": 128,
+      "total_area": 1.1200002479553177,
+      "mean_r_s": 0.4000000000000001,
+      "mean_n_phong": 200.0
+    },
+    {
+      "group_id": 10,
+      "normal": [
+        0.2588,
+        0.9659,
+        0.0
+      ],
+      "components": [
+        "AD_West"
+      ],
+      "n_facets": 128,
+      "total_area": 1.1200002479553177,
+      "mean_r_s": 0.4000000000000001,
+      "mean_n_phong": 200.0
+    },
+    {
+      "group_id": 11,
+      "normal": [
+        0.9659,
+        -0.2588,
+        0.0
+      ],
+      "components": [
+        "AD_West"
+      ],
+      "n_facets": 128,
+      "total_area": 9.799999833106995,
+      "mean_r_s": 0.4000000000000001,
+      "mean_n_phong": 200.0
+    },
+    {
+      "group_id": 12,
+      "normal": [
+        0.9659,
+        0.2588,
+        0.0
+      ],
+      "components": [
+        "AD_East"
+      ],
+      "n_facets": 128,
+      "total_area": 9.799999833106995,
+      "mean_r_s": 0.4000000000000001,
+      "mean_n_phong": 200.0
+    },
+    {
+      "group_id": 13,
+      "normal": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "components": [
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "n_facets": 384,
+      "total_area": 97.299999833107,
+      "mean_r_s": 0.36666666666666664,
+      "mean_n_phong": 266.6666666666667
+    }
+  ],
   "peak_summary": [
     {
       "peak_epoch": 1,
@@ -2721,7 +2949,7 @@
       ]
     }
   ],
-  "hifi_time_s": 58.46766233444214,
+  "hifi_time_s": 59.44015336036682,
   "lc_max_diff": 3.019806626980426e-14,
-  "total_time_s": 116.79742908477783
+  "total_time_s": 119.12009334564209
 }
