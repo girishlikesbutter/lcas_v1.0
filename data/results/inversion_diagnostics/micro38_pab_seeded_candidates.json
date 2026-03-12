@@ -1,0 +1,58 @@
+{
+  "experiment": "micro38_pab_seeded_candidates",
+  "target_epoch": 183,
+  "target_mag": 7.168932631268177,
+  "true_mag": 7.144809010506018,
+  "n_unique_normals": 14,
+  "seed_config": {
+    "n_phi_exact": 360,
+    "offset_degs": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "n_ring_dirs": 12,
+    "n_phi_ring": 30,
+    "n_exact_seeds": 5040,
+    "n_offset_seeds": 25200,
+    "n_total_seeds": 30240
+  },
+  "optimization": {
+    "method": "L-BFGS-B",
+    "maxiter": 50,
+    "convergence_tol": 0.01,
+    "n_workers": 8,
+    "opt_time_s": 5432.6
+  },
+  "results": {
+    "n_converged": 21305,
+    "n_errors": 0,
+    "convergence_rate": 0.7045,
+    "n_unique_candidates": 10860,
+    "cluster_threshold_deg": 1.0,
+    "nearest_to_truth_deg": 5.0,
+    "att_error_percentiles": {
+      "1": 27.25,
+      "5": 84.73,
+      "10": 89.68,
+      "25": 99.25,
+      "50": 124.58,
+      "75": 154.53,
+      "90": 172.67,
+      "95": 176.58,
+      "99": 179.38
+    }
+  },
+  "micro10_comparison": {
+    "n_micro10_candidates": 5643,
+    "micro10_nearest_to_truth_deg": 24.57,
+    "cross_match_threshold_deg": 2.0,
+    "n_micro10_recovered": 4434,
+    "recovery_fraction": 0.7858,
+    "efficiency_pab": 0.3591,
+    "efficiency_random": 0.5643
+  },
+  "total_time_s": 5567.8
+}

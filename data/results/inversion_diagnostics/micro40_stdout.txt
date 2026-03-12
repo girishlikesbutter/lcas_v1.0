@@ -1,0 +1,17 @@
+Setting up experiment...
+Setup complete in 99.4s
+Peaks: [183, 260, 360]
+dt_leg1 = 721.4s
+True omega at B: [-0.46172732 -0.35512952  2.00047314] deg/s
+True |omega| = 2.0836 deg/s
+
+============================================================
+Running n_starts = 10 per band...
+  Candidates: 49 (from 58 valid)
+  Nearest to truth: 2.67 deg, mag_err=2.6692 dps
+  True found (< 5 deg): True
+  Wall time: 1162.0s
+  Band occupancy: {0: 3, 1: 5, 2: 4, 3: 1, 4: 4, 5: 7, 6: 1, 7: 5, 8: 6, 9: 1, 10: 3, 11: 3, 12: 6}
+
+============================================================
+Running n_starts = 20 per band...

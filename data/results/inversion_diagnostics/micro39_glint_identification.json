@@ -1,0 +1,483 @@
+{
+  "experiment": "micro39_glint_identification",
+  "description": "Blind glint component identification from LC shape",
+  "n_observations": 500,
+  "dt_sampling_s": 7.214428859865499,
+  "noise_sigma": 0.05,
+  "n_bright_peaks": 11,
+  "bright_peak_epochs": [
+    15,
+    79,
+    142,
+    183,
+    260,
+    267,
+    275,
+    296,
+    360,
+    424,
+    486
+  ],
+  "oracle_labels": [
+    1,
+    1,
+    1,
+    7,
+    6,
+    2,
+    5,
+    1,
+    1,
+    1,
+    0
+  ],
+  "oracle_label_distribution": {
+    "0": {
+      "count": 1,
+      "components": [
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "area": 97.299999833107,
+      "normal": [
+        -1.0,
+        0.0,
+        0.0
+      ]
+    },
+    "1": {
+      "count": 6,
+      "components": [
+        "AD_East"
+      ],
+      "area": 9.799999833106995,
+      "normal": [
+        -0.9659,
+        -0.2588,
+        0.0
+      ]
+    },
+    "2": {
+      "count": 1,
+      "components": [
+        "AD_West"
+      ],
+      "area": 9.799999833106995,
+      "normal": [
+        -0.9659,
+        0.2588,
+        0.0
+      ]
+    },
+    "5": {
+      "count": 1,
+      "components": [
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "area": 16.92999948456884,
+      "normal": [
+        0.0,
+        -1.0,
+        0.0
+      ]
+    },
+    "6": {
+      "count": 1,
+      "components": [
+        "AD_East",
+        "AD_West",
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "area": 22.750000339001417,
+      "normal": [
+        0.0,
+        0.0,
+        -1.0
+      ]
+    },
+    "7": {
+      "count": 1,
+      "components": [
+        "AD_East",
+        "AD_West",
+        "Bus",
+        "SP_North",
+        "SP_South"
+      ],
+      "area": 22.750000339001417,
+      "normal": [
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  },
+  "features": [
+    {
+      "epoch": 15,
+      "oracle_group": 1,
+      "peak_mag": 7.9066386006682725,
+      "fwhm_epochs": 11.0,
+      "fwhm_seconds": 79.35871745852049,
+      "rise_slope": -1.0819236583959593,
+      "decay_slope": 1.094847002209692,
+      "recurrence_epochs": 0.0,
+      "recurrence_seconds": 0.0
+    },
+    {
+      "epoch": 79,
+      "oracle_group": 1,
+      "peak_mag": 7.943763906246771,
+      "fwhm_epochs": 9.0,
+      "fwhm_seconds": 64.92985973878949,
+      "rise_slope": -0.948758637278101,
+      "decay_slope": 1.2347166418479234,
+      "recurrence_epochs": 64.0,
+      "recurrence_seconds": 461.7234470313919
+    },
+    {
+      "epoch": 142,
+      "oracle_group": 1,
+      "peak_mag": 8.185182172172832,
+      "fwhm_epochs": 2.0,
+      "fwhm_seconds": 14.428857719730997,
+      "rise_slope": -0.9838938852086461,
+      "decay_slope": 1.152306100630249,
+      "recurrence_epochs": 63.0,
+      "recurrence_seconds": 454.5090181715264
+    },
+    {
+      "epoch": 183,
+      "oracle_group": 7,
+      "peak_mag": 7.168932631268177,
+      "fwhm_epochs": 1.0,
+      "fwhm_seconds": 7.214428859865499,
+      "rise_slope": -1.2438211300349784,
+      "decay_slope": 1.190266361779822,
+      "recurrence_epochs": 41.0,
+      "recurrence_seconds": 295.79158325448543
+    },
+    {
+      "epoch": 260,
+      "oracle_group": 6,
+      "peak_mag": 6.993509592643965,
+      "fwhm_epochs": 15.0,
+      "fwhm_seconds": 108.21643289798249,
+      "rise_slope": -1.3100535067860002,
+      "decay_slope": 1.0468104525536344,
+      "recurrence_epochs": 77.0,
+      "recurrence_seconds": 555.5110222096434
+    },
+    {
+      "epoch": 267,
+      "oracle_group": 2,
+      "peak_mag": 8.773119632966557,
+      "fwhm_epochs": 15.0,
+      "fwhm_seconds": 108.21643289798249,
+      "rise_slope": -1.0033839663354072,
+      "decay_slope": 0.8198257167761505,
+      "recurrence_epochs": 7.0,
+      "recurrence_seconds": 50.50100201905849
+    },
+    {
+      "epoch": 275,
+      "oracle_group": 5,
+      "peak_mag": 8.739737548833933,
+      "fwhm_epochs": 15.0,
+      "fwhm_seconds": 108.21643289798249,
+      "rise_slope": -0.6630712217035338,
+      "decay_slope": 0.7356579626119271,
+      "recurrence_epochs": 8.0,
+      "recurrence_seconds": 57.71543087892399
+    },
+    {
+      "epoch": 296,
+      "oracle_group": 1,
+      "peak_mag": 8.317779847509103,
+      "fwhm_epochs": 11.0,
+      "fwhm_seconds": 79.35871745852049,
+      "rise_slope": -1.0447958206181625,
+      "decay_slope": 0.963710296654115,
+      "recurrence_epochs": 21.0,
+      "recurrence_seconds": 151.50300605717547
+    },
+    {
+      "epoch": 360,
+      "oracle_group": 1,
+      "peak_mag": 7.529851068704017,
+      "fwhm_epochs": 9.0,
+      "fwhm_seconds": 64.92985973878949,
+      "rise_slope": -1.0917370936420614,
+      "decay_slope": 1.2938923433553824,
+      "recurrence_epochs": 64.0,
+      "recurrence_seconds": 461.7234470313919
+    },
+    {
+      "epoch": 424,
+      "oracle_group": 1,
+      "peak_mag": 7.99002000367871,
+      "fwhm_epochs": 2.0,
+      "fwhm_seconds": 14.428857719730997,
+      "rise_slope": -0.9346619125563155,
+      "decay_slope": 1.2517845640645704,
+      "recurrence_epochs": 64.0,
+      "recurrence_seconds": 461.7234470313919
+    },
+    {
+      "epoch": 486,
+      "oracle_group": 0,
+      "peak_mag": 8.690659481895866,
+      "fwhm_epochs": 4.0,
+      "fwhm_seconds": 28.857715439461995,
+      "rise_slope": -0.9659232150317916,
+      "decay_slope": 1.0193917501361778,
+      "recurrence_epochs": 62.0,
+      "recurrence_seconds": 447.2945893116609
+    }
+  ],
+  "feature_names": [
+    "peak_mag",
+    "fwhm_epochs",
+    "rise_slope",
+    "decay_slope",
+    "recurrence_epochs"
+  ],
+  "feature_means": [
+    8.0217449533262,
+    8.545454545454545,
+    -1.0247294588719051,
+    1.0730190175108767,
+    42.81818181818182
+  ],
+  "feature_stds": [
+    0.5790843636069192,
+    5.228655943472147,
+    0.16176205553748357,
+    0.17078125526857815,
+    27.132061483244847
+  ],
+  "clustering": {
+    "3": {
+      "ari": 0.208,
+      "confusion_matrix": [
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          2,
+          4,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ],
+      "cluster_labels": [
+        0,
+        1,
+        1,
+        2,
+        2,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ]
+    },
+    "4": {
+      "ari": 0.33043478260869563,
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          2,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "cluster_labels": [
+        0,
+        2,
+        2,
+        3,
+        3,
+        1,
+        1,
+        0,
+        2,
+        2,
+        2
+      ]
+    },
+    "5": {
+      "ari": 0.36444444444444446,
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "cluster_labels": [
+        0,
+        2,
+        2,
+        3,
+        4,
+        1,
+        1,
+        0,
+        2,
+        2,
+        2
+      ]
+    }
+  },
+  "rule_based": {
+    "ari": 0.8307692307692308,
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        6,
+        0
+      ],
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0
+      ]
+    ],
+    "thresholds": {
+      "bright": 7.5,
+      "medium": 8.5,
+      "dim": 9.0
+    },
+    "labels": [
+      1,
+      1,
+      1,
+      0,
+      0,
+      2,
+      2,
+      1,
+      1,
+      1,
+      2
+    ]
+  },
+  "best_k": 5,
+  "best_ari": 0.36444444444444446
+}

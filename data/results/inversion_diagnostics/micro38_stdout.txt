@@ -1,0 +1,89 @@
+======================================================================
+Micro-38 -- PAB-seeded iso-brightness candidate generation
+======================================================================
+Setup complete: 500 observations, dt_sampling = 7.21s
+
+--- Extracting unique facet normals ---
+Total facets: 3840
+Unique normal groups: 14
+
+--- Computing PAB_inertial at target epoch ---
+PAB_inertial at epoch 183: [ 0.76506824 -0.61181973 -0.20086615]
+Target magnitude (observed): 7.1689
+True magnitude: 7.1448
+
+--- Generating PAB-circle seeds ---
+Exact-alignment seeds: 5040 (360 phi x 14 normals)
+  Offset 1 deg: 5040 seeds (12 ring dirs x 30 phi x 14 normals)
+  Offset 2 deg: 5040 seeds (12 ring dirs x 30 phi x 14 normals)
+  Offset 3 deg: 5040 seeds (12 ring dirs x 30 phi x 14 normals)
+  Offset 4 deg: 5040 seeds (12 ring dirs x 30 phi x 14 normals)
+  Offset 5 deg: 5040 seeds (12 ring dirs x 30 phi x 14 normals)
+
+Total seeds: 30240
+
+--- Running L-BFGS-B from 30240 seeds (8 workers) ---
+  [  5000/30240] 3535 converged, 970s elapsed, ~4898s remaining
+  [ 10000/30240] 7018 converged, 1966s elapsed, ~3979s remaining
+  [ 15000/30240] 10536 converged, 2906s elapsed, ~2953s remaining
+  [ 20000/30240] 14059 converged, 3741s elapsed, ~1915s remaining
+  [ 25000/30240] 17582 converged, 4585s elapsed, ~961s remaining
+  [ 30000/30240] 21118 converged, 5398s elapsed, ~43s remaining
+Optimization: 5432.6s (0.180s/seed)
+
+--- Filtering converged results ---
+Converged: 21305/30240 (0 errors, 8935 above tolerance)
+
+--- Clustering within 1.0 deg ---
+Unique candidates: 10860 from 21305 converged (7.4s)
+
+--- Angular distances to truth ---
+Nearest candidate to truth@183: 5.00 deg
+
+Attitude error percentiles (unique basins):
+   1%ile:   27.25 deg
+   5%ile:   84.73 deg
+  10%ile:   89.68 deg
+  25%ile:   99.25 deg
+  50%ile:  124.58 deg
+  75%ile:  154.53 deg
+  90%ile:  172.67 deg
+  95%ile:  176.58 deg
+  99%ile:  179.38 deg
+
+--- Loading micro10 candidates for comparison ---
+Loaded 5643 micro10 candidates
+micro10 nearest to truth@q0: 24.57 deg
+
+--- Cross-matching micro10 vs PAB-seeded candidates ---
+Cross-match within 2.0 deg: 4434/5643 micro10 candidates recovered (78.6%)
+Cross-match time: 19.1s
+
+======================================================================
+SUMMARY
+======================================================================
+PAB-seeded approach:
+  Total seeds:          30240
+  Converged:            21305 (70.5%)
+  Unique candidates:    10860
+  Nearest to truth@183: 5.00 deg
+
+micro10 (random SO(3)) comparison:
+  Seeds:                10,000
+  Unique candidates:    5643
+  Nearest to truth@q0:  24.57 deg
+
+Cross-match (2.0 deg):
+  micro10 candidates recovered by PAB-seeded: 4434/5643 (78.6%)
+
+Efficiency ratio: 10860/30240 = 0.3591 candidates/seed (PAB) vs 5643/10000 = 0.5643 candidates/seed (random)
+
+--- Generating plot ---
+Plot saved: /home/girish/projects/lcas_v1.0/data/results/inversion_diagnostics/micro38_pab_seeded_candidates.png
+
+--- Saving results ---
+NPZ saved: /home/girish/projects/lcas_v1.0/data/results/inversion_diagnostics/micro38_pab_seeded_candidates.npz
+JSON saved: /home/girish/projects/lcas_v1.0/data/results/inversion_diagnostics/micro38_pab_seeded_candidates.json
+
+Total runtime: 5567.8s
+Done.

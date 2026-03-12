@@ -1,0 +1,149 @@
+======================================================================
+micro39 -- Blind glint component identification from LC shape
+======================================================================
+Setup complete: 500 observations, dt_sampling = 7.21s
+
+--- Loading micro34 oracle data ---
+  Loaded true_lc: shape=(500,)
+  Loaded frac_flux: shape=(14, 500)
+  Number of normal groups: 14
+  Max |micro34_true_lc - CTX.true_lc| = 0.000000
+
+--- Peak detection (from noiseless true LC) ---
+Total peaks detected (order=5): 43
+Bright peaks (mag < 9): 11
+
+Bright peak epochs and magnitudes:
+  [ 0] epoch=  15, true_mag=7.935, observed_mag=7.907
+  [ 1] epoch=  79, true_mag=8.043, observed_mag=7.944
+  [ 2] epoch= 142, true_mag=8.266, observed_mag=8.185
+  [ 3] epoch= 183, true_mag=7.145, observed_mag=7.169
+  [ 4] epoch= 260, true_mag=7.040, observed_mag=6.994
+  [ 5] epoch= 267, true_mag=8.845, observed_mag=8.773
+  [ 6] epoch= 275, true_mag=8.717, observed_mag=8.740
+  [ 7] epoch= 296, true_mag=8.273, observed_mag=8.318
+  [ 8] epoch= 360, true_mag=7.504, observed_mag=7.530
+  [ 9] epoch= 424, true_mag=7.958, observed_mag=7.990
+  [10] epoch= 486, true_mag=8.723, observed_mag=8.691
+
+--- Oracle labels (from micro34 fractional flux) ---
+Oracle label distribution:
+  Group  0:  1 peaks, components=['Bus', 'SP_North', 'SP_South'], area=97.30, normal=[-1.0, 0.0, 0.0]
+  Group  1:  6 peaks, components=['AD_East'], area=9.80, normal=[-0.9659, -0.2588, 0.0]
+  Group  2:  1 peaks, components=['AD_West'], area=9.80, normal=[-0.9659, 0.2588, 0.0]
+  Group  5:  1 peaks, components=['Bus', 'SP_North', 'SP_South'], area=16.93, normal=[0.0, -1.0, 0.0]
+  Group  6:  1 peaks, components=['AD_East', 'AD_West', 'Bus', 'SP_North', 'SP_South'], area=22.75, normal=[0.0, 0.0, -1.0]
+  Group  7:  1 peaks, components=['AD_East', 'AD_West', 'Bus', 'SP_North', 'SP_South'], area=22.75, normal=[0.0, 0.0, 1.0]
+
+--- Feature extraction from observed (noisy) LC ---
+
+Feature table (11 bright peaks):
+ idx  epoch  oracle        peak_mag     fwhm_epochs      rise_slope     decay_slope  recurrence_epochs
+------------------------------------------------------------------------------------------------------
+   0     15  G   1          7.9066         11.0000         -1.0819          1.0948          0.0000
+   1     79  G   1          7.9438          9.0000         -0.9488          1.2347         64.0000
+   2    142  G   1          8.1852          2.0000         -0.9839          1.1523         63.0000
+   3    183  G   7          7.1689          1.0000         -1.2438          1.1903         41.0000
+   4    260  G   6          6.9935         15.0000         -1.3101          1.0468         77.0000
+   5    267  G   2          8.7731         15.0000         -1.0034          0.8198          7.0000
+   6    275  G   5          8.7397         15.0000         -0.6631          0.7357          8.0000
+   7    296  G   1          8.3178         11.0000         -1.0448          0.9637         21.0000
+   8    360  G   1          7.5299          9.0000         -1.0917          1.2939         64.0000
+   9    424  G   1          7.9900          2.0000         -0.9347          1.2518         64.0000
+  10    486  G   0          8.6907          4.0000         -0.9659          1.0194         62.0000
+
+--- Building feature matrix ---
+Feature matrix shape: (11, 5)
+Feature means:  [ 8.02174495  8.54545455 -1.02472946  1.07301902 42.81818182]
+Feature stds:   [ 0.57908436  5.22865594  0.16176206  0.17078126 27.13206148]
+
+--- Hierarchical clustering ---
+
+  k=3: Adjusted Rand Index = 0.2080
+  Confusion matrix (rows=oracle, cols=cluster):
+                C0  C1  C2
+    G 0 (Bus,SP_North,SP):   0    1    0
+    G 1 (        AD_East):   2    4    0
+    G 2 (        AD_West):   1    0    0
+    G 5 (Bus,SP_North,SP):   1    0    0
+    G 6 (AD_East,AD_West):   0    0    1
+    G 7 (AD_East,AD_West):   0    0    1
+
+  k=4: Adjusted Rand Index = 0.3304
+  Confusion matrix (rows=oracle, cols=cluster):
+                C0  C1  C2  C3
+    G 0 (Bus,SP_North,SP):   0    0    1    0
+    G 1 (        AD_East):   2    0    4    0
+    G 2 (        AD_West):   0    1    0    0
+    G 5 (Bus,SP_North,SP):   0    1    0    0
+    G 6 (AD_East,AD_West):   0    0    0    1
+    G 7 (AD_East,AD_West):   0    0    0    1
+
+  k=5: Adjusted Rand Index = 0.3644
+  Confusion matrix (rows=oracle, cols=cluster):
+                C0  C1  C2  C3  C4
+    G 0 (Bus,SP_North,SP):   0    0    1    0    0
+    G 1 (        AD_East):   2    0    4    0    0
+    G 2 (        AD_West):   0    1    0    0    0
+    G 5 (Bus,SP_North,SP):   0    1    0    0    0
+    G 6 (AD_East,AD_West):   0    0    0    0    1
+    G 7 (AD_East,AD_West):   0    0    0    1    0
+
+Best k = 5 with ARI = 0.3644
+
+--- Rule-based classifier ---
+Rule-based ARI = 0.8308
+Rule-based confusion matrix (rows=oracle, cols=rule):
+              mag<7.5  7.5-8.5  8.5-9.0
+  G 0 (Bus,SP_North,SP):      0       0       1
+  G 1 (        AD_East):      0       6       0
+  G 2 (        AD_West):      0       0       1
+  G 5 (Bus,SP_North,SP):      0       0       1
+  G 6 (AD_East,AD_West):      1       0       0
+  G 7 (AD_East,AD_West):      1       0       0
+
+Per-peak classification comparison:
+   idx  epoch       mag    oracle   cluster      rule
+     0     15     7.907  G    1  C    0  R    1
+     1     79     7.944  G    1  C    2  R    1
+     2    142     8.185  G    1  C    2  R    1
+     3    183     7.169  G    7  C    3  R    0
+     4    260     6.994  G    6  C    4  R    0
+     5    267     8.773  G    2  C    1  R    2
+     6    275     8.740  G    5  C    1  R    2
+     7    296     8.318  G    1  C    0  R    1
+     8    360     7.530  G    1  C    2  R    1
+     9    424     7.990  G    1  C    2  R    1
+    10    486     8.691  G    0  C    2  R    2
+
+--- Generating plot ---
+Plot saved: /home/girish/projects/lcas_v1.0/data/results/inversion_diagnostics/micro39_glint_identification.png
+
+--- Saving results ---
+JSON saved: /home/girish/projects/lcas_v1.0/data/results/inversion_diagnostics/micro39_glint_identification.json
+
+======================================================================
+Micro-39 complete in 99.8s
+======================================================================
+
+Key findings:
+  Bright peaks detected (mag < 9): 11
+  Oracle groups present: 6 distinct groups
+    G0: 1 peaks, components=['Bus', 'SP_North', 'SP_South']
+    G1: 6 peaks, components=['AD_East']
+    G2: 1 peaks, components=['AD_West']
+    G5: 1 peaks, components=['Bus', 'SP_North', 'SP_South']
+    G6: 1 peaks, components=['AD_East', 'AD_West', 'Bus', 'SP_North', 'SP_South']
+    G7: 1 peaks, components=['AD_East', 'AD_West', 'Bus', 'SP_North', 'SP_South']
+
+  Hierarchical clustering results:
+    k=3: ARI = 0.2080
+    k=4: ARI = 0.3304
+    k=5: ARI = 0.3644
+  Best: k=5, ARI=0.3644
+
+  Rule-based classifier: ARI = 0.8308
+
+  Interpretation:
+    Partial agreement (0.2 < ARI < 0.5): shape captures some structure.
+    Rule-based classifier outperforms hierarchical clustering.
