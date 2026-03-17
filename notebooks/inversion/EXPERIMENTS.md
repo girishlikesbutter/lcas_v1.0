@@ -6,21 +6,26 @@
 
 ## 1. Resume Point
 
-- **ACTIVE THREAD:** Glint-based omega estimation — recurrence constraint (2026-03-13)
-- **LAST COMPLETED:** Series 09b micro38/39/40 (PAB-seeded candidates, component identification, bridge n_starts sweep, 2026-03-13). Key findings:
-  - **micro38 (PAB-seeded candidates):** 30K PAB-circle seeds → 10,860 unique candidates, nearest to truth@183 = 5.00 deg. Random SO(3) seeds (micro10, 10K seeds) get nearest = 0.50 deg — 10x closer. **PAB seeding worse than random in this form.** Root cause: seeds diluted across 14 normals (only 1 correct), optimizer discards PAB structure. Concept is valid but needs redesign: identify glinting normal first (known geometry + magnitude lookup), concentrate all seeds on that one circle.
-  - **micro39 (component ID):** Rule-based magnitude classifier (ARI=0.83) vastly outperforms hierarchical shape clustering (ARI=0.36). With known satellite geometry/BRDF, observed glint magnitude directly identifies the source normal group. AD_East (6/6 correct), z-faces (2/2), singletons lumped together but distinguishable from the dominant groups.
-  - **micro40 (bridge n_starts, PARTIAL):** Only n_starts=10 completed before kill. 49 candidates after dedup, nearest to truth 2.67 deg (found). Wall time: 19 min for ONE oracle pair. **Bridge cost is prohibitive at scale:** 50×50 non-oracle pairs × 19 min = ~23 days. Band-sweep bridging cannot scale to the real pipeline.
+- **ACTIVE THREAD:** Glint-based inversion pipeline — classification & geometric filter (2026-03-18)
+- **LAST COMPLETED:** Series 09b micro44-48 (normal-family visualization, glint classification, geometric filter, trajectory datasets, phase angle analysis, 2026-03-18). Key findings:
+  - **micro44 (normal-family sphere):** Multi-mode visualization tool. The ndot_pab mode (alignment vs time + LC overlay + correlation) is the primary diagnostic. Confirmed +X/-X perfect anti-correlation (r=-1.000).
+  - **micro45 (glint filter basin):** Precision-based glint filter has clear basin for attitude (~0.94 precision at truth vs ~0.50 random). Omega direction basin is noisy/multi-modal.
+  - **micro46 (100 fixed-time trajectories):** Full diagnostic dataset with realistic omega [0.1, 1.5] deg/s. Original [0.5, 5.0] range was unrealistically fast for GEO.
+  - **micro47 (glint statistics):** mag < 6.0 = 100% specular purity. GB classifier F1=0.90. Peak magnitude (79%) and max slope (15%) are the only features that matter.
+  - **micro48 (100 varied-time trajectories):** Randomised start times 08:35-15:35 UTC. Phase angle does NOT help specular/diffuse separation but DOES affect which group glints. Excess brightness generalises across phase angles.
+  - **`src/inversion/glint_filter.py`:** Precision-based geometric filter (78ms/eval). "When I predict a glint, is it really there?"
 - **RUNNING:** Nothing.
-- **BLOCKING:** Bridge solver cost makes the current pipeline architecture (iso-brightness → band-sweep bridging → L-conservation) infeasible for non-oracle settings.
-- **NEXT STEP:** Test glint-recurrence omega estimation. If the same normal glints at epochs t1, t2, ..., the recurrence intervals constrain |omega × n| (the precession rate of n around omega). Multiple normals give multiple projections of omega. This could bypass bridging entirely. Also: redesign PAB candidate generation with focused single-normal seeding (identify normal from magnitude, concentrate all seeds on that circle).
+- **BLOCKING:** Need to connect glint classification → geometric constraints → actual attitude search pipeline.
+- **NEXT STEP:** Build the inversion pipeline: (1) classify LC peaks from morphology (mag < 6 = specular anchor, mag 6-9 = mixed, mag > 9 = diffuse), (2) for specular anchors, identify normal group by brightness band (+X/-X = brightest, dishes = dimmest), (3) use glint filter precision as candidate rejection criterion, (4) exploit +X/-X alternation pattern and equatorial phase angle for group disambiguation. Also: test glint recurrence for omega estimation.
 - **OPEN QUESTIONS:**
-  1. ~~Can we identify which component is glinting purely from LC shape?~~ **ANSWERED (micro39):** Yes, via magnitude thresholds with known geometry. ARI=0.83. Shape clustering is weak (ARI=0.36).
+  1. ~~Can we identify which component is glinting purely from LC shape?~~ **ANSWERED (micro39+47):** Yes, via magnitude. mag < 6 = 100% specular. Brightness band maps to face area: ±X (5.5 mag), ±Y/±Z (6.7-7.1), dishes (7.6-8.0). GB classifier F1=0.90.
   2. ~~How much does the PAB-alignment constraint reduce the iso-brightness candidate set at glint epochs?~~ **ANSWERED (micro36):** 89.4% kill at 5 deg threshold. But iso-brightness and PAB are partially redundant at glints.
   3. ~~Can PAB-circle candidate generation replace iso-brightness search?~~ **ANSWERED (micro38):** Not in current form (diluted across 14 normals, optimizer discards PAB constraint). Redesign needed: focused single-normal seeding + direct phi-scan.
   4. Does the PAB constraint transfer to non-oracle settings (noisy LC, approximate peak detection)?
   5. Can different articulation angles be distinguished by glint shape for the same component?
   6. Can glint recurrence intervals constrain omega without bridging? (multiple recurrences from same normal → |omega × n|; multiple normals → full omega vector)
+  7. **NEW:** Can equatorial phase angle trajectory predict which normal group is responsible for a given specular glint? (micro48 shows phase-dependent group activation)
+  8. **NEW:** Does excess brightness (peak relative to local median) provide a phase-angle-invariant specular classifier? (micro48 shows it generalises better than raw magnitude)
 
 ---
 
@@ -440,6 +445,54 @@ micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
 
 ---
 
+### Series 09b — Glint Classification & Geometric Filter (2026-03-17 → 2026-03-18)
+
+Deep dive into specular glint physics for LC-only classification and a fast geometric filter for inversion. Corrected the glint definition (geometry-first, not LC-peak-first) and established quantitative thresholds. Built two trajectory datasets with realistic omega range.
+
+**Key methodological shift:** A glint is defined by PAB-normal alignment (angular distance → 0°). The LC spike is the *consequence*. Classification should work from LC morphology alone (no attitude knowledge), then geometric constraints follow.
+
+**Normal group naming convention:**
++X (G13), -X (G0), +Y (G8), -Y (G5), +Z (G7), -Z (G6), +WD (G11), -WD (G2), +ED (G12), -ED (G1). Ordered: +X, -X, +Y, -Y, +Z, -Z, +WD, -WD, +ED, -ED. Dish edge faces (G3, G4, G9, G10) excluded (area 1.12 m² each).
+
+```
+micro44 ─── Normal-family sphere visualization (multi-mode)
+├── micro45 ─── Glint filter basin shape analysis
+├── micro46 ─── 100 trajectories dataset (fixed start time)
+├── micro47 ─── Glint classification statistics + ML
+└── micro48 ─── 100 trajectories dataset (randomised start times)
+```
+
+| Script | Question | Key Result | Status |
+|--------|----------|------------|--------|
+| `micro44_normal_sphere.py` | Can we visualize PAB-normal alignment to understand glint geometry? | **Yes.** ndot_pab mode is the key diagnostic: 10-panel alignment-vs-time plot with LC overlay and sliding correlation. Multiple other modes (mollweide, pab_zoom, glint_panels). Confirmed +X/-X alternate perfectly (r=-1.000 for all opposite pairs). | DONE |
+| `micro45_glint_filter_basin.py` | Does the geometric glint filter have a smooth basin around truth? | **Partially.** Attitude has a clear basin (precision drops ±30°). Omega magnitude has a basin. Omega direction is noisy/multi-modal — needs global search. Parameterised as (theta, phi, \|omega\|) not cartesian. 52ms/eval. | DONE |
+| `micro46_generate_trajectories.py` | Generate 100 trajectories with full diagnostic data at realistic omega. | 100 trajectories, omega [0.11, 1.48] deg/s, fixed start 10:00 UTC. Stores: quaternions, k1/k2, PAB, phase angles, hi-fi+lo-fi LC, per-group flux, alignment, peaks. 13.5 MB master NPZ + per-trajectory checkpoints. | DONE |
+| `micro47_glint_statistics.py` | What are the statistical properties of specular vs diffuse peaks across 100 trajectories? | **mag < 6.0 = 100% specular purity** (zero exceptions, 2969 peaks). GB classifier F1=0.90 using peak_mag (79%) + max_slope (15%). Diffuse bumps still single-group dominated (79% have one group >70% flux). +X/-X dominance fraction = 0.50 (perfect alternation). Switch rate vs omega: r=0.957. | DONE |
+| `micro48_generate_trajectories_v2.py` | Does phase angle affect glint classification? Generate varied-time dataset. | 100 trajectories, randomised start 08:35-15:35 UTC, equatorial phase 0-97°. **Phase angle does NOT improve specular/diffuse separation** (optimal correction = 0.000). But phase angle DOES affect which group glints — different groups activate at different equatorial phase angles. Excess brightness generalises better than raw magnitude across observation conditions. | DONE |
+
+**Key findings (cumulative):**
+1. **Realistic GEO tumble rates are 0.1-1.5 deg/s.** The original [0.5, 5.0] range was unrealistically fast. 21/30 old trajectories were too fast. Corrected in micro46/48.
+2. **mag < 6.0 is a perfect specular classifier.** 100% purity, zero exceptions across ~6000 peaks and all phase angles. The boundary is razor-sharp — 6.02 to 6.16 spans 90-100% purity.
+3. **Specular glints are identifiable from LC morphology alone.** Peak magnitude (79% importance) and max slope (15%) are the only features that matter. GB classifier F1=0.90.
+4. **Brightness band maps to face area** for group identification: ±X at mag 5.5 (area 97.3), ±Y/±Z at 6.7-7.1 (area 16.9-22.8), dishes at 7.6-8.0 (area 9.8).
+5. **+X and -X alternate perfectly** (r=-1.000). All opposite pairs are perfectly anti-correlated. This is a geometric identity, not an empirical finding.
+6. **Equatorial phase angle affects group activation** but not specular/diffuse separation. Different groups glint preferentially at different phase angles. +X glints at larger equatorial phase than -X (median 51° vs 35°).
+7. **Excess brightness** (peak relative to local running median) generalises across observation conditions better than raw magnitude.
+8. **Geometric glint filter** (`src/inversion/glint_filter.py`): precision-based scoring at 78ms/eval. True trajectory precision ~0.94, random ~0.50 at 10° threshold. Clear basin for attitude, noisy for omega direction.
+9. **Diffuse bumps are still single-group dominated** (79% have one group >70% flux). Same mechanism as specular, just broader Lambertian component at 20-40° alignment. Always the large faces (±X, ±Z).
+10. **62% of trajectories have ≥1 guaranteed specular anchor** (mag < 6). 24% have ≥2 — enough for timing constraints.
+
+**Datasets generated:**
+- `data/results/inversion_diagnostics/micro46_trajectories/` — 100 fixed-time trajectories (13.5 MB)
+- `data/results/inversion_diagnostics/micro48_trajectories/` — 100 varied-time trajectories (19.0 MB)
+
+**Module created:**
+- `src/inversion/glint_filter.py` — `GlintFilter` class with `evaluate()` and `quick_reject()` methods.
+
+See `09_glint_analysis/FINDINGS.md` for detailed analysis.
+
+---
+
 ## 3. Superseded Work
 
 ### Global Optimisers on 6D Joint Space (Series 01)
@@ -614,6 +667,18 @@ micro34 ─── PAB alignment diagnostic (oracle, all 500 epochs)
   - *micro39:* Component identification from magnitude works (ARI=0.83) when satellite geometry/BRDF is known. Shape-based clustering fails (ARI=0.36). With known model, observed glint magnitude directly identifies source normal.
   - *micro40:* n_starts=10 is marginal (found truth this run, missed in micro26c). 19 min/pair makes N² non-oracle bridging infeasible (~23 days for 2500 pairs).
 - **Decision:** The band-sweep bridging architecture is cost-prohibitive for non-oracle settings. New direction: exploit glint **recurrence** to estimate omega without bridging. If the same normal glints at multiple epochs, the recurrence intervals constrain |omega × n|. Multiple normals give multiple projections → full omega vector. Also redesign PAB seeding: identify normal from magnitude, focus all seeds on one circle, scan phi directly.
+
+### 2026-03-17: Glint classification quantified, geometric filter built (micro44-48)
+- **Tried:** Normal-family sphere visualization, exhaustive glint statistics across 200 trajectories (100 fixed-time + 100 varied-time), ML classification (Gradient Boosting), geometric glint filter for candidate rejection, phase angle analysis.
+- **Found:**
+  - Corrected omega range to realistic [0.1, 1.5] deg/s (literature shows retired GEO tumbles well below 1°/s)
+  - **mag < 6.0 = 100% specular purity** — the single most important finding. Zero exceptions across ~6000 peaks and all phase angles.
+  - GB classifier achieves F1=0.90 but peak magnitude alone (79% importance) does nearly all the work
+  - Geometric glint filter: precision-based scoring ("when I predict a glint, is it there?") gives true trajectory ~0.94 vs random ~0.50 at 78ms/eval
+  - Phase angle doesn't improve specular/diffuse separation but does affect which group glints — potential for group identification
+  - +X/-X and all opposite pairs are perfectly anti-correlated (r=-1.000) in alignment curves
+  - Established proper glint definition: alignment causes the glint, LC spike is the consequence. Classification must work from LC morphology alone.
+- **Decision:** The path forward is LC-only classification → geometric constraints → attitude search. Specular anchors (mag < 6) provide hard constraints on which normal aligns with PAB at specific epochs. The glint filter provides fast candidate rejection. Next: connect this to actual attitude estimation pipeline.
 
 ### 2026-03-01: Omega basin characterisation
 - **Tried:** Systematic omega basin study (magnitude, direction, q-degradation) at lo-fi and hi-fi fidelity
