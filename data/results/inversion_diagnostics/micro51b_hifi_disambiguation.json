@@ -1,0 +1,141 @@
+{
+  "experiment": "micro51b_hifi_disambiguation",
+  "results": [
+    {
+      "traj_idx": 57,
+      "omega_dps": 0.20052553636949297,
+      "q0_err": 2.146039808702958,
+      "omega_dir_err": 8.537736462515939e-07,
+      "omega_mag_err": 8.398002916815792e-10,
+      "winner_idx": 1,
+      "winner_correct": true,
+      "lofi_gap": -0.01317466643237902,
+      "hifi_gap": 0.17349309940892832,
+      "converged": true,
+      "runtime_s": 95.05512499809265
+    },
+    {
+      "traj_idx": 22,
+      "omega_dps": 0.40856632329281584,
+      "q0_err": 176.85190203730048,
+      "omega_dir_err": 0.0,
+      "omega_mag_err": 1.3552168800739658e-09,
+      "winner_idx": 1,
+      "winner_correct": false,
+      "lofi_gap": -0.431066070547806,
+      "hifi_gap": -0.17303453721953166,
+      "converged": false,
+      "runtime_s": 123.61262798309326
+    },
+    {
+      "traj_idx": 84,
+      "omega_dps": 0.5066301755896951,
+      "q0_err": 1.2948898957539876,
+      "omega_dir_err": 0.0,
+      "omega_mag_err": 9.094696326440142e-10,
+      "winner_idx": 1,
+      "winner_correct": true,
+      "lofi_gap": -0.4292603029905558,
+      "hifi_gap": -0.4953922816479861,
+      "converged": true,
+      "runtime_s": 106.03906774520874
+    },
+    {
+      "traj_idx": 70,
+      "omega_dps": 0.6084165447023929,
+      "q0_err": 4.559216845768472,
+      "omega_dir_err": 0.0,
+      "omega_mag_err": 1.949041693437476e-09,
+      "winner_idx": 1,
+      "winner_correct": true,
+      "lofi_gap": -0.07240109878058099,
+      "hifi_gap": -0.19031199932237208,
+      "converged": true,
+      "runtime_s": 123.31983876228333
+    },
+    {
+      "traj_idx": 63,
+      "omega_dps": 0.8675725673258603,
+      "q0_err": 175.68342895624752,
+      "omega_dir_err": 8.537736462515939e-07,
+      "omega_mag_err": 1.0058355118870548e-11,
+      "winner_idx": 0,
+      "winner_correct": true,
+      "lofi_gap": -0.06882685824131668,
+      "hifi_gap": 0.08545228057432536,
+      "converged": false,
+      "runtime_s": 113.81644058227539
+    },
+    {
+      "traj_idx": 76,
+      "omega_dps": 1.0188282025058835,
+      "q0_err": 120.96825681140703,
+      "omega_dir_err": 0.0,
+      "omega_mag_err": 6.238173540993486e-09,
+      "winner_idx": 1,
+      "winner_correct": false,
+      "lofi_gap": -0.3228350991857467,
+      "hifi_gap": -0.31569475005783554,
+      "converged": false,
+      "runtime_s": 129.45545887947083
+    },
+    {
+      "traj_idx": 27,
+      "omega_dps": 1.138558706377837,
+      "q0_err": 177.36470226167137,
+      "omega_dir_err": 8.537736462515939e-07,
+      "omega_mag_err": 9.26536460984516e-09,
+      "winner_idx": 1,
+      "winner_correct": true,
+      "lofi_gap": -0.05026885065399306,
+      "hifi_gap": -0.19472909999441468,
+      "converged": false,
+      "runtime_s": 128.16625022888184
+    },
+    {
+      "traj_idx": 35,
+      "omega_dps": 1.2154043860228398,
+      "q0_err": 2.0054103816868465,
+      "omega_dir_err": 0.0,
+      "omega_mag_err": 6.586812329256826e-09,
+      "winner_idx": 4,
+      "winner_correct": true,
+      "lofi_gap": -0.417687547793374,
+      "hifi_gap": -0.522469874105298,
+      "converged": true,
+      "runtime_s": 118.9120614528656
+    },
+    {
+      "traj_idx": 46,
+      "omega_dps": 1.3778112059092766,
+      "q0_err": 179.11770567282304,
+      "omega_dir_err": 1.2074182697257333e-06,
+      "omega_mag_err": 4.0611689178547964e-12,
+      "winner_idx": 1,
+      "winner_correct": false,
+      "lofi_gap": -0.04926476968231763,
+      "hifi_gap": -0.12840261867174108,
+      "converged": false,
+      "runtime_s": 116.07601141929626
+    },
+    {
+      "traj_idx": 19,
+      "omega_dps": 1.4758386803618997,
+      "q0_err": 2.6147543539565574,
+      "omega_dir_err": 8.537736462515939e-07,
+      "omega_mag_err": 1.6642994036881754e-08,
+      "winner_idx": 0,
+      "winner_correct": true,
+      "lofi_gap": -0.021845794635720228,
+      "hifi_gap": 0.19571470224503826,
+      "converged": true,
+      "runtime_s": 130.59534072875977
+    }
+  ],
+  "summary": {
+    "converged": 5,
+    "total": 10,
+    "correct_hyp": 7
+  },
+  "total_time_s": 1242.9232518672943
+}

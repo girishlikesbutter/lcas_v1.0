@@ -40,6 +40,7 @@ from scipy.optimize import minimize
 
 from lib.experiment_setup import (
     setup_experiment, brightness_single_epoch, attitude_error_deg, save_results,
+    ObjectiveFunction,
 )
 from src.dynamics.attitude_propagator import propagate_attitude
 
@@ -256,30 +257,79 @@ def run_pipeline(traj_idx, omega_perturbation_pct=0.0, rng_seed=42):
     sorted_hyps = sorted(hypothesis_results, key=lambda h: h['best_cost'])
 
     # --- Step 4: LC residual for antiparallel disambiguation ---
-    # Top 2 hypotheses — evaluate LC residual to break tie
-    top2 = sorted_hyps[:2]
-    # Sample 10 non-glint epochs spread across the observation window
-    non_glint_epochs = np.array([e for e in range(0, 500, 50)
-                                  if e not in confident_peaks])[:10]
+    # Use full ObjectiveFunction (lo-fi) to properly score the top candidates.
+    # This compares lo-fi predicted LC vs hi-fi observed LC — the model handles
+    # all BRDF, geometry, articulation.  We propagate each candidate back to t=0
+    # and evaluate the full 6-param objective.
+    from src.inversion.quaternion_utils import quaternion_to_axis_angle
+    obj_fn = ObjectiveFunction(
+        satellite=CTX.satellite,
+        observation_times=observation_times,
+        observed_lightcurve=mags_t,
+        sun_positions_j2000=CTX.sun_pos,
+        observer_positions_j2000=CTX.obs_pos,
+        satellite_positions_j2000=CTX.sat_pos,
+        observer_distances=CTX.obs_dist,
+        compute_shadows_flag=False,  # lo-fi
+        articulation_matrices=CTX.art_matrices,
+        mode="tumbling",
+        inertia_tensor=inertia_tensor,
+        show_progress=False,
+    )
 
-    for hyp in top2:
+    # First pass: lo-fi on top 4 to narrow the field
+    top_n = sorted_hyps[:4]
+    for hyp in top_n:
         q_test = anchor_q_from_phi(hyp['best_phi'], unique_normals[hyp['hyp_idx']],
                                    pab_j2000[anchor_epoch])
         try:
-            lc_mse = lc_residual_at_samples(
-                q_test, omega_start, anchor_time, non_glint_epochs,
-                observation_times, inertia_tensor, CTX, mags_t)
+            back_times = np.array([0.0, anchor_time])
+            q_back, omega_back = propagate_attitude(
+                q_test, -omega_start, back_times, "tumbling", inertia_tensor)
+            q0_cand = q_back[-1]
+            omega0_cand = -omega_back[-1]
+            R_cand = Rotation.from_quat([q0_cand[1], q0_cand[2], q0_cand[3], q0_cand[0]])
+            rotvec = R_cand.as_rotvec()
+            params = np.concatenate([rotvec, omega0_cand])
+            hyp['lc_mse'] = float(obj_fn.evaluate(params))
+            hyp['q0_cand'] = q0_cand
+            hyp['omega0_cand'] = omega0_cand
         except Exception:
-            lc_mse = 1e10
-        hyp['lc_mse'] = lc_mse
+            hyp['lc_mse'] = 1e10
 
-    # Re-rank by combined score (glint cost primary, LC residual for tie-breaking)
-    # If top2 have similar glint cost (within 2x), use LC to break tie
-    if top2[0]['best_cost'] > 0 and top2[1]['best_cost'] / top2[0]['best_cost'] < 2.0:
-        top2_sorted = sorted(top2, key=lambda h: h.get('lc_mse', 1e10))
-        winner = top2_sorted[0]
-    else:
-        winner = top2[0]
+    # Second pass: hi-fi on top 2 to break antiparallel degeneracy
+    top_n_sorted = sorted(top_n, key=lambda h: h.get('lc_mse', 1e10))
+    top2_for_hifi = top_n_sorted[:2]
+
+    obj_fn_hifi = ObjectiveFunction(
+        satellite=CTX.satellite,
+        observation_times=observation_times,
+        observed_lightcurve=mags_t,
+        sun_positions_j2000=CTX.sun_pos,
+        observer_positions_j2000=CTX.obs_pos,
+        satellite_positions_j2000=CTX.sat_pos,
+        observer_distances=CTX.obs_dist,
+        compute_shadows_flag=True,  # hi-fi with shadows
+        articulation_matrices=CTX.art_matrices,
+        mode="tumbling",
+        inertia_tensor=inertia_tensor,
+        show_progress=False,
+    )
+
+    for hyp in top2_for_hifi:
+        if 'q0_cand' not in hyp:
+            hyp['hifi_mse'] = 1e10
+            continue
+        try:
+            R_cand = Rotation.from_quat([hyp['q0_cand'][1], hyp['q0_cand'][2],
+                                          hyp['q0_cand'][3], hyp['q0_cand'][0]])
+            params = np.concatenate([R_cand.as_rotvec(), hyp['omega0_cand']])
+            hyp['hifi_mse'] = float(obj_fn_hifi.evaluate(params))
+        except Exception:
+            hyp['hifi_mse'] = 1e10
+
+    # Use hi-fi to pick winner
+    winner = min(top2_for_hifi, key=lambda h: h.get('hifi_mse', 1e10))
 
     winner_hyp = winner['hyp_idx']
     winner_phi = winner['best_phi']
