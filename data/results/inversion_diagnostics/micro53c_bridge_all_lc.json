@@ -1,0 +1,39 @@
+{
+  "experiment": "micro53c",
+  "results": [
+    {
+      "traj_idx": 84,
+      "omega_dps": 0.5066301755896951,
+      "q0_err": 111.26404235653558,
+      "omega0_dir_err": 42.11686656772727,
+      "omega0_mag_err": 2.659482808078975,
+      "lc_residual": 1.9019280875728881,
+      "converged": false,
+      "antiparallel": false,
+      "runtime_s": 832.3797330856323
+    },
+    {
+      "traj_idx": 70,
+      "omega_dps": 0.6084165447023929,
+      "q0_err": 44.99331660586253,
+      "omega0_dir_err": 74.42315610005546,
+      "omega0_mag_err": 15.155489438262922,
+      "lc_residual": 1.9492983311010557,
+      "converged": false,
+      "antiparallel": false,
+      "runtime_s": 931.251706123352
+    },
+    {
+      "traj_idx": 35,
+      "omega_dps": 1.2154043860228398,
+      "q0_err": 178.8179898101524,
+      "omega0_dir_err": 83.48307721644959,
+      "omega0_mag_err": 8.385505030904676,
+      "lc_residual": 2.6533017701567725,
+      "converged": false,
+      "antiparallel": false,
+      "runtime_s": 1078.789606809616
+    }
+  ],
+  "total_time": 2902.891494512558
+}
