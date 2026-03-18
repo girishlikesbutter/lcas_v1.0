@@ -6,17 +6,15 @@
 
 ## 1. Resume Point
 
-- **ACTIVE THREAD:** Glint-based inversion pipeline — classification & geometric filter (2026-03-18)
-- **LAST COMPLETED:** Series 09b micro44-48 (normal-family visualization, glint classification, geometric filter, trajectory datasets, phase angle analysis, 2026-03-18). Key findings:
-  - **micro44 (normal-family sphere):** Multi-mode visualization tool. The ndot_pab mode (alignment vs time + LC overlay + correlation) is the primary diagnostic. Confirmed +X/-X perfect anti-correlation (r=-1.000).
-  - **micro45 (glint filter basin):** Precision-based glint filter has clear basin for attitude (~0.94 precision at truth vs ~0.50 random). Omega direction basin is noisy/multi-modal.
-  - **micro46 (100 fixed-time trajectories):** Full diagnostic dataset with realistic omega [0.1, 1.5] deg/s. Original [0.5, 5.0] range was unrealistically fast for GEO.
-  - **micro47 (glint statistics):** mag < 6.0 = 100% specular purity. GB classifier F1=0.90. Peak magnitude (79%) and max slope (15%) are the only features that matter.
-  - **micro48 (100 varied-time trajectories):** Randomised start times 08:35-15:35 UTC. Phase angle does NOT help specular/diffuse separation but DOES affect which group glints. Excess brightness generalises across phase angles.
-  - **`src/inversion/glint_filter.py`:** Precision-based geometric filter (78ms/eval). "When I predict a glint, is it really there?"
+- **ACTIVE THREAD:** Glint-anchored inversion pipeline — omega initialisation (2026-03-18)
+- **LAST COMPLETED:** Series 10 micro49-51b (pipeline generalisation, omega landscape, end-to-end with hi-fi disambiguation, 2026-03-18). Key findings:
+  - **micro49 (generalisation test):** micro42b's phi sweep generalises to micro46 dataset [0.1, 1.5] deg/s. Correct hypothesis ranks #1-#2 in 7/9 cases; antiparallel twin is the dominant failure. Census: 86% have ≥2 bright peaks (mag<8), 88% have ≥2 distinct groups, 57% have same-group recurrence.
+  - **micro50/50b (omega landscape):** Alignment cost landscape has clear global minimum at truth but direction basin is only ~2°. Coarse grids (100-500 dirs) completely fail. Full-epoch scoring confirms truth is best but grid can't find it. Recurrence-based omega is useless (rho=0.146).
+  - **micro50c (multi-start NM):** Random starts fail (0/200 within 20°). Near-truth starts (10% pert) converge to 0.3° — basin EXISTS but is too narrow for global search.
+  - **micro51b (end-to-end with hi-fi):** **5/10 converge fully** (q0 < 5°, median 2.15°). Hi-fi shadows break antiparallel: 7/10 correct hypothesis. Accepting ±180° ambiguity: **9/10 succeed**. Omega direction = 0.0° for all (oracle omega).
 - **RUNNING:** Nothing.
-- **BLOCKING:** Need to connect glint classification → geometric constraints → actual attitude search pipeline.
-- **NEXT STEP:** Build the inversion pipeline: (1) classify LC peaks from morphology (mag < 6 = specular anchor, mag 6-9 = mixed, mag > 9 = diffuse), (2) for specular anchors, identify normal group by brightness band (+X/-X = brightest, dishes = dimmest), (3) use glint filter precision as candidate rejection criterion, (4) exploit +X/-X alternation pattern and equatorial phase angle for group disambiguation. Also: test glint recurrence for omega estimation.
+- **BLOCKING:** Omega initialisation — the direction basin is ~2° (0.03% of sphere), which defeats all global search strategies tested (grid, DE, multi-start NM, recurrence). The pipeline is validated but requires approximate omega input.
+- **NEXT STEP:** (1) CasADi/IPOPT multiple shooting formulation for joint q+omega recovery. (2) Multi-session omega estimation (e.g., LC from multiple observation windows). (3) FFT/periodogram for |omega| magnitude, then constrained direction search. (4) Accept ±180° ambiguity as operational output — pipeline gives (attitude_or_flipped, omega) at 9/10 success with oracle omega.
 - **OPEN QUESTIONS:**
   1. ~~Can we identify which component is glinting purely from LC shape?~~ **ANSWERED (micro39+47):** Yes, via magnitude. mag < 6 = 100% specular. Brightness band maps to face area: ±X (5.5 mag), ±Y/±Z (6.7-7.1), dishes (7.6-8.0). GB classifier F1=0.90.
   2. ~~How much does the PAB-alignment constraint reduce the iso-brightness candidate set at glint epochs?~~ **ANSWERED (micro36):** 89.4% kill at 5 deg threshold. But iso-brightness and PAB are partially redundant at glints.
@@ -493,6 +491,76 @@ See `09_glint_analysis/FINDINGS.md` for detailed analysis.
 
 ---
 
+### Series 09c — Glint-Anchored NLP Inversion (2026-03-18)
+
+First successful attitude+omega recovery from glint constraints. At a specular glint, the attitude is constrained to a 1-DOF circle on SO(3) (parameterised by twist angle phi around the aligned normal). Combined with 3-DOF omega, the problem is 4-DOF per anchor hypothesis. Tested a two-phase approach: coarse phi sweep to find the correct basin, then Nelder-Mead to refine.
+
+**Key insight:** Direct NLP optimisation (Nelder-Mead on 4-DOF) fails — the phi landscape has many false basins from min-over-normals switching. But a brute-force phi sweep (36 values, 75s) reliably finds the correct phi. The optimizer handles omega fine once phi is seeded correctly.
+
+**Three-component scoring function:**
+1. **Glint alignment:** At each glint epoch, `min over 10 normals of (1 - R(q)@n · PAB)^2`. Uses only the 10 glint-producing normals (excludes G3/G4/G9/G10, area 1.1 m²).
+2. **Anti-glint violations:** At dim epochs (observed mag > 11), count how many have `max(n · PAB_body) > cos(8°)`. The true trajectory has 0 violations; wrong hypotheses have 2-22.
+3. **Lo-fi LC residual:** At 10 sampled epochs, compare predicted vs observed brightness. Breaks the antiparallel degeneracy that glint-only scoring cannot resolve.
+
+```
+micro41 ─── 30-trajectory classification (superseded by micro47)
+├── micro42 ─── Glint-anchored NLP (partial — OOM during multi-start)
+├── micro42b ─── Anchor hypothesis sweep + two-phase convergence proof
+└── micro43 ─── Focused single-normal PAB seeding (failed)
+```
+
+| Script | Question | Key Result | Status |
+|--------|----------|------------|--------|
+| `micro41_glint_classification.py` | Does magnitude-band classification generalise across 30 trajectories? | **No — 21.9% accuracy.** 10 groups produce glints across overlapping magnitude ranges. But physics is clean: 94.5% of peaks have single dominant group. 14 normals collapse to 5 direction families. Superseded by micro47's GB classifier (F1=0.90) at realistic omega range. | DONE (superseded) |
+| `micro42_glint_anchored_nlp.py` | Can a 4-DOF NLP (phi + omega) recover truth from glint constraints? | Script validated (glint cost at truth = 4.5e-4, phi parameterisation works with 1.49° inherent floor). Multi-start never completed due to OOM/timeout. Established per-eval timing: sparse propagation = 55ms, full = 208ms with LC samples. | PARTIAL |
+| `micro42b_anchor_hypothesis_sweep.py` | Can we identify the correct anchor normal and converge via two-phase approach? | **YES (oracle omega).** Part 1: cost gap 15.9x between correct (G1) and runner-up at truth. Part 2: two-phase (phi sweep → Nelder-Mead) converges to **1.77° att, 1.15° omega dir** from oracle omega start. Antiparallel twin G12 has identical glint cost (179° att) — LC residual needed. Only oracle omega start converges; 10% perturbation fails. | DONE |
+| `micro43_focused_pab_seeding.py` | Does concentrating PAB seeds on one identified normal beat random SO(3)? | **No — decisively worse** (12.4° vs 0.69°). L-BFGS-B leaves PAB circle immediately. Even oracle normal (20.2°) worse than random. PAB seeding is a dead approach. | DONE |
+
+**Key findings (cumulative):**
+1. **Two-phase approach works:** Sweep phi coarsely (10 hypotheses × 36 values = 360 evals, 75s), then refine locally with Nelder-Mead. Converges to 1.77° attitude, 1.15° omega direction.
+2. **Direct NLP fails:** Nelder-Mead on 4-DOF can't find the correct phi — the min-over-normals landscape has too many false basins. Omega converges (2.8°) but phi gets stuck (37° error).
+3. **Anti-glint constraint is valid** with corrected parameters: 10 glint-producing normals only (not 14), cos(8°) alignment threshold (matching micro34/35's glint definition). True trajectory: 0 violations. Wrong hypotheses: 2-22 violations.
+4. **Lo-fi LC residual breaks antiparallel degeneracy.** G1 (correct) has lc_mse=0.057, while antiparallel twin G12 has lc_mse=3.0 — a 50x difference. 10 sampled epochs suffice.
+5. **Omega basin is narrow (~2° direction).** Even 10% perturbation of oracle omega fails to converge. This is the remaining blocker.
+6. **PAB seeding is dead.** Both diluted (micro38) and focused (micro43) approaches fail because L-BFGS-B doesn't respect the PAB circle constraint.
+
+---
+
+### Series 10 — Pipeline Generalisation & Omega Landscape (2026-03-18)
+
+End-to-end testing of the glint-anchored NLP architecture (micro42b) on realistic micro46 trajectories, systematic characterisation of the omega cost landscape, and hi-fi disambiguation for antiparallel degeneracy.
+
+```
+micro49 ─── Generalisation test + anchor census (100 trajectories)
+├── micro50 ─── Omega landscape: magnitude, direction, coarse grid
+│   ├── micro50b ─── Full-epoch scoring (500 constraints, still fails)
+│   ├── micro50c ─── Multi-start NM (random fails, near-truth succeeds)
+│   └── micro50d ─── Differential Evolution (incomplete, killed)
+├── micro51 ─── End-to-end pipeline (lo-fi disambiguation: 2/10)
+└── micro51b ─── End-to-end with hi-fi disambiguation (5/10, 9/10 with ±180°)
+```
+
+| Script | Question | Key Result | Status |
+|--------|----------|------------|--------|
+| `micro49` | Does micro42b generalise to micro46 [0.1, 1.5] deg/s? | **Partially.** Correct hyp ranks #1-#2 in 7/9, antiparallel is dominant failure. Census: 86% ≥2 bright peaks (mag<8), 88% ≥2 groups, 57% recurrence. | DONE |
+| `micro50` | Can coarse omega grid find the right region? | **No.** Magnitude sweep (correct dir): 30-400x gap at truth. Direction sweep (correct mag): 2° basin at 5x threshold. Coarse grid (100×20) → 124° error. Recurrence: rho=0.146, useless. | DONE |
+| `micro50b` | Does full-epoch scoring (500 epochs) help? | **Signal exists** (truth -0.002 vs grid +0.002-0.008) but 2° direction basin too narrow for 500-point grid. Traj 22 #2 at 3.3° but spurious #1 ahead of it. | DONE |
+| `micro50c` | Can multi-start NM find omega from random starts? | **No.** 0/200 random starts within 20°. Near-truth (10% pert): 9/20 within 5°, best 0.3°. Basin exists, global search can't find it. | DONE (partial) |
+| `micro50d` | Can DE find omega on 3D? | Incomplete — killed. DE unlikely to beat multi-start NM on same landscape. | KILLED |
+| `micro51` | End-to-end with lo-fi disambiguation? | **2/10 converge.** Lo-fi LC residual can't break antiparallel (systematic lo-fi/hi-fi offset). | DONE |
+| `micro51b` | Does hi-fi (shadow) evaluation break antiparallel? | **Yes, partially.** 5/10 fully converge (median q0=2.15°). 7/10 correct hypothesis. **9/10 succeed with ±180° ambiguity.** Only 1/10 genuinely wrong. ~120s/trajectory. | DONE |
+
+**Key findings:**
+1. **Pipeline architecture validated on realistic omega range.** micro42b's two-phase approach (phi sweep + NM) generalises to [0.1, 1.5] deg/s. When omega is known, the pipeline recovers attitude (or its antiparallel) in 9/10 cases.
+2. **Hi-fi shadows break antiparallel for 5/10.** For the other 4, the shadow pattern of correct vs antiparallel is too similar (both produce plausible LCs). The ±180° ambiguity is fundamental for box-shaped satellites with opposite-face symmetry.
+3. **Omega direction basin is ~2° (0.03% of sphere).** No global search strategy works: grid (any density), DE, multi-start NM, recurrence. The landscape has a clear global minimum but extreme multi-modality. Near-truth (10% perturbation) converges; random doesn't.
+4. **Recurrence is useless for omega.** No correlation between same-group recurrence intervals and |omega| (rho=0.146, p=0.28). The mapping is not a simple 2π/|omega| relationship due to triaxial polhode effects.
+5. **Omega magnitude is easier than direction.** With correct direction, magnitude valley is unambiguous (30-400x cost gap). The hard part is finding the direction.
+
+> ⚡ **KEY RESULT (2026-03-18):** With oracle omega, the pipeline achieves 9/10 success (attitude or ±180°) at realistic tumble rates. Omega initialisation remains the critical open problem. The omega direction basin (~2°) is too narrow for any tested global search on the 3D space.
+
+---
+
 ## 3. Superseded Work
 
 ### Global Optimisers on 6D Joint Space (Series 01)
@@ -679,6 +747,30 @@ See `09_glint_analysis/FINDINGS.md` for detailed analysis.
   - +X/-X and all opposite pairs are perfectly anti-correlated (r=-1.000) in alignment curves
   - Established proper glint definition: alignment causes the glint, LC spike is the consequence. Classification must work from LC morphology alone.
 - **Decision:** The path forward is LC-only classification → geometric constraints → attitude search. Specular anchors (mag < 6) provide hard constraints on which normal aligns with PAB at specific epochs. The glint filter provides fast candidate rejection. Next: connect this to actual attitude estimation pipeline.
+
+### 2026-03-18: Two-phase glint-anchored NLP validated (micro42b)
+- **Tried:** (1) 30-trajectory magnitude classification, (2) focused PAB seeding, (3) glint-anchored 4-DOF NLP with min-over-normals, (4) anti-glint violation counting, (5) lo-fi LC residual scoring, (6) two-phase phi sweep + local refinement.
+- **Found:**
+  - Magnitude classification doesn't generalise across trajectories (21.9%), superseded by micro47's GB classifier (F1=0.90). 14 normals collapse to 5 families; G3/G4/G9/G10 (1.1 m²) never produce glints.
+  - PAB seeding is dead — optimizer leaves the circle (micro43: 12.4° vs 0.69° random).
+  - Direct NLP optimisation fails — Nelder-Mead finds omega (2.8° dir) but not phi (37° error). Min-over-normals creates false phi basins.
+  - Anti-glint constraint valid: at dim epochs (mag > 11), penalise alignment > cos(8°) for 10 glint-producing normals. True trajectory: 0 violations. Wrong hypotheses: 2-22.
+  - Lo-fi LC residual (10 samples) breaks antiparallel degeneracy: correct 0.057 vs twin 3.0 (50x).
+  - **Two-phase works:** phi sweep (10 hypotheses × 36 values, 75s) → Nelder-Mead refinement → **1.77° attitude, 1.15° omega direction.** First successful glint-based inversion.
+  - **Remaining gap:** Only oracle omega converges. 10% omega perturbation fails. Omega basin ~2° direction.
+- **Decision:** Two-phase phi-sweep architecture validated. Blocking problem is now omega initialisation. Next: coarse omega sweep with glint filter, test on realistic omega range (micro46/48 datasets), recurrence-based omega estimation.
+
+### 2026-03-18: Pipeline generalisation + omega landscape exhaustively characterised (micro49-51b)
+- **Tried:** (1) Generalisation test on 10 micro46 trajectories (0.14-1.45 deg/s). (2) Omega cost landscape: magnitude sweep, direction sweep, coarse grid (100-500 dirs), full-epoch scoring (500 constraints), multi-start NM (220 starts), DE (killed). (3) Recurrence-based omega. (4) End-to-end pipeline with lo-fi and hi-fi disambiguation.
+- **Found:**
+  - Phi sweep generalises: correct hyp ranks #1-#2 in 7/9, antiparallel is dominant failure.
+  - Omega direction basin is exactly ~2° (confirmed by dense sweep and multi-start NM). 0/200 random NM starts converge, but 9/20 near-truth (10% pert) do — basin exists, can't find it globally.
+  - Full-epoch scoring (bright + anti-glint at 500 epochs) has clear signal (truth is global minimum) but direction basin is still ~2°.
+  - Recurrence is useless for omega (rho=0.146).
+  - Lo-fi LC residual fails at antiparallel disambiguation (systematic lo-fi/hi-fi offset).
+  - **Hi-fi (shadow) LC residual breaks antiparallel for 5/10 trajectories.** Shadows fall on different faces for correct vs flipped orientation.
+  - **With ±180° ambiguity accepted: 9/10 trajectories succeed** (attitude or antiparallel, plus correct omega). Only 1/10 genuinely wrong (wrong hypothesis entirely).
+- **Decision:** Pipeline architecture is validated for attitude recovery given approximate omega. The ±180° ambiguity is inherent for box-shaped satellites and can be resolved post-hoc. The omega initialisation problem is the remaining blocker — exhaustively shown to require a fundamentally different approach (multi-session observations, CasADi/IPOPT formulation, or external omega estimate).
 
 ### 2026-03-01: Omega basin characterisation
 - **Tried:** Systematic omega basin study (magnitude, direction, q-degradation) at lo-fi and hi-fi fidelity
