@@ -11,10 +11,10 @@
   - **micro49 (generalisation test):** micro42b's phi sweep generalises to micro46 dataset [0.1, 1.5] deg/s. Correct hypothesis ranks #1-#2 in 7/9 cases; antiparallel twin is the dominant failure. Census: 86% have ≥2 bright peaks (mag<8), 88% have ≥2 distinct groups, 57% have same-group recurrence.
   - **micro50/50b (omega landscape):** Alignment cost landscape has clear global minimum at truth but direction basin is only ~2°. Coarse grids (100-500 dirs) completely fail. Full-epoch scoring confirms truth is best but grid can't find it. Recurrence-based omega is useless (rho=0.146).
   - **micro50c (multi-start NM):** Random starts fail (0/200 within 20°). Near-truth starts (10% pert) converge to 0.3° — basin EXISTS but is too narrow for global search.
-  - **micro51b (end-to-end with hi-fi):** **5/10 converge fully** (q0 < 5°, median 2.15°). Hi-fi shadows break antiparallel: 7/10 correct hypothesis. Accepting ±180° ambiguity: **9/10 succeed**. Omega direction = 0.0° for all (oracle omega).
+  - **micro51b (attitude recovery from LC + known omega):** Given only the observed LC and the true 3D omega vector (no oracle attitude), the pipeline recovers initial attitude q0 with **5/10 fully correct** (q0 error < 5°, median 2.15°) and **9/10 correct to within a 180° ambiguity** (attitude or its antiparallel). Hi-fi (shadow) LC evaluation disambiguates the antiparallel for 5 of the 9. The pipeline takes no attitude information as input — q0 is recovered purely from LC peaks + known omega + satellite geometry.
 - **RUNNING:** Nothing.
-- **BLOCKING:** Omega initialisation — the direction basin is ~2° (0.03% of sphere), which defeats all global search strategies tested (grid, DE, multi-start NM, recurrence). The pipeline is validated but requires approximate omega input.
-- **NEXT STEP:** (1) CasADi/IPOPT multiple shooting formulation for joint q+omega recovery. (2) Multi-session omega estimation (e.g., LC from multiple observation windows). (3) FFT/periodogram for |omega| magnitude, then constrained direction search. (4) Accept ±180° ambiguity as operational output — pipeline gives (attitude_or_flipped, omega) at 9/10 success with oracle omega.
+- **BLOCKING:** Omega initialisation. The pipeline recovers attitude given the true 3D omega vector, but obtaining that omega vector from scratch is unsolved. The omega direction convergence basin is ~2° (~0.03% of sphere), which defeats all global search strategies tested (grid, DE, multi-start NM, recurrence).
+- **NEXT STEP:** (1) CasADi/IPOPT multiple shooting formulation for joint q+omega recovery. (2) Multi-session omega estimation (e.g., LC from multiple observation windows). (3) FFT/periodogram for |omega| magnitude, then constrained direction search.
 - **OPEN QUESTIONS:**
   1. ~~Can we identify which component is glinting purely from LC shape?~~ **ANSWERED (micro39+47):** Yes, via magnitude. mag < 6 = 100% specular. Brightness band maps to face area: ±X (5.5 mag), ±Y/±Z (6.7-7.1), dishes (7.6-8.0). GB classifier F1=0.90.
   2. ~~How much does the PAB-alignment constraint reduce the iso-brightness candidate set at glint epochs?~~ **ANSWERED (micro36):** 89.4% kill at 5 deg threshold. But iso-brightness and PAB are partially redundant at glints.
@@ -548,16 +548,16 @@ micro49 ─── Generalisation test + anchor census (100 trajectories)
 | `micro50c` | Can multi-start NM find omega from random starts? | **No.** 0/200 random starts within 20°. Near-truth (10% pert): 9/20 within 5°, best 0.3°. Basin exists, global search can't find it. | DONE (partial) |
 | `micro50d` | Can DE find omega on 3D? | Incomplete — killed. DE unlikely to beat multi-start NM on same landscape. | KILLED |
 | `micro51` | End-to-end with lo-fi disambiguation? | **2/10 converge.** Lo-fi LC residual can't break antiparallel (systematic lo-fi/hi-fi offset). | DONE |
-| `micro51b` | Does hi-fi (shadow) evaluation break antiparallel? | **Yes, partially.** 5/10 fully converge (median q0=2.15°). 7/10 correct hypothesis. **9/10 succeed with ±180° ambiguity.** Only 1/10 genuinely wrong. ~120s/trajectory. | DONE |
+| `micro51b` | Given only the observed LC and the true 3D omega vector (no oracle attitude), can the pipeline recover q0? | **Yes.** 5/10 q0 error < 5° (median 2.15°). 9/10 correct to within 180° ambiguity. Hi-fi shadows disambiguate 5/9 antiparallel cases. No attitude oracle — q0 recovered purely from LC + known omega + satellite model. ~120s/trajectory. | DONE |
 
 **Key findings:**
-1. **Pipeline architecture validated on realistic omega range.** micro42b's two-phase approach (phi sweep + NM) generalises to [0.1, 1.5] deg/s. When omega is known, the pipeline recovers attitude (or its antiparallel) in 9/10 cases.
-2. **Hi-fi shadows break antiparallel for 5/10.** For the other 4, the shadow pattern of correct vs antiparallel is too similar (both produce plausible LCs). The ±180° ambiguity is fundamental for box-shaped satellites with opposite-face symmetry.
-3. **Omega direction basin is ~2° (0.03% of sphere).** No global search strategy works: grid (any density), DE, multi-start NM, recurrence. The landscape has a clear global minimum but extreme multi-modality. Near-truth (10% perturbation) converges; random doesn't.
-4. **Recurrence is useless for omega.** No correlation between same-group recurrence intervals and |omega| (rho=0.146, p=0.28). The mapping is not a simple 2π/|omega| relationship due to triaxial polhode effects.
-5. **Omega magnitude is easier than direction.** With correct direction, magnitude valley is unambiguous (30-400x cost gap). The hard part is finding the direction.
+1. **Attitude recovery from LC + known omega validated.** Given the true 3D omega vector and the observed LC (no attitude oracle), the pipeline recovers q0 for 9/10 trajectories to within 180° ambiguity at realistic omega [0.2, 1.5] deg/s. 5/10 fully resolve (median q0 error 2.15°); the other 4 return the antiparallel (q0 error ~175-180°, fixable post-hoc).
+2. **Hi-fi shadows partially resolve the 180° ambiguity.** Shadow patterns differ between correct and antiparallel orientations. This resolves 5/9 antiparallel cases. For the remaining 4, the satellite's ±face symmetry makes shadows too similar. The 180° ambiguity is fundamental for box-shaped satellites with opposite-face pairs.
+3. **Omega direction basin is ~2° (0.03% of sphere).** The 3D omega vector cannot be recovered from a single 1-hour LC by any tested global search: grid (any density), DE, multi-start NM, recurrence. The cost landscape has a clear global minimum but extreme multi-modality. Near-truth (10% perturbation) converges locally; random starts don't.
+4. **Recurrence is useless for omega estimation.** No correlation between same-group recurrence intervals and |omega| (rho=0.146, p=0.28). The relationship is not a simple 2π/|omega| due to triaxial polhode geometry.
+5. **Omega magnitude is easier than direction.** With correct direction, magnitude valley is unambiguous (30-400x cost gap). The hard part is the 3D direction on the sphere.
 
-> ⚡ **KEY RESULT (2026-03-18):** With oracle omega, the pipeline achieves 9/10 success (attitude or ±180°) at realistic tumble rates. Omega initialisation remains the critical open problem. The omega direction basin (~2°) is too narrow for any tested global search on the 3D space.
+> ⚡ **KEY RESULT (2026-03-18):** Given only the observed light curve and the true 3D angular velocity vector (no attitude oracle), the glint-anchored pipeline recovers initial attitude q0 for 9/10 trajectories at realistic tumble rates [0.2, 1.5] deg/s, correct to within a 180° ambiguity (median error 2.15° for the 5/10 that fully resolve, remainder are the antiparallel). Attitude is recovered from scratch — the pipeline sweeps 10 normal hypotheses × 36 twist angles, scores by PAB alignment at LC peaks, and disambiguates via hi-fi shadow evaluation. The remaining open problem is recovering the 3D omega vector itself: its convergence basin is ~2° in direction, too narrow for any tested global search strategy.
 
 ---
 
@@ -760,17 +760,16 @@ micro49 ─── Generalisation test + anchor census (100 trajectories)
   - **Remaining gap:** Only oracle omega converges. 10% omega perturbation fails. Omega basin ~2° direction.
 - **Decision:** Two-phase phi-sweep architecture validated. Blocking problem is now omega initialisation. Next: coarse omega sweep with glint filter, test on realistic omega range (micro46/48 datasets), recurrence-based omega estimation.
 
-### 2026-03-18: Pipeline generalisation + omega landscape exhaustively characterised (micro49-51b)
-- **Tried:** (1) Generalisation test on 10 micro46 trajectories (0.14-1.45 deg/s). (2) Omega cost landscape: magnitude sweep, direction sweep, coarse grid (100-500 dirs), full-epoch scoring (500 constraints), multi-start NM (220 starts), DE (killed). (3) Recurrence-based omega. (4) End-to-end pipeline with lo-fi and hi-fi disambiguation.
+### 2026-03-18: Attitude recovery from LC + known omega demonstrated (micro49-51b)
+- **Tried:** (1) Generalisation test on 10 micro46 trajectories (0.14-1.45 deg/s). (2) Omega cost landscape: magnitude sweep, direction sweep, coarse grid (100-500 dirs), full-epoch scoring (500 constraints), multi-start NM (220 starts), DE (killed). (3) Recurrence-based omega. (4) End-to-end attitude recovery pipeline with lo-fi and hi-fi disambiguation.
 - **Found:**
-  - Phi sweep generalises: correct hyp ranks #1-#2 in 7/9, antiparallel is dominant failure.
+  - **Given only the observed LC and the true 3D omega vector (no attitude oracle), the pipeline recovers q0 for 9/10 trajectories to within 180° ambiguity.** 5/10 fully correct (median 2.15°), 4/10 return antiparallel (~175-180°, fixable post-hoc), 1/10 genuinely wrong.
+  - The pipeline sweeps 10 normal hypotheses × 36 twist angles (no prior group identification needed), scores by PAB alignment at LC peak epochs, then disambiguates via hi-fi shadow evaluation.
   - Omega direction basin is exactly ~2° (confirmed by dense sweep and multi-start NM). 0/200 random NM starts converge, but 9/20 near-truth (10% pert) do — basin exists, can't find it globally.
   - Full-epoch scoring (bright + anti-glint at 500 epochs) has clear signal (truth is global minimum) but direction basin is still ~2°.
-  - Recurrence is useless for omega (rho=0.146).
-  - Lo-fi LC residual fails at antiparallel disambiguation (systematic lo-fi/hi-fi offset).
-  - **Hi-fi (shadow) LC residual breaks antiparallel for 5/10 trajectories.** Shadows fall on different faces for correct vs flipped orientation.
-  - **With ±180° ambiguity accepted: 9/10 trajectories succeed** (attitude or antiparallel, plus correct omega). Only 1/10 genuinely wrong (wrong hypothesis entirely).
-- **Decision:** Pipeline architecture is validated for attitude recovery given approximate omega. The ±180° ambiguity is inherent for box-shaped satellites and can be resolved post-hoc. The omega initialisation problem is the remaining blocker — exhaustively shown to require a fundamentally different approach (multi-session observations, CasADi/IPOPT formulation, or external omega estimate).
+  - Recurrence is useless for omega estimation (rho=0.146).
+  - Lo-fi LC residual fails at antiparallel disambiguation (systematic lo-fi/hi-fi offset). Hi-fi (shadows) resolves 5/9 cases.
+- **Decision:** Attitude recovery given known omega is demonstrated. The ±180° ambiguity is inherent for box-shaped satellites and can be resolved post-hoc. The remaining open problem is recovering the 3D omega vector itself from a single observation session — exhaustively shown to require a fundamentally different approach (multi-session observations, CasADi/IPOPT formulation, or external omega estimate).
 
 ### 2026-03-01: Omega basin characterisation
 - **Tried:** Systematic omega basin study (magnitude, direction, q-degradation) at lo-fi and hi-fi fidelity
