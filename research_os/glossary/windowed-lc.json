@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "windowed-lc",
+  "kind": "glossary_term",
+  "term": "Windowed LC",
+  "definition": "A time-segment of an existing light curve.",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "synonyms_blocked": [
+    "windowed photometry"
+  ],
+  "related_terms": [
+    "wind",
+    "single-wind-lc-window"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s019b_omega_dir_basin_at_truth_mag",
+  "kind": "run_record",
+  "goal_node": "goal_ls-bracket",
+  "question": "How wide is the omega-direction LM basin when omega-magnitude is pinned at truth?",
+  "hypothesis": "Pinning omega-mag at truth widens the omega-dir basin to roughly 1.5-3deg (vs the s003 ~1deg joint tube).",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [6, 28, 44],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "omega_dir_basin_deg": "3-5",
+    "best_q0_err_seed44": 0.033,
+    "best_q0_err_seed28": 0.034,
+    "best_q0_err_seed6": 0.287,
+    "wall_s": 1200
+  },
+  "artefacts": [
+    { "path": "results/s019b/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s019b_omega_dir_basin_at_truth_mag.md"],
+  "parents": ["s018c_phi_sweep_pilot", "s019_ls_bracket_omega_mag", "s003_landscape_vs_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-03T00:00:00Z",
+  "narrative_md": "At pinned truth-omega-magnitude the omega-direction LM basin radius is 3-5deg across seeds 6/28/44 (seed 44 narrowest at 3-4deg, seeds 6/28 >=4deg), 3-5x wider than the s003 joint dir+mag '1deg tube'. Outcome exceeded the pre-registered 1.5-3deg prediction; makes a bracket-augmented omega grid (~7500 cells/seed) feasible."
+}

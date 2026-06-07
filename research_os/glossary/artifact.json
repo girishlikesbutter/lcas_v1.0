@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "id": "artifact",
+  "kind": "glossary_term",
+  "term": "artifact",
+  "definition": "A typed data object that flows between Tools — the 'materials' of the laboratory (e.g. a seed/observation, an IA Cloud, a (windowed) light curve, a candidate set, a (q0,ω) state, a ρ-band result). An artifact's TYPE is itself a glossary term, so the glossary doubles as the port type-system: a Tool's input/output signature is written in artifact types (e.g. the IA-Cloud-generator Tool is seed → IA Cloud). Instances are today loose NPZ/JSON files referenced by run records; reifying them as typed, addressable materials is open laboratory work.",
+  "status": "canon",
+  "promoted_on": "2026-06-07",
+  "synonyms_blocked": [],
+  "related_terms": ["tool", "pipeline", "ia-cloud", "windowed-lc", "rho-band"],
+  "created_at": "2026-06-07T00:00:00Z"
+}

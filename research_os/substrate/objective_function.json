@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "objective_function",
+  "kind": "substrate_component",
+  "name": "ObjectiveFunction.evaluate",
+  "path": "src/inversion/objective_function.py",
+  "tier": "substrate",
+  "interface": "(params[6] = q0-omega-state) -> chi-squared scalar; wraps full forward model (propagate + shadow + LC generate) as a single optimizer cost.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:91074cc503e91fd9",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/inversion/objective_function.py:ObjectiveFunction.evaluate",
+  "ports": {
+    "input": [
+      "q0-omega-state"
+    ],
+    "output": {
+      "return": "scoring"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:91074cc503e91fd9",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

@@ -1,0 +1,3 @@
+# Disposable plot-stream cache (ADR-0003) — regenerate via the viz scripts / stream_add.py
+*.png
+manifest.json

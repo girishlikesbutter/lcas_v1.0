@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "parameter-uncertainty",
+  "kind": "glossary_term",
+  "term": "parameter-uncertainty",
+  "definition": "The covariance matrix + per-parameter std-devs (and/or MCMC posterior samples) characterising the (q0,\u03c9) estimate's uncertainty.",
+  "status": "provisional",
+  "coined_in": "research_os/backfill/W-D_tool_pipeline_scour.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [],
+  "created_at": "2026-06-07T00:00:00Z"
+}

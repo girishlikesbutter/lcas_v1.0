@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s051_polhode_observation",
+  "kind": "run_record",
+  "goal_node": "goal_polhode-prior",
+  "question": "Is the omega prior better parameterised as a 1-D polhode curve (|L|, polhode_label, polhode_phase) rather than a free 3-vector?",
+  "status": "inconclusive",
+  "run_type": "probe",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "omega_mag_mean_dps": 0.2415,
+    "omega_mag_std_over_mean_pct": 0.5,
+    "polhode_shape": "small closed loop near body -X"
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s051_polhode_observation.md"],
+  "parents": ["s042_basin_radius_cohort"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Architectural insight (no compute): direct visual observation of the s048c+ viewer's omega-direction sphere on seed 89 surfaced that omega-hat(t) traces a polhode -- a 1-parameter closed curve fixed by the (a-priori-known) inertia tensor. Proposes reparameterising the omega prior as (|L|, polhode_label, polhode_phase) for dynamics-admissible sampling and polhode-tangent-constrained LM. Numbers (seed 89 |omega| 0.24 dps, 0.5% std/mean) need cohort confirmation (s052/s053). Reads truth seed-89 omega(t) as the observation."
+}

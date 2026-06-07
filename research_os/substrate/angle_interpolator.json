@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "angle_interpolator",
+  "kind": "substrate_component",
+  "name": "angle_interpolator",
+  "path": "src/interpolation/quaternion_interpolator.py",
+  "tier": "substrate",
+  "interface": "VARIANT: DIFFERENT input path: explicit keyframe times/values/transitions -> interpolated angles, vs behavior-driven. Same output artifact (component-angles), genuinely different method (manual control vs physics behavior). variant_of articulation-angles-from-behaviors.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:07c9a35fd3ea6ae3",
+  "canon": false,
+  "variant_of": "articulation_angles_from_behaviors",
+  "promoted_from": null,
+  "entry_point": "src/interpolation/quaternion_interpolator.py:create_angle_interpolator",
+  "ports": {
+    "input": [
+      "attitude-trajectory"
+    ],
+    "output": {
+      "angles": "component-angles"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:07c9a35fd3ea6ae3",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

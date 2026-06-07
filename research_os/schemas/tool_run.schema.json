@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/tool_run.schema.json",
+  "title": "Tool run (bench-run record)",
+  "description": "ADR-0007. Immutable, append-only record of ONE invocation of ONE Tool on ONE input by the executor run-button (req #15, smallest form). The CANONICAL counterpart of a `run_record` for value-NEUTRAL bench operations: 'run the IA-Cloud Tool on seed 39'. Distinct from `run_record` on purpose — a Tool run has NO hypothesis and NO confirmed/refuted status (a Tool is a capability, not a bet), so it must not pollute the experiment corpus that drives claim blast-radius. It IS first-class provenance: it stamps the Tool version + the content hash IN FORCE at run time (so a later substrate bump makes a prior tool_run's hash stale and visible), and claims/goals MAY cite a tool_run id. The drift-check (tool_lint) runs BEFORE invocation; a stale binding yields status='drift_refused' and the bound code is never run.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "tool",
+    "tool_version",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^tr_[a-z0-9]+(_[a-z0-9]+)*$",
+      "description": "Bench-run id: 'tr_' + tool id + '_' + a run timestamp/counter, lowercase underscore. Stable forever; may be cited by claims/goals as provenance.",
+      "examples": ["tr_sample_so3_pool_20260607t161200", "tr_ia_cloud_generator_1717776000"]
+    },
+    "kind": { "type": "string", "const": "tool_run" },
+    "tool": {
+      "type": "string",
+      "description": "substrate_component id of the Tool that was run. Referential: must resolve to a substrate_component.",
+      "examples": ["sample_so3_pool", "ia_cloud_generator", "rho_band_classify"]
+    },
+    "tool_version": {
+      "type": "string",
+      "description": "The Tool's current_version at run time. Referential: must appear in that component's versions[]. With hash_at_run, this is the reproducibility + drift stamp.",
+      "examples": ["1.0.0"]
+    },
+    "hash_at_run": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Content hash of the bound source file at run time ('sha256:...', the tool_lint format). Compared to the card's current_hash to detect a silent change. Null only for a drift_refused run where the file vanished.",
+      "examples": ["sha256:98b7059d797f85a5"]
+    },
+    "hash_ok": {
+      "type": "boolean",
+      "description": "True iff hash_at_run matched the Tool card's current_hash (binding was in-sync). False with status='ok' is possible only if --force overrode a drift refusal (recorded honestly).",
+      "default": true
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "drift_refused", "error"],
+      "description": "ok = the Tool ran to completion. drift_refused = the drift-check (tool_lint) failed and the bound code was NOT run (entry_point missing or hash moved). error = the Tool was invoked but raised (see `error`)."
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {},
+      "description": "The input the Tool was run ON (the artifact side of the call), e.g. {seed: 39, epoch: 12} or {lc_path: '...'}. Freeform; the executor records exactly what it passed."
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {},
+      "description": "Effective parameters used = the Tool card's default_params overlaid with the run's overrides. The full, reproducible parameterisation (the ADR-0007 'variation lives in params' record)."
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {},
+      "description": "Open metric bag summarising the output (e.g. return-value shapes/keys, counts, a scalar result, wall_s). The dashboard indexes whatever is present.",
+      "examples": [{ "n_samples": 1000, "returned_keys": ["R_cache", "q_pool_wxyz"], "q_pool_wxyz_shape": [1000, 4] }]
+    },
+    "wall_s": {
+      "type": ["number", "null"],
+      "default": null,
+      "description": "Wall-clock seconds the invocation took (null for drift_refused)."
+    },
+    "artefacts": {
+      "type": "array",
+      "default": [],
+      "description": "Output files produced (saved arrays, plots). Plots surface to the web-app plot stream tagged by this tool_run. Same shape as run_record.artefacts.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind"],
+        "properties": {
+          "path": { "type": "string", "description": "Repo-relative path." },
+          "kind": { "type": "string", "enum": ["checkpoint", "plot", "anim", "data", "report", "log"] },
+          "caption": { "type": "string", "description": "One-line caption for the plot stream." }
+        }
+      }
+    },
+    "artifacts_produced": {
+      "type": "array",
+      "default": [],
+      "items": { "type": "string" },
+      "description": "ADR-0007. artifact_instance ids reified from this run's port-typed outputs ('recognised materials only'). Referential: each must resolve to an artifact_instance. Distinct from `artefacts` (figures/logs): these are addressable, typed MATERIALS on the laboratory shelf."
+    },
+    "oracle_clean": {
+      "type": "boolean",
+      "default": true,
+      "description": "True iff no truth_* / oracle data was read during the run. A Tool like load_truth reads oracle data by definition -> false. Mirrors run_record.oracle_clean so a bench run is honest about provenance."
+    },
+    "error": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "For status='error', the exception type + message (and short traceback tail). For status='drift_refused', the human-readable reason the binding was rejected. Null for status='ok'."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Operator note: WHY this Tool was run on this input (the bench-log annotation). Free text."
+    },
+    "commit": {
+      "type": "string",
+      "description": "git SHA the run executed at (reproducibility)."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["cli", "webapp", "skill"],
+      "default": "cli",
+      "description": "How the run-button was triggered: a terminal CLI invocation, the dashboard run-button (via the intent queue), or a spine skill."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the record was written (ISO-8601)."
+    },
+    "executed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the compute actually ran, if different from created_at."
+    }
+  }
+}

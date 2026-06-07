@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s070_replicate_s064",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Does the s064 Jacobi-coord (polhode-basis) LM polish surface additional Band A clusters from the same s059j cluster reps on post-fix seed 89, beyond vanilla full-LC polish?",
+  "hypothesis": "Polhode-basis LM polish is a drop-in replacement that finds additional Band A clusters from the same cluster reps (the s064 architectural claim).",
+  "status": "refuted",
+  "run_type": "expensive",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "unique_bandA_clusters_post": 1,
+    "unique_bandA_clusters_pre": 5,
+    "bandA_polishes_post": 3,
+    "cluster457_q0_err_deg": 59.58,
+    "cluster457_rho_hifi": 0.90,
+    "polish_wall_s": 250
+  },
+  "artefacts": [
+    { "path": "results/s064_jacobi_polish/gate3_seed089_summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s070_replicate_s064.md"],
+  "parents": ["s067_postfix_propagator_validation", "s069_replicate_s059k"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": true,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "Re-ran s064 Jacobi-coord polish on the shared post-fix seed-89 s059j output. It lands the same single Band A cluster (id=457) as vanilla full-LC polish (s069) — 1/50 unique, vs pre-fix 5/50 — surfacing no extra cluster. The s064 'finds additional Band A clusters' claim is empirically refuted on this replication; the speedup claim and truth-invariance smoke still hold. Truth basin at rank 1987 is outside the top-50 budget regardless of parameterisation."
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_attitude-inversion",
+  "kind": "goal_node",
+  "node_kind": "thesis",
+  "parent": null,
+  "title": "Recover satellite attitude state (q0, ω) from a single ground-based light curve",
+  "state": "open",
+  "spent": { "runs": 0, "wall_s": 0 },
+  "contract_refs": [],
+  "child_runs": [],
+  "last_measured": {
+    "run": "s106",
+    "summary": "first Band A on the hard tumbler seed 119 (ρ 0.0300, |ω| 1.5025 deg/s) — but oracle-seeded; blind discrimination open",
+    "at": "2026-05-28T12:00:00Z"
+  },
+  "is_trunk_artifact": true,
+  "created_at": "2026-04-30T00:00:00Z",
+  "updated_at": "2026-05-28T12:00:00Z"
+}

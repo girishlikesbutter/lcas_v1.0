@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_cloud-data-seedgen",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_cloud-architectures",
+  "title": "IA Cloud-data architecture as a seed generator",
+  "state": "closed",
+  "spent": {
+    "runs": 28,
+    "wall_s": 5159.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s023_filter_composition",
+    "s025_tube_shape",
+    "s027_cluster_topology",
+    "s030_relax_thresholds",
+    "s038_filter_diagnostics_seed023",
+    "s038_handoff_diagnosis_gaps",
+    "s047a_cell_filter_informativeness",
+    "s047b_seed14_full_bracket_cell_filter",
+    "s048_peak_cascade_smoke",
+    "s048b_per_epoch_spread_v1",
+    "s048c_cloud_viewer",
+    "s048c_handoff",
+    "s049_cascade_seed14",
+    "s050a_cluster_geometry",
+    "s050b_validation_stress",
+    "s050cde_c1_concentration_dead",
+    "s057_anchor_propagation",
+    "s057b_anchor_scan",
+    "s057c_truth_pair_omega",
+    "s057d_dt_sweep",
+    "s057e_multi_anchor",
+    "s057f_per_qa_consistency",
+    "s057g_forward_propagation",
+    "s057h_canonical_cluster",
+    "s057i_hifi_validate",
+    "s058_lm_polish_clusters",
+    "s059j_cloud_data_omega_grid",
+    "s059j_design"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-04T00:00:00Z",
+  "last_measured": {
+    "run": "s059j_cloud_data_omega_grid",
+    "summary": "ω-grid architecture validated end-to-end; headline yield was ORACLE-TAINTED (retracted)",
+    "at": "2026-05-08T00:00:00Z"
+  }
+}

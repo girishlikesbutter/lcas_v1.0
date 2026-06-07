@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s092_cross_cloud_116",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-discriminator",
+  "question": "Does crossing two real brightness-matched anchor clouds and screening by connectability + a third-anchor brightness check isolate the truth-consistent pair from combinatorial junk?",
+  "hypothesis": "Connectability + one brightness check isolates the truth pair from the combinatorial junk.",
+  "status": "refuted",
+  "run_type": "batch",
+  "seeds": [
+    116
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "npairs": 1866770,
+    "connectable_pct": 62.94,
+    "cpass_survivors": 79443,
+    "cpass_pct": 4.26,
+    "prefilter_cut_x": 23.5,
+    "positive_control_w_dir_deg": 3.27,
+    "survivors_within_5deg": 584,
+    "median_w_dir_deg": 91.8,
+    "wall_s": 325
+  },
+  "artefacts": [
+    {
+      "path": "notebooks/inversion/survey/results/s092/cross.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s092_cross_cloud_116.md"
+  ],
+  "parents": [
+    "s088_bvp_shoot_conditioning",
+    "s089_third_anchor_overdetermination",
+    "s093_fullc_score_survivors"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": true,
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "First cross of two real brightness-matched anchor clouds (no handed-in correspondence) on seed 116: crossing 1.87M pairs, connectability keeps 62.9%, the cloud-free 3rd-anchor brightness check keeps 4.26% (79,443) — a 23.5× cut retaining the truth pair. But truth is retained, not isolated (median ω-dir 91.8°, only 584 within 5°). Connectability + one brightness check is a cheap prefilter, not the discriminator. The cross consumes only observed magnitude; truth used only as a positive-control label.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ]
+}

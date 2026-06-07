@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="card">
+  <h2>New run</h2>
+  <form id="run-form" autocomplete="off">
+    <div class="row">
+      <label>Seed
+        <input type="number" name="seed" min="0" max="99" step="1"
+               value="{{ defaults.seed }}" required>
+      </label>
+      <label>Surrogate
+        <select name="surrogate">
+          <option value="v1" {% if defaults.surrogate == 'v1' %}selected{% endif %}>v1 (fast — ~4.5 µs/sample)</option>
+          <option value="v2" {% if defaults.surrogate == 'v2' %}selected{% endif %}>v2 (residual ensemble — ~56 µs/sample)</option>
+        </select>
+      </label>
+      <label>N samples
+        <input type="number" name="n_samples" min="1000" max="500000"
+               step="1000" value="{{ defaults.n_samples }}" required>
+      </label>
+      <label>Tolerance (mag)
+        <input type="number" name="tolerance_mag" min="0.001" max="5"
+               step="any" value="{{ '%.2f' % defaults.tolerance_mag }}" required>
+      </label>
+    </div>
+    <div class="row">
+      <label class="grow">Epochs
+        <input type="text" name="epochs" value="{{ defaults.epochs }}"
+               placeholder="all | ::5 | 100-200 | 0,100,200" required>
+        <small>any of: <code>all</code>, <code>::N</code> (every Nth), <code>M-N</code> (inclusive range), <code>M,N,P,...</code> (specific)</small>
+      </label>
+    </div>
+    <div class="row">
+      <button class="btn primary" type="submit">Run</button>
+      <span id="form-error" class="error"></span>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Cached runs ({{ runs|length }})</h2>
+  {% if runs %}
+  <table class="runs">
+    <thead>
+      <tr>
+        <th>created (UTC)</th><th>seed</th><th>surrogate</th>
+        <th>N</th><th>tol</th><th>epochs</th><th>spec</th>
+        <th>|ω| dps</th><th>closest min/max</th>
+        <th>compute</th><th>cfg id</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in runs %}
+      <tr>
+        <td>{{ r.created_at }}</td>
+        <td>{{ r.seed }}</td>
+        <td>{{ r.surrogate }}</td>
+        <td>{{ '{:,}'.format(r.n_samples) }}</td>
+        <td>{{ '%.2f' % r.tolerance_mag }}</td>
+        <td>{{ r.n_epochs }}</td>
+        <td><code>{{ r.epoch_spec_str or '—' }}</code></td>
+        <td>{{ '%.3f' % r.omega_mag_dps }}</td>
+        <td>{{ '%.1f' % r.closest_deg_min_max[0] }} / {{ '%.1f' % r.closest_deg_min_max[1] }}°</td>
+        <td>{{ '%.1f' % r.wall_compute_s }} s</td>
+        <td><code>{{ r.config_id }}</code></td>
+        <td>
+          {% if r._has_animation %}
+          <a class="btn small" href="/viewer/{{ r.config_id }}">open</a>
+          {% else %}
+          <span class="muted">no html</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No runs yet.</p>
+  {% endif %}
+</section>
+
+<script>
+const form = document.getElementById('run-form');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('form-error');
+  errEl.textContent = '';
+  const fd = new FormData(form);
+  const resp = await fetch('/run', { method: 'POST', body: fd });
+  const data = await resp.json();
+  if (!resp.ok) { errEl.textContent = data.error || 'request failed'; return; }
+  window.location = data.redirect;
+});
+</script>
+{% endblock %}

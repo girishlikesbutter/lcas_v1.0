@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s059i_validator",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "At fixed truth q_a, does the local-window surrogate-MSE over an omega-grid rank the truth-omega at the top?",
+  "hypothesis": "With q_a pinned to truth, the local-window surrogate-MSE cost surface is sharply discriminative and ranks truth-omega at or near rank 1.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [28],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "truth_omega_rank": "1/1407",
+    "truth_rho_local": 0.389,
+    "rank2_rho": 3.444,
+    "rank4_rho": 7.979,
+    "T_A": 25,
+    "grid": "200dir x 6mag",
+    "window_W": 10
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s059i_validator.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-08T00:00:00Z",
+  "narrative_md": "Cost-surface validator: at fixed truth q_a (T_A=25, seed 28), local-window surrogate-MSE over a Fibonacci 200-dir x 6-mag (+-30%) grid ranks truth-omega at rank 1/1407 (rho_local 0.389 = noise floor; runner-up 3.44 Band B). The omega-grid premise holds at zero q_a noise. Open: degradation at realistic cloud quantization (~7-10deg q_a). Pins q_a to truth and inserts truth-omega at grid idx 0 -- oracle-leak, N=1."
+}

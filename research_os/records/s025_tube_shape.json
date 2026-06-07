@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s025_tube_shape",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "What is the per-axis roll-off (natural cell size) of the alignment and geo filters around truth?",
+  "hypothesis": "The filter tube is anisotropic with a measurable per-axis cell size for grid search.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [6, 28, 41, 44, 91],
+  "N": 5,
+  "claim_scope": "N1",
+  "metrics": {
+    "geo_omega_dir_basin_deg": 1.0,
+    "geo_q0_basin_deg": 5.0,
+    "align_omega_mag_basin_pct": 5.0,
+    "wall_s": 10
+  },
+  "artefacts": [
+    { "path": "results/s025/summary.json", "kind": "data" },
+    { "path": "results/s025/tube_shape.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s025_tube_shape.md"],
+  "parents": ["s003_landscape_vs_omega", "s019b_omega_dir_basin_at_truth_mag", "s021_truth_vs_random"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-04T00:00:00Z",
+  "narrative_md": "Per-axis perturbation map on 5 seeds: geo cost is the sharper filter (omega-dir basin ~1deg, q0 basin ~5deg); alignment cost is wide on q0/omega-dir but extremely tight on omega-mag (drops at any non-zero perturbation). The filter tube is anisotropic: q0 wide, omega-dir narrow, omega-mag narrowest. LS-bracket's ~5% omega-mag accuracy matches the alignment-cost omega-mag scale."
+}

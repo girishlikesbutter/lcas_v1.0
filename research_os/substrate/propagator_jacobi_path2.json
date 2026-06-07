@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "propagator_jacobi_path2",
+  "kind": "substrate_component",
+  "name": "propagator_jacobi_path2",
+  "path": "notebooks/inversion/survey/lib/jacobi_propagator.py",
+  "tier": "substrate",
+  "interface": "VARIANT: DIFFERENT METHOD: fully closed-form q(t) via 3-1-3 precession+nutation + elliprj (s072/s074), ~5x faster than ODE Euler. THE production propagator of the live survey (used by 53 experiment files incl. shoot). Not a param of propagate_attitude \u2014 a separate analytical implementation. Should be variant_of propagator.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:98b7059d797f85a5",
+  "canon": false,
+  "variant_of": "propagator",
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/jacobi_propagator.py:propagate_jacobi_path2",
+  "ports": {
+    "input": [
+      "q0-omega-state",
+      "epoch-observation"
+    ],
+    "output": {
+      "q_body_hist": "attitude-trajectory",
+      "omega_body_hist": "attitude-trajectory"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:98b7059d797f85a5",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

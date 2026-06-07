@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s005_joint_local_descent",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Does joint 6-DOF Levenberg-Marquardt descent on surrogate-MSE recover truth from ICs inside the s003 truth-ω tube, and how large is the per-seed basin of attraction?",
+  "hypothesis": "Joint (q0, ω) LM from inside the s003 tube converges to truth basin reliably; basin radius is seed-dependent.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [6, 18, 28, 41, 91],
+  "N": 5,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_seeds_T1_converge": "5/5",
+    "n_seeds_T2_converge": "4/5",
+    "n_random_in_tube_converge": "18/20",
+    "twin_recoveries": "0/50",
+    "basin_radius_q0_deg": "2 to 15",
+    "basin_radius_w_dir_deg": "~1-2",
+    "basin_radius_w_mag_pct": "~3-5"
+  },
+  "artefacts": [
+    { "path": "results/s005/runs.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s005_joint_local_descent.md"],
+  "parents": ["s001_cost_at_truth_cohort", "s002_surrogate_landscape_probe", "s003_landscape_vs_omega", "s004_alignment_landscape_vs_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "Joint 6-DOF LM on surrogate-MSE recovers truth from inside the s003 tube on 4/5 seeds and 18/20 random in-tube ICs (90%). Convergence is bimodal (success: q0_err<1°, ω_dir_err<0.05°; failure: 20-180°). Per-seed basin radius is seed-dependent (2°-15° q0, ~1-2° ω-dir, ~3-5% ω-mag) with seed 28 the tight outlier (~2°). Twin recoveries 0/50. Seed 91 (the m115 anchor) converges from inside the tube — its m115 failure was an outer-ω-search problem, not local descent. Joint LM is the viable inversion architecture."
+}

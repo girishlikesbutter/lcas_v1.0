@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s050cde_c1_concentration_dead",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Can per-q_a multi-pair aggregation of the s049 cascade pool (Hough omega-vote, cross-t_k consensus, q-space agreement) separate truth-q_a from random?",
+  "hypothesis": "Even if single hypotheses fail, the collective behaviour of all (truth_q_a, q_b) pairs concentrates around truth-omega in a way random q_a's do not.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [14],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "s050c_best_rank": "1/1113 (truth=4 vs pool p50=3, not structural)",
+    "s050d_consensus": "saturated, 778-1099 ties",
+    "s050e_best_truth_qa_rank": "2098/141706",
+    "s050e_top1000_enrichment": "0.0x",
+    "wall_s": 370
+  },
+  "artefacts": [
+    { "path": "results/s050c_multipair_concentration/concentration.npz", "kind": "checkpoint" },
+    { "path": "results/s050d_consensus_test/summary.json", "kind": "data" },
+    { "path": "results/s050e_qspace_score/qspace_score.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s050cde_c1_concentration_dead.md"],
+  "parents": ["s050a_cluster_geometry", "s050b_validation_stress", "s049_cascade_seed14"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Closes path C1 across three structurally distinct variants: Hough omega-voting (top rank only at a near-noise bin), cross-t_k consensus (metric saturates with 778-1099 ties), and q-space agreement (best truth-q_a ranks 2098/141706, top-1000 enrichment 0.0x). Unifying cause: at 17% omega-noise the propagation drift makes truth and random q-positions comparable; naive multi-pair averaging inherits the failure because it can't tell which q_b is truth-adjacent. Only peak-stationarity remains as a Phase-3 candidate. Reads truth-q_a as the discriminator target."
+}

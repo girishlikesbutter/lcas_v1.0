@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_omega-mag-basin",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_omega-from-lc",
+  "title": "|ω|-magnitude good-fit basin sharpness; 1-D refine",
+  "state": "closed",
+  "spent": {
+    "runs": 2,
+    "wall_s": 156.1
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s083_nmag_sensitivity",
+    "s084_omega_refine_viability"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s084_omega_refine_viability",
+    "summary": "1-D |ω|-refine viable (0 aliases); binding constraint = anchor q-accuracy",
+    "at": "2026-05-21T00:00:00Z"
+  }
+}

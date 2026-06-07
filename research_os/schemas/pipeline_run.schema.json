@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/pipeline_run.schema.json",
+  "title": "Pipeline run (bench-run record for a runnable DAG)",
+  "description": "ADR-0007 §5.3. Immutable, append-only record of ONE execution of a runnable Pipeline (its `steps` DAG) by the executor (loop/run_pipeline.py). The multi-step counterpart of a `tool_run`: where a tool_run is one Tool on one input, a pipeline_run is the compose/map chain of Tools, each step drift-checked and stamped, threaded by the ref language. Like tool_run it is value-NEUTRAL bench provenance — it carries the Pipeline's id but NOT a hypothesis verdict (the Pipeline node owns the bet; an Experiment that TESTS the pipeline owns the confirmed/refuted status via run_record.tests). It must not pollute the experiment corpus that drives claim blast-radius. The whole run is refused (status='drift_refused') if ANY step's binding is stale, unless forced (recorded honestly per step via hash_ok).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "pipeline",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^pr_[a-z0-9]+(_[a-z0-9]+)*$",
+      "description": "Pipeline-run id: 'pr_' + the pipeline slug (hyphens -> underscores) + '_' + a run timestamp, lowercase underscore. Stable forever; may be cited by claims/goals as provenance.",
+      "examples": ["pr_so3_pool_dedup_20260607t190000", "pr_blind_5step_invert_1717800000"]
+    },
+    "kind": { "type": "string", "const": "pipeline_run" },
+    "pipeline": {
+      "type": "string",
+      "description": "pipeline id that was run. Referential: must resolve to a pipeline node that has a non-empty `steps` DAG.",
+      "examples": ["pipeline_so3-pool-dedup", "pipeline_blind-5step-invert"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "drift_refused", "error"],
+      "description": "ok = every step ran to completion. drift_refused = a step's drift-check failed and the DAG was NOT run past it. error = a step was invoked but raised (see step.error / top-level error)."
+    },
+    "steps": {
+      "type": "array",
+      "default": [],
+      "description": "Per-step result, in execution order. The DAG made legible: which Tool, at which version/hash, op, wall, and an output digest.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step", "tool", "op", "status"],
+        "properties": {
+          "step": { "type": "string", "description": "The step id from the pipeline's steps[]." },
+          "tool": { "type": "string", "description": "substrate_component id this step ran." },
+          "tool_version": { "type": ["string", "null"], "default": null, "description": "The Tool's current_version at run time." },
+          "op": { "type": "string", "enum": ["compose", "map"] },
+          "status": { "type": "string", "enum": ["ok", "drift_refused", "error", "skipped"], "description": "skipped = an earlier step refused/errored so this one never ran." },
+          "hash_at_run": { "type": ["string", "null"], "default": null, "description": "Bound source-file hash at run time (tool_lint format)." },
+          "hash_ok": { "type": "boolean", "default": true, "description": "True iff hash_at_run matched the card's current_hash." },
+          "wall_s": { "type": ["number", "null"], "default": null },
+          "n_mapped": { "type": ["integer", "null"], "default": null, "description": "op=map only: how many elements `over` was lifted across." },
+          "metrics": { "type": "object", "additionalProperties": true, "default": {}, "description": "Output digest (return-value shapes/keys/scalars), same summariser as tool_run." },
+          "artifacts_produced": { "type": "array", "default": [], "items": { "type": "string" }, "description": "ADR-0007. artifact_instance ids reified from this step's port-typed outputs ('recognised materials only'). Referential: each must resolve to an artifact_instance. The materials this step put on the shelf." },
+          "error": { "type": ["string", "null"], "default": null }
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {},
+      "description": "The pipeline-level inputs the DAG was run on (resolved by `$in.<key>` refs in step inputs)."
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {},
+      "description": "Pipeline-level param overrides, keyed by step id, layered over each step's params/default_params."
+    },
+    "wall_s": { "type": ["number", "null"], "default": null, "description": "Total wall-clock seconds for the whole DAG." },
+    "oracle_clean": {
+      "type": "boolean",
+      "default": true,
+      "description": "True iff no step read truth_*/oracle data (false if any step's Tool is an oracle Tool, e.g. load_truth). Mirrors tool_run.oracle_clean."
+    },
+    "error": { "type": ["string", "null"], "default": null, "description": "Top-level failure reason for status in {drift_refused, error}; null for ok." },
+    "reason": { "type": "string", "description": "Operator note: WHY this pipeline was run (bench-log annotation)." },
+    "commit": { "type": "string", "description": "git SHA the run executed at." },
+    "source": { "type": "string", "enum": ["cli", "webapp", "skill"], "default": "cli" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "executed_at": { "type": "string", "format": "date-time" }
+  }
+}

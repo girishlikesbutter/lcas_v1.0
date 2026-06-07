@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s030_relax_thresholds",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does any threshold relaxation of the s020 seed-6 filter let the 5 known basin-pool candidates (2 truth + 3 twin) survive?",
+  "hypothesis": "Relaxing the geo/align thresholds admits the truth-basin and twin-basin candidates.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [6],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_candidates": 432000,
+    "survivors_L0": 875,
+    "survivors_L2": 97943,
+    "union_survivors": 121128,
+    "truth_basin_survivors": 0,
+    "basin_candidate_align_max": 0.429,
+    "wall_s": 1
+  },
+  "artefacts": [
+    { "path": "results/s030/seed006/summary.json", "kind": "data" },
+    { "path": "results/s030/seed006/survivors_per_level.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s030_relax_thresholds.md"],
+  "parents": ["s020_seed_pipeline", "s022_known_good", "s023_filter_composition"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-04T00:00:00Z",
+  "narrative_md": "Pure post-process re-categorising the cached 432k seed-6 pool at 4 relaxation levels. Decisive NO: every level rejects all 5 basin candidates because they score align <= 0.429 (3/7 bright peaks) and the lowest tested threshold is 0.5. Sharpens the s020 diagnosis from 'thresholds too strict' to 'IC granularity (30deg phi steps) too coarse' — not a hyperparameter fix. Also corrected an s020 mis-recorded count (28,690 not ~1864)."
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s048b_per_epoch_spread_v1",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "How does the per-epoch C_t pre-image cloud size vary across the LC on seed 89, and is selectivity driven by brightness or geometry?",
+  "hypothesis": "Dim epochs are more constrained (smaller C_t); the per-epoch pre-image filter is a usable q-prior with truth always retained.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "Ct_range": "1278-75218 of 500k",
+    "Ct_variation_x": 60,
+    "tightest_dim_epoch_survivors": 384,
+    "max_nearest_truth_deg": 9.59,
+    "min_nearest_truth_deg": 0.78,
+    "wall_s_30epochs": 144
+  },
+  "artefacts": [
+    { "path": "results/s048_peak_cascade_smoke/seed089_v1_spread_n30/spread.npz", "kind": "checkpoint" },
+    { "path": "results/s048_peak_cascade_smoke/seed089_v1_spread_n30_dimmest/spread.npz", "kind": "checkpoint" },
+    { "path": "results/s048_peak_cascade_smoke/seed089_v1_spread_n30/spread_15panel.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s048b_per_epoch_spread_v1.md"],
+  "parents": ["s048_peak_cascade_smoke"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "v1-surrogate sweep of per-epoch C_t cloud size on seed 89: |C_t| varies 60x across the LC, and selectivity is geometry-dominated, not brightness-dominated (mag 14.86 -> 1.3k survivors vs mag 14.38 -> 75k). Truth-q survives at every probed epoch but nearest-sample distance can grow to 9.59 deg at thin-slice geometries. v1 is ~12x faster than v2 (4.5 vs 56 us/sample), the right choice for C_t sampling. Reads truth-q nearest distances as the diagnostic."
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s016c_prime_fresh_sobol_fixed_omag",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "With fresh Sobol(q0 x ω-dir) starts at fixed-correct harvested ω-mag, does 5-DOF LM reach the loose truth basin (is the ω-mag prior sufficient)?",
+  "hypothesis": "Correct ω-mag alone (Option C) is a sufficient prior to bridge the q0 + ω-dir search gap into the truth basin.",
+  "status": "refuted",
+  "run_type": "expensive",
+  "seeds": [6, 13, 28, 41, 49, 79, 91],
+  "N": 7,
+  "claim_scope": "N1",
+  "metrics": {
+    "in_basin_loose": "0/7 seeds",
+    "seed28_harvest_wmag_err_pct": -0.01,
+    "min_q0_err_deg": 7.1,
+    "selector_winner_surr_mse_band_A_seeds": "13, 41, 79",
+    "n_lm_runs": 960,
+    "wall_s": 4596
+  },
+  "artefacts": [
+    { "path": "results/s016c_prime/runs.npz", "kind": "checkpoint" },
+    { "path": "results/s016c_prime/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s016c_prime_fresh_sobol_fixed_omag.md"],
+  "parents": ["s003_landscape_vs_omega", "s011_q4cii_sobol_so3_polish_pilot", "s014_cohort_rho_band", "s015_joint_q0_omega_pilot", "s016_omega_mag_frozen_polish"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-01T00:00:00Z",
+  "narrative_md": "ω-mag prior is structurally insufficient. With fresh Sobol(q0 x ω-dir) starts at fixed-correct harvested ω-mag, 0/7 seeds reach loose basin — including seed 28 where harvested ω-mag was 0.01% from truth (effectively perfect). Option C is closed: ω-mag accuracy alone cannot bridge the q0 + ω-dir gap. Reframe: the cohort selector returns candidates with surr-MSE 0.005-0.011 mag^2 (Band A by proxy) on seeds 13/41/79 — multi-solution attractors (q0 80-173° + ω-dir 73-122° off, LC still matches); hi-fi ρ-band deferred to s017. 960 LM runs."
+}

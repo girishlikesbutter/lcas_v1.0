@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s089_third_anchor_overdetermination",
+  "kind": "run_record",
+  "goal_node": "goal_third-anchor",
+  "question": "Does a third anchor (over-determined joint BVP) lower the fast-seed ω-dir noise floor and collapse the winding multiplicity?",
+  "hypothesis": "A third intermediate anchor (a) averages endpoint noise down below the 1.25° gate and (b) pins the winding so long baselines no longer alias.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [119, 116, 103],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "ladder_collapse_119": "26->1",
+    "ladder_collapse_103": "4->1",
+    "joint_w_dir_119_deg": 1.49,
+    "short_w_dir_119_deg": 1.57,
+    "rescue_103_long_deg": 39.64,
+    "rescue_103_joint_deg": 1.38,
+    "wall_s": 33
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s089/conditioning.json", "kind": "data" },
+    { "path": "notebooks/inversion/survey/results/s089/ladder.json", "kind": "data" },
+    { "path": "notebooks/inversion/survey/results/s089/conditioning.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s089_third_anchor_overdetermination.md"],
+  "parents": ["s088_bvp_shoot_conditioning", "s087_omega_dir_threshold", "s085_anchor_accuracy_gate"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "Split result: Q2 (multiplicity) confirmed decisively — the third anchor collapses the fast-seed winding ladder 26→1 (119), 4→1 (SAM 103), and rescues an aliased long baseline 39.6°→1.38°. Q1 (noise floor) refuted on the binding fast seed — joint tracks 2-pt (1.49° vs 1.57°), both clearing 1.25° only at σ_q≲2.0°. The third anchor is a disambiguator, not a noise-reducer. Perturbed-truth anchors → not blind."
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s098_local_densify_116",
+  "kind": "run_record",
+  "goal_node": "goal_blind-fast-invert",
+  "question": "Does rank-by-full-LC-RMSE + localized densification close into a blind Band-A inversion on seed 116, and is truth the unique best-fitting solution?",
+  "hypothesis": "One blind round of localized densification + full-LC RMSE rank + hi-fi gate closes a Band-A inversion on seed 116.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [116],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "rho": 0.34,
+    "rho_band": "A",
+    "best_joint_qa_deg": 0.91,
+    "best_joint_qb_deg": 1.22,
+    "best_joint_w_dir_deg": 0.45,
+    "truth_near_rho": 1.09,
+    "global_nonmono_min_rmse": 0.0182,
+    "truth_floor_rmse": 0.0102,
+    "wall_s": 6704
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s098/rescore.json", "kind": "data" },
+    { "path": "notebooks/inversion/survey/results/s098/densify.json", "kind": "data" },
+    { "path": "notebooks/inversion/survey/results/s098/hifi_rho.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s098_local_densify_116.md"],
+  "parents": ["s097_times0_gauge_bug_audit", "s096_density_usefulness_116", "s093_fullc_score_survivors", "s092_cross_cloud_116"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-25T00:00:00Z",
+  "narrative_md": "One round of localized densification (re-sample isophote inside the surviving cloud, steered by full-LC RMSE rank) pulls a candidate to qa 0.91/qb 1.22°, ω-dir 0.45°. The pipeline closes a blind Band-A inversion (top candidate hi-fi ρ 0.34). Twist: truth is NOT unique/best — full-LC RMSE is non-monotonic; a 15.5° q-offset basin and body-twins fit better (ρ 0.34-0.51) than the ~1° truth perturbation (ρ 1.09); all genuine hi-fi multi-solutions. |ω| band reuses truth as the s092 stand-in → not strictly blind. Densify cross overran 22× (112 min vs ~5 min)."
+}

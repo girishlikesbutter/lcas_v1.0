@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "id": "multi_start_optimize",
+  "kind": "substrate_component",
+  "name": "multi_start_optimize",
+  "path": "src/inversion/optimizers.py",
+  "tier": "substrate",
+  "interface": "(ObjectiveFunction, bounds, n_starts) -> List[OptimizationResult] sorted by cost; N independent global+local starts. The standard single-fidelity optimizer orchestrator.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:5f51f8ce0092fb5b",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/inversion/optimizers.py:multi_start_optimize",
+  "ports": {
+    "input": [
+      "scoring"
+    ],
+    "output": {
+      "return": "candidate-set"
+    }
+  },
+  "default_params": {
+    "n_starts": 5,
+    "use_local_refinement": true,
+    "workers": 1
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:5f51f8ce0092fb5b",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "spice-setup-file",
+  "kind": "glossary_term",
+  "term": "spice-setup-file",
+  "definition": "An mkspk/pinpoint/prediCkt configuration file that drives SPICE kernel generation.",
+  "status": "provisional",
+  "coined_in": "research_os/backfill/W-D_tool_pipeline_scour.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [],
+  "created_at": "2026-06-07T00:00:00Z"
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "id": "basin-characterisation",
+  "kind": "glossary_term",
+  "term": "Basin characterisation",
+  "definition": "Characterising the COST-FUNCTION SHAPE relative to a VARIED parameter set, with the others HELD FIXED, under a STATED cost. MUST always state (varied params, fixed params, cost). E.g. vary q, hold ω near truth, cost RMSE → is the argmin-q the truth-q?",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "coined_in": "s003_landscape_vs_omega",
+  "synonyms_blocked": [
+    "connectability-tube",
+    "fidelity tube",
+    "truth-ω tube"
+  ],
+  "related_terms": [
+    "rho-band",
+    "je-w-param"
+  ]
+}

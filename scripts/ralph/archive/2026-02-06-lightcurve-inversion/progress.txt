@@ -1,0 +1,26 @@
+# Ralph Progress Log
+Started: Thu Feb 06 2026
+
+## Codebase Patterns
+- Project uses requirements.txt for dependencies (not pyproject.toml)
+- No mypy/pyright configured - use `python -m compileall src/ -q` for syntax validation
+- Python source files are in src/ directory with standard module structure
+- Jupytext notebooks use percent format (.py files paired with .ipynb)
+- Inversion module is in src/inversion/ with ObjectiveFunction, optimizers, and utilities
+- Dynamics module is in src/dynamics/ with propagate_attitude() for attitude propagation
+- Existing notebooks 01-03 in notebooks/inversion/ demonstrate inertia, propagation, and basic inversion
+- Notebooks 04-07 implement inversion diagnostics (landscape, basin size, optimizer comparison, robustness)
+- Use Intelsat 901 config from data/models/intelsat_901/ for testing
+- SPICE metakernel at data/spice_kernels/lcas_meta_generic_v2.tm
+- ObjectiveFunction takes mode="tumbling" and compute_shadows_flag parameter
+- true_params = [axis_angle_x, axis_angle_y, axis_angle_z, omega_x, omega_y, omega_z]
+- CountedObjective wrapper pattern for budget enforcement (from notebook 06)
+- evaluate_success(): omega error < 0.1 deg/s AND rms < 2x noise_sigma
+- DE config: strategy='best1bin', mutation=(0.5, 1.0), recombination=0.7, popsize=15, polish=False
+- Use time.perf_counter() for timing measurements
+- Figures saved to data/results/inversion_diagnostics/ at 150 DPI with bbox_inches='tight'
+- Wilson score interval for success rate confidence intervals
+- Use BASE_SEED + trial * 100 for reproducible random seeds across trials
+
+---
+

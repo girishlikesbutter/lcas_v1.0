@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s011_q4cii_sobol_so3_polish_pilot",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "At fixed truth-ω, does multi-axis Sobol-Shoemake(q0) on SO(3) + LM polish yield at least one in-basin landing per seed at low density (N=64)?",
+  "hypothesis": "Uniform Sobol(q0) on SO(3) at N=64 + LM polish recovers truth basin on most seeds, because LM's grab radius exceeds the basin radius.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [6, 10, 21, 28, 41, 44, 48, 60, 84, 91],
+  "N": 10,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_seeds_in_basin_at_N64": "9/10",
+    "seed10_in_basin": "0/64",
+    "lm_grab_radius_deg": "~50-100",
+    "twin_recoveries": "0/640",
+    "n_ics_per_seed": 64,
+    "wall_s": 2361
+  },
+  "artefacts": [
+    { "path": "results/s011/runs.npz", "kind": "checkpoint" },
+    { "path": "results/s011/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s011_q4cii_sobol_so3_polish_pilot.md"],
+  "parents": ["s002_surrogate_landscape_probe", "s005_joint_local_descent", "s006_seed28_landscape_at_truth_omega", "s009_cohort_basin_radius_probe", "s010_seed44_landscape_at_truth_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "Multi-axis Sobol-Shoemake(q0) on SO(3) + LM polish at fixed truth-ω, 10 seeds x 64 ICs = 640 runs (39 min). 9/10 seeds get ≥1 in-basin landing at N=64. Key surprise: LM's grab radius (~50-100°) far exceeds the basin itself — even seed 28 (sub-Sobol basin) gets 7/64 hits. Failure: seed 10 (slowest tumbler, 1.06 rot) gets 0/64 — many low-MSE competing attractors, none near truth. Q4c works at low density; the cohort tail under-counted by s009's body-X probe."
+}

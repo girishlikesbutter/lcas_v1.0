@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_physical-omega-bracket",
+  "kind": "claim_card",
+  "deck": "preference",
+  "statement": "Intersect every blind LS-|omega| bracket with the physical [0.1,1.5] deg/s prior. Unclamped, s019 gave a 34.9 deg/s ceiling (23x too high) -> a fake 72-winding multi-shoot. Truth seed-119 |omega| = 1.482 deg/s.",
+  "supporting_runs": [],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "high",
+    "gates_passed": [],
+    "oracle_clean": true
+  },
+  "scope": {
+    "N": 0,
+    "kind": "N1"
+  },
+  "depends_on": [],
+  "status": "live",
+  "superseded_by": null,
+  "supersedes": null,
+  "links_to_writeups": [
+    "memory/feedback_omega_prior_physical_bracket.md"
+  ],
+  "confirmed_by": "girish",
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

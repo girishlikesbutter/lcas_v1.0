@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s050a_cluster_geometry",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Do the s049 cascade survivors cluster around truth (so cluster-reps can be LM-polished), or are they a uniform thinning of (q_a, omega) space?",
+  "hypothesis": "Cascade survivors concentrate on truth, reducing to a few hundred clusters -- the Phase 2 LM-budget precondition.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [14],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "survivors": 35835,
+    "q_dist_to_truth_p50_deg": 129.42,
+    "omega_vec_err_rel_p50_pct": 122.93,
+    "truth_qa_enrichment_factor": 0.59,
+    "clusters_canon_5deg_5pct": 32640,
+    "phase2_gate_overshoot_x": 163,
+    "wall_s": 102
+  },
+  "artefacts": [
+    { "path": "results/s050a_cluster_geometry/cluster.npz", "kind": "checkpoint" },
+    { "path": "results/s050a_cluster_geometry/summary.json", "kind": "data" },
+    { "path": "results/s050a_cluster_geometry/phase1a_geometry.png", "kind": "plot" },
+    { "path": "results/s050a_cluster_geometry/phase1a_cluster_counts.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s050a_cluster_geometry.md"],
+  "parents": ["s049_cascade_seed14", "s048_peak_cascade_smoke", "s048b_per_epoch_spread_v1", "s042_basin_radius_cohort"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Decisive negative for the s049 seed-generator framing: the 35835 cascade survivors are nearly a uniform thinning of (q_a, omega) space -- q-dist-to-truth median 129 deg (random SO(3) median 123 deg), and truth-q_a enrichment is 0.59x (filter is mildly anti-truth). At 5deg/5% they form 32640 canonical clusters, 163x over the 200-cluster LM gate. 'Truth survives' != 'truth is selected'. Phase 3 (omega-noise reduction) becomes first priority. Reads actual truth state for all distance metrics."
+}

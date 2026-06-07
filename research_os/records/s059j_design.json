@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s059j_design",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "What is the production cloud-data omega-grid inversion pipeline design, given the four s059i validators that de-risked it?",
+  "hypothesis": "Separating the where-to-anchor decision (coarse 50k sweep) from the how-dense-at-anchor decision (400k resample at one anchor) yields a cohort-viable, blind, ~5-10 min/seed inversion pipeline.",
+  "status": "inconclusive",
+  "run_type": "probe",
+  "seeds": [],
+  "claim_scope": "cohort",
+  "metrics": {
+    "anchor_setup_speedup": "20x",
+    "validator_truth_omega_rank": "1/1407",
+    "qa_noise_robust_deg": 7.5,
+    "cohort_robust_at_400k": "8/8",
+    "N_DIRS_default": 200,
+    "N_MAGS_default": 6
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s059j_design.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-08T00:00:00Z",
+  "narrative_md": "Design doc (not a run) for the production cloud-data omega-grid inversion pipeline, de-risked by the four s059i validators. Headline idea: separate where-to-anchor (coarse 50k argmin |C_t| sweep, ~10s) from how-dense-at-anchor (400k resample at one anchor, ~3s) -- 20x setup speedup, zero quality loss. 9-step architecture (anchor -> dense q_a set -> |C_a| cap -> omega-grid -> local-window score -> cluster -> LM polish -> hi-fi gate -> Band A/B yield) with explicit NO TRUTH-CLUSTER INJECTION. Inconclusive: it is a plan; the executed pilot (s059j_cloud_data_omega_grid) later failed the yield gate at N_DIRS=200."
+}

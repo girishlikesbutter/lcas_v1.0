@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_blind-pipeline",
+  "kind": "goal_node",
+  "node_kind": "chapter",
+  "parent": "goal_attitude-inversion",
+  "title": "End-to-end ≤15-min blind Band-A inversion on stratified seeds",
+  "state": "open",
+  "spent": {
+    "runs": 1,
+    "wall_s": 6030.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s082_joint_grid_pivot"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-03T00:00:00Z"
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "id": "lc_resolve",
+  "kind": "substrate_component",
+  "name": "resolve_lc",
+  "path": "notebooks/inversion/survey/lib/lc_compare.py",
+  "tier": "substrate",
+  "interface": "(spec string, ctx_cache, cache_dir) -> magnitude (N,); resolves four spec schemes including fresh hi-fi propagation via render_hifi.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:457787394970d984",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/lc_compare.py:resolve_lc",
+  "ports": {
+    "input": [
+      "q0-omega-state",
+      "epoch-observation"
+    ],
+    "output": [
+      "light-curve",
+      "hifi-lightcurve"
+    ]
+  },
+  "default_params": {
+    "cache_dir": null
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:457787394970d984",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

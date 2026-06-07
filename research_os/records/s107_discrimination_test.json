@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s107_discrimination_test",
+  "kind": "run_record",
+  "goal_node": "goal_windowed-photometry-polish",
+  "question": "Does the s106 windowed-photometry polish phantom (manufacture Band A from arbitrary cross-survivors), and does it survive the production pipeline on seed 119?",
+  "hypothesis": "The polish either discriminates (Band A only near truth) or phantoms (Band A from any cross-survivor); and the production pipeline reaches Band A on 119.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [
+    119
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_polishes": 1107,
+    "n_bandA": 0,
+    "n_phantom": 0,
+    "best_polish_rho": 1.468,
+    "best_polish_band": "D",
+    "polish_basin_w_dir_deg": 5,
+    "s106_reproduced_rho": 0.03,
+    "single_shoot_dir_off_deg": 104.07,
+    "hifi_confirm_rho": 29.36
+  },
+  "artefacts": [
+    {
+      "path": "results/s107/seed119/cross.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s107/seed119/polish.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s107/seed119/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s107/seed119/hifi_rho.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s107/seed119/seed_quality_probe.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s107/seed119/discrimination_plot.png",
+      "kind": "plot"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s107_discrimination_test.md"
+  ],
+  "parents": [
+    "s106_hybrid_loss_polish",
+    "s100_5step_coverage_proto",
+    "s105_pairs_to_omega_decomposition"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": false,
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "created_at": "2026-05-28T00:00:00Z",
+  "narrative_md": "The s106 polish does NOT phantom — across 1107 stratified cross pairs, 0 reach Band A, 0 phantoms, 3 hi-fi confirms hold Band D. But it is not production-ready on 119: the s106 oracle-nearest pair is dropped by the s100 cross filter (single-shoot ω 104° off → C-pass fails), and the polish basin of convergence in ω-direction is only ~5° (a 4.25°-off seed reaches Band A reproducing 0.0300 bit-identically; a 104°-off production seed cannot). s106 is real but architecturally inaccessible. Uses the oracle pair + truth labels → not blind.",
+  "tests": [
+    "pipeline_single-wind-lc-window-polish"
+  ]
+}

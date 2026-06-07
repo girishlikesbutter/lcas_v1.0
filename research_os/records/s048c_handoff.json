@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s048c_handoff",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "What should the next agent build to produce a scientifically-truthful animation of per-epoch C_t cloud evolution across the full LC?",
+  "status": "inconclusive",
+  "run_type": "probe",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {},
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s048c_handoff.md"],
+  "parents": ["s048_peak_cascade_smoke", "s048b_per_epoch_spread_v1"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Handoff brief for the s048c cloud-evolution animation: a 500-frame seed-89 sweep at 100k samples / v1 surrogate / 0.10 mag tol, rotvec-3D projection, global scaling, killed-haze, truth-q trail and LC/|C_t|(t) sidebar, matching the hifi_isoshell viewer polish. A handoff document, no result. References cached truth-q overlay, so not blind."
+}

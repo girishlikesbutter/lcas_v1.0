@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s027_cluster_topology",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "What does the filter-conditioned survivor set look like — how many seeds have zero random survivors, and how do survivors cluster relative to truth/twin?",
+  "hypothesis": "The filter intersection annihilates the random panel on most seeds, and any survivors are multi-solution attractors, not truth/twin.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "n_zero_survivor_seeds": 88,
+    "n_survivor_seeds": 12,
+    "top_cluster_near_truth": 0,
+    "top_cluster_near_twin": 0,
+    "top_cluster_other": 12,
+    "wall_s": 30
+  },
+  "artefacts": [
+    { "path": "results/s027/clusters.json", "kind": "data" },
+    { "path": "results/s027/cluster_topology.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s027_cluster_topology.md"],
+  "parents": ["s021_truth_vs_random", "s022_known_good", "s023_filter_composition", "s014b_n_rotations_analysis"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-04T00:00:00Z",
+  "narrative_md": "Post-process on s021's filter intersection: 88/100 seeds have ZERO random survivors. The 12 survivor-positive seeds are mostly cohort-tail (weak-filter); their top clusters are all classified 'other' (12/12) — genuine multi-solution attractors with truth-like peak structure but distant in (q0, omega) space. The filter annihilates, not merely thins, the random panel on most seeds."
+}

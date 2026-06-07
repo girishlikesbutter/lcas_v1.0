@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s060_v1_v2_cloud_compare",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "Does the v1<->v2 surrogate agreement seen in the polish regime extend to the cloud-survival regime?",
+  "hypothesis": "v1 and v2 admit the same survivor cloud (the polish-regime Spearman 0.996 carries over).",
+  "status": "refuted",
+  "run_type": "probe",
+  "seeds": [14],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "bright_Ct_v1": 450,
+    "bright_Ct_v2": 488,
+    "bright_IoU": 0.43,
+    "dim_Ct_v1": 1113,
+    "dim_Ct_v2": 1980,
+    "dim_Ct_v2_excess_pct": 78,
+    "dim_IoU": 0.42,
+    "pool_N": 500000,
+    "tol_mag": 0.10,
+    "wall_s": 10
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s060_v1_v2_compare/seed14_extrema_v1_vs_v2_cloud.png", "kind": "plot", "caption": "2x2 v1 vs v2 cloud histogram at LC extrema, seed 14" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s060_v1_v2_cloud_compare.md"],
+  "parents": ["s060_v1_v2_lc_compare", "s049_cascade_seed14"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-10T00:00:00Z",
+  "narrative_md": "At seed 14's LC extrema (N=500k pool, TOL +/-0.10 mag), v2 admits 78% more cells than v1 at the dim epoch (1980 vs 1113) and IoU(v1,v2) ~ 0.42 at BOTH extrema -- so the survivor SETS differ materially despite the polish-regime Spearman 0.996. Mechanism: the TOL window sits on a near-vertical edge of a heavy-tailed residual distribution, amplifying tiny v1<->v2 shape differences. Load-bearing substrate for the v1-substrate-reframe memory: anywhere a pipeline consumes v1 cloud counts/survivor sets the result is suspect. Renders truth-LC extrema vs mag_hifi (render-at-truth)."
+}

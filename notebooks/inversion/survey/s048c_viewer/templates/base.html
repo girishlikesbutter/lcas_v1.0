@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}C_t Cloud Viewer{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body>
+<div id="header">
+  <h1>C_t Cloud Viewer</h1>
+  <span id="info-text">survey/s048c — local Flask dispatcher</span>
+</div>
+<main>{% block main %}{% endblock %}</main>
+<footer>
+  Compute jobs run in the terminal that started this server. Closing the
+  terminal kills in-flight jobs. Cached runs persist on disk under
+  <code>results/s048c_cloud_viewer/</code>.
+</footer>
+</body>
+</html>

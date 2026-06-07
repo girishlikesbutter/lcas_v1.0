@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "hard-shoot-trap",
+  "kind": "glossary_term",
+  "term": "hard-shoot trap",
+  "definition": "Hard-connecting two ~1°-off attitude endpoints over multiple polhode turns (3.1 on seed 119) bakes a large ω error (4.25°) into the shoot, forcing Band D — even though LM multistart on the EXACT pair is sound (Band A). Escaped by minimizing photometry over a forward window instead of hard-connecting endpoints (s106). Identified s105 as the binding blocker, displacing the earlier anchor-baseline-aliasing hypothesis.",
+  "status": "canon",
+  "coined_in": "s105",
+  "promoted_on": "2026-05-28",
+  "synonyms_blocked": ["shooting trap", "endpoint-connect trap"],
+  "aliases": [],
+  "related_terms": ["polhode-diameter", "body-twin"],
+  "created_at": "2026-05-28T00:00:00Z",
+  "updated_at": "2026-05-28T00:00:00Z"
+}

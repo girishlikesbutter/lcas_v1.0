@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s021_truth_vs_random",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Does truth score high on the alignment + geo necessary-condition filters across the cohort, and does the body-twin match?",
+  "hypothesis": "Truth scores >=0.95 on both filters on the recoverable cohort and the body-twin matches truth.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "n_random_per_seed": 1000,
+    "truth_align_at_1.0": 80,
+    "truth_geo_at_1.0": 73,
+    "truth_percentile_rank_median_align": 0.001,
+    "median_rejection_intersection": 1.0,
+    "mean_rejection_intersection": 0.991,
+    "wall_s": 1320
+  },
+  "artefacts": [
+    { "path": "results/s021/score_distributions.npz", "kind": "checkpoint" },
+    { "path": "results/s021/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s021_truth_vs_random.md"],
+  "parents": ["s022_known_good", "s023_filter_composition", "s027_cluster_topology"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-04T00:00:00Z",
+  "narrative_md": "Cohort run (100 seeds x 1000 random candidates) reframes alignment/geo cost as one-sided necessary-condition rejection filters. Truth scores 1.0 align on 80/100, 1.0 geo on 73/76 defined; body-twin matches truth on every defined seed; truth percentile rank median 0.001. On the median seed the filter intersection rejects every random candidate. Decisive positive on the necessary-condition reframe."
+}

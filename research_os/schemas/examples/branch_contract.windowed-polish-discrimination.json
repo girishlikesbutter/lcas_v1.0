@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "id": "contract_windowed-polish-discrimination",
+  "kind": "branch_contract",
+  "goal_node": "goal_windowed-photometry-polish",
+  "status": "frozen",
+  "question": "Does windowed-photometry polish DISCRIMINATE truth, or does it also drive far/phantom seed-pairs to Band A?",
+  "hypothesis": "Pairs far from truth (or off the truth attractor) stay Band D under the same window-as-objective polish; no phantom Band A appears, so the window objective is a genuine discriminator and not just a truth-seeded fit.",
+  "predictions": [
+    {
+      "case": "seed 119, oracle-FAR pair (endpoints >90° off the truth pair)",
+      "expected_outcome": "stays Band D (ρ > 4)",
+      "uncertain": true
+    },
+    {
+      "case": "seed 119, second-nearest attractor pair (one of the 7 attractors, not the truth one)",
+      "expected_outcome": "uncertain — could phantom into Band A; this is the crux",
+      "uncertain": true
+    },
+    {
+      "case": "seed 116 (a different tumbler) with its own oracle-nearest pair",
+      "expected_outcome": "reproduces Band A (replication of the s106 mechanism on a 2nd seed)",
+      "uncertain": true
+    }
+  ],
+  "confirm_criteria": "0 phantom Band A across >=5 non-truth pairs on seed 119, AND the s106 mechanism reproduces Band A on >=1 second seed.",
+  "refute_criteria": ">=1 oracle-far pair reaches Band A (the window objective is not discriminating), OR the mechanism fails to reproduce on any second seed.",
+  "budget": { "expected_runs": 8, "expected_wall_s": 7200 },
+  "required_artefacts": [
+    "rho-band table over all tested pairs (truth-near, second-attractor, far)",
+    "window-objective overlay plot (ρ vs window choice per pair)"
+  ],
+  "analytical_probe": {
+    "cheap_path": "re-score the cached s106 polished checkpoints for the far/second-attractor pairs against truth hi-fi LC (no new optimisation), instead of running 8 fresh windowed polishes",
+    "why_insufficient": "discrimination requires running the window-as-objective LM polish ON the far pairs to see whether they phantom into Band A; the cached checkpoints only hold the truth-near pair, so the far-pair endpoint is not in any existing result.json — there is nothing to re-score.",
+    "probe_run": null
+  },
+  "model": "opus",
+  "reasoning": "xhigh",
+  "run_type_policy": { "cheap": "auto", "expensive": "gated" },
+  "probe_budget_s": 180,
+  "amendments": [],
+  "frozen_at": "2026-05-28T13:00:00Z",
+  "created_at": "2026-05-28T12:30:00Z",
+  "updated_at": "2026-05-28T13:00:00Z"
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s007_omega_mag_peak_spacing_pilot",
+  "kind": "run_record",
+  "goal_node": "goal_lc-omega-priors",
+  "question": "Can a Lomb-Scargle / autocorrelation peak-spacing prior estimate ω-magnitude within s005's 3-5% basin radius?",
+  "hypothesis": "Peak-spacing on the LC produces an ω-mag estimate accurate enough (within ~3% basin radius) to seed LM polish.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [6, 10, 18, 21, 28, 41, 48, 60, 84, 91],
+  "N": 10,
+  "claim_scope": "N1",
+  "metrics": {
+    "blind_median_err_pct": 15.7,
+    "blind_worst_err_pct": 72.3,
+    "oracle_median_err_pct": 7.4,
+    "oracle_worst_err_pct": 17.2,
+    "threshold_pct": 3,
+    "blind_passes": false,
+    "oracle_passes": false
+  },
+  "artefacts": [
+    { "path": "results/s007/peakspacing.npz", "kind": "checkpoint" },
+    { "path": "results/s007/summary.json", "kind": "data" },
+    { "path": "results/s007/periodograms.png", "kind": "plot" },
+    { "path": "results/s007/truth_vs_estimate.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s007_omega_mag_peak_spacing_pilot.md"],
+  "parents": ["s001_cost_at_truth_cohort", "s003_landscape_vs_omega", "s005_joint_local_descent", "s006_seed28_landscape_at_truth_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "Decisive negative. A Lomb-Scargle/ACF peak-spacing prior cannot hit s005's 3% ω-mag basin radius: blind dominant-peak median error 15.7% (worst 72.3%), even the truth-aware oracle median 7.4% (worst 17.2%). Tumbling rigid-body LCs are multi-periodic (precession + spin coupling), so the dominant peak does not track |ω| — peak/truth ratios scatter 0.14x-6.7x. The ω-mag-from-peak-spacing path is closed; Q4c must accept a coarse ω-mag grid or a model-aware prior."
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s036_multi_seed_pilot",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Does the s033-s034-s035 density+polish chain generalise to representative cohort seeds 23/57/28?",
+  "hypothesis": "The density+polish chain produces Band A-or-B candidates on the cohort-representative pilot seeds as it did on seed 89.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [23, 57, 28],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_band_A_or_B": 0,
+    "seed23_best_surr_rho": 50.1,
+    "seed23_polished_rho": 38.7,
+    "seed28_survivors": 0,
+    "seed57_status": "timeout",
+    "wall_s": 10800
+  },
+  "artefacts": [
+    { "path": "results/s036_multi_seed_pilot/seed023_result.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s036_multi_seed_pilot.md"],
+  "parents": ["s035_hifi_confirm_seed89", "s033_density_sensitivity", "s034_lm_polish_seed89"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-05T00:00:00Z",
+  "narrative_md": "The density+polish chain does NOT generalise: 0/3 pilot seeds produce Band A-or-B. Two failure modes — phi-sweep ICs too far from truth (seed 23: rho=50 start -> LM diverges) and narrow basin unreachable (seed 28: 0 survivors); seed 57 timed out (49% bracket). Phi-sweep IC primitive is the architectural bottleneck (seed-dependent off-circle floor). Points to Sobol-Shoemake q0 ICs as the robust replacement (s037)."
+}

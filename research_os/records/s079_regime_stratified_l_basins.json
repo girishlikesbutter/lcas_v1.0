@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s079_regime_stratified_l_basins",
+  "kind": "run_record",
+  "goal_node": "goal_l-vector-discriminator",
+  "question": "Does the equal-|L|/free-direction competing-basin class track the truth tumbling regime (long-axis mode vs short-axis mode) or separatrix proximity (k^2)?",
+  "hypothesis": "The multi-solution structure is regime-dependent; the equal-|L|/free-direction class concentrates on one tumbling mode rather than being seed-random or k^2-driven.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    6,
+    10,
+    21,
+    28,
+    41,
+    44,
+    48,
+    60,
+    84,
+    91
+  ],
+  "N": 10,
+  "claim_scope": "N1",
+  "metrics": {
+    "lam_competing_basins": 96,
+    "sam_competing_basins": 8,
+    "lam_L_mag_rel_diff_median_pct": 0.7,
+    "lam_L_dir_median_deg": 91,
+    "seed28_k2": 0.944,
+    "seed28_competing_basins": 0
+  },
+  "artefacts": [
+    {
+      "path": "results/s079/summary.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s079_regime_stratified_l_basins.md"
+  ],
+  "parents": [
+    "s077_l_vector_basin_sweep",
+    "s073f_cluster457_local_geometry"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "Re-scored s077's 640 basins stratified by truth tumbling regime. The equal-|L|/free-direction competing-basin class is almost entirely a long-axis-mode (LAM) phenomenon: 6 LAM seeds host 96/104 competing basins (median 14/seed), 4 SAM seeds host 8 (median 2.5). The distributions barely touch. Separatrix proximity is NOT the driver \u2014 the most near-separatrix seed (28, SAM, k^2=0.944) has zero competing basins. Ties the hard multi-solution degeneracy to an a-priori-knowable property. Medium confidence: n=10, loose surrogate gate. Uses truth state/regime -> oracle_clean false."
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "id": "survive_at_epoch",
+  "kind": "substrate_component",
+  "name": "survive_at_epoch",
+  "path": "notebooks/inversion/survey/lib/c_t_pipeline.py",
+  "tier": "substrate",
+  "interface": "(model, k1_body, k2_body, obs_dist_ep, sp_deg, ad_deg, measured_mag, tolerance_mag) -> (pred (N,), keep (N,) bool); per-epoch isophote survival predicate over the whole pool via surrogate.predict.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:3893ace4b5223f1b",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:survive_at_epoch",
+  "ports": {
+    "input": [
+      "ia-cloud",
+      "single-wind-lc-window"
+    ],
+    "output": {
+      "pred": "light-curve",
+      "keep": "filter"
+    }
+  },
+  "default_params": {
+    "sp_deg": 0,
+    "ad_deg": 15
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:3893ace4b5223f1b",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

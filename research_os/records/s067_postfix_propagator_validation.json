@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s067_postfix_propagator_validation",
+  "kind": "run_record",
+  "goal_node": "goal_convention-bug",
+  "question": "Does the two-line omega-sign fix close the s066 L_J2000 non-conservation finding and pass the SPICE/conservation/Jacobi regression gates?",
+  "hypothesis": "Changing +0.5 -> -0.5 in the q-kinematic ODE makes the kinematic match the q-interpretation and restores L_J2000 conservation.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89, 28, 14],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "A1_spice_err_postfix": 9.73e-11,
+    "A2_toy_Lj2000_drift_postfix": 7.83e-12,
+    "A3_cohort_Lj2000_drift_range": "1e-9 to 3e-7",
+    "A4_jacobi_parity_range": "2e-10 to 2e-8",
+    "gates_passed": "4/4"
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s067_postfix_propagator_validation.md"],
+  "parents": ["s065_propagator_convention_spice_test", "s066_lj2000_nonconservation"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_passed": ["conservation-smoke"],
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "The two-line sign fix (+0.5 -> -0.5 in propagate_euler line 318, propagate_principal_axis lines 177-184, and the Jacobi hybrid q-ODE line 432) closes the s066 finding. All 4 regression gates pass: SPICE pxform @ dt=1s with +omega_textbook 9.73e-11 (< 1e-9); L_J2000 toy drift 7.83e-12; m048 cohort L_J2000 drift 1e-9 to 3e-7 (~0% rel); Jacobi <-> propagate_euler parity 2e-10 to 2e-8. The forward model is now physical (L_J2000 conserved at the DOP853 noise floor), the s065 -omega workaround is gone, and Path 2 closed-form q(t) is unblocked. Cohort regen needed; surrogate is bridge-independent. Validates against cohort truth (render-at-truth); this is the post-fix substrate 2.0.0."
+}

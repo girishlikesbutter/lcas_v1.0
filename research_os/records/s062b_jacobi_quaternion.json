@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s062b_jacobi_quaternion",
+  "kind": "run_record",
+  "goal_node": "goal_jacobi-propagator",
+  "question": "Can closed-form q(t) be implemented via the Path 2 precession+nutation decomposition, round-tripping cached truth at machine precision?",
+  "hypothesis": "The Path 2 (precession + nutation) closed-form q(t) reconstructs the propagator's trajectory under standard right-handed conventions.",
+  "status": "inconclusive",
+  "run_type": "cheap",
+  "seeds": [89, 28, 14],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "hybrid_q_vs_dop_seed89": 1.02e-10,
+    "hybrid_q_vs_dop_seed28": 1.61e-8,
+    "hybrid_q_vs_dop_seed14": 6.11e-10,
+    "twoT_drift_max": 1.2e-15,
+    "L2_drift_max": 4.39e-16,
+    "path2_status": "deferred"
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s062b_jacobi_quaternion.md"],
+  "parents": ["s062_jacobi_design", "s065_propagator_convention_spice_test"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_passed": ["conservation-smoke"],
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "Path 2 closed-form q(t) attempted (precession+nutation 3-1-3 decomposition) but hit a convention puzzle: q-interpretation matches the propagator at t=0 (1e-16) yet the reconstruction drifts at t>0, and L_J2000 = R.T @ L_body is not conserved even on a toy asymmetric tumbler. Path 2 deferred; production reverted to the HYBRID path (closed-form omega + DOP853 q-ODE) which passes 2T/L^2 conservation strict 1e-12 and matches DOP853 to integration noise (1e-10 to 1.6e-8). The puzzle was later resolved by s065/s066 (omega-sign convention residual / L_J2000 non-conservation). Validates against cohort truth (render-at-truth)."
+}

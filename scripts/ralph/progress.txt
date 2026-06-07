@@ -1,0 +1,270 @@
+# Ralph Progress Log
+Started: Fri Feb  6 05:19:30 PM NZDT 2026
+---
+
+## Codebase Patterns
+- Notebooks use Jupytext percent format with `formats: ipynb,py:percent` header
+- Setup pattern: PROJECT_ROOT detection, sys.path insert, os.chdir, then imports
+- ObjectiveFunction takes `compute_shadows_flag` (True=hi-fi with ray tracing, False=lo-fi with all-lit approximation)
+- True attitude params stored as 6-element vector: [axis_angle_x, axis_angle_y, axis_angle_z, omega_x, omega_y, omega_z]
+- CountedObjective wrapper normalizes axis-angle via quaternion round-trip before evaluation
+- Parameter bounds: axis-angle [-pi, pi], omega [-30 deg/s, 30 deg/s] in radians
+- Success criteria: omega error < 0.1 deg/s AND RMS residual < 2x noise_sigma
+- SPICE Observer ID for ground station: 399999
+- Fixed articulation: solar panels 0 deg, antenna dishes 15 deg
+- Inertia tensor computed with specific component masses (Bus: 1532, SP: 170 each, AD: 50 each)
+
+---
+
+## 2026-02-06 - US-001
+- Created notebooks/inversion/08_mixed_fidelity_inversion.py as Jupytext percent format notebook
+- Implemented full Intelsat 901 setup (config, STL loading, BRDF, SPICE, articulation, inertia tensor)
+- Generated synthetic lightcurve with tumbling dynamics and shadows enabled (n_obs=50, noise_sigma=0.05)
+- Created dual-fidelity objectives: obj_hifi (shadows ON) and obj_lofi (shadows OFF)
+- Both objectives verified at true_params
+- Stored true_params, param_names, bounds matching notebook 06 format
+- Included evaluate_success() and CountedObjective wrapper from notebook 06
+- Added setup verification section
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py (new)
+- **Learnings for future iterations:**
+  - The setup pattern is identical across notebooks 04-07; copy sections 1-6 from notebook 06
+  - ObjectiveFunction's compute_shadows_flag controls whether ray tracing is used; False uses create_no_shadow_lit_status() for all-lit approximation
+  - Need to use venv Python for jupytext validation: `source .venv/bin/activate`
+  - No formal typechecker (mypy/pyright) is installed; use py_compile and AST parsing for syntax checks
+  - Branch was created from ralph/lightcurve-inversion (not master) since that's where notebooks 04-07 live
+---
+
+## 2026-02-06 - US-002
+- Implemented Experiment 1a: Evaluation timing benchmark (N=20 evals of each fidelity level)
+- Prints mean/std timing for hi-fi and lo-fi, plus speedup factor
+- Implemented Experiment 1b: Lightcurve comparison at true parameters
+- Extracts predicted magnitudes from both objectives using _generate_predicted_lightcurve()
+- Computes magnitude residual (hifi - lofi) with mean, std, range, and RMS statistics
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py (appended cells)
+- **Learnings for future iterations:**
+  - To extract predicted lightcurves, replicate evaluate() pipeline: axis_angle_to_quaternion → propagate_attitude → _compute_body_frame_vectors → _generate_predicted_lightcurve
+  - Body-frame vectors (k1, k2) are identical for both objectives since geometry/attitude are the same; only the shadow computation differs in _generate_predicted_lightcurve
+  - ObjectiveFunction._compute_chi_squared returns MSE (sum(residuals^2)/n_valid) when no uncertainties are provided
+---
+
+## 2026-02-06 - US-003
+- Implemented Experiment 1c: Rank correlation (Spearman) between lo-fi and hi-fi objectives
+- Evaluates 100 random parameter samples on both objectives within bounds
+- Computes Spearman rank correlation using scipy.stats.spearmanr
+- Created 3-panel benchmark figure (mixed_fidelity_benchmark.png):
+  - (a) Lightcurve overlay (hi-fi vs lo-fi at true params)
+  - (b) Magnitude residual vs time with noise_sigma band
+  - (c) Scatter of lo-fi vs hi-fi objective values with Spearman rho annotation
+- Added markdown summary cell with expected range assessment
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py (appended cells)
+- **Learnings for future iterations:**
+  - scipy.stats.spearmanr returns (rho, p_value) tuple
+  - Use np.random.uniform(lower, upper, size=(n, dim)) for batch random sampling within bounds
+  - Figure saving pattern: PROJECT_ROOT / "data" / "results" / "inversion_diagnostics" / "filename.png" at 150 DPI with bbox_inches='tight'
+  - Jupytext may update its version number in the header during sync (1.19.0 → 1.19.1) - this is normal
+---
+
+## 2026-02-06 - US-004
+- Implemented Experiment 2a: Basin shift from true parameters
+  - Runs L-BFGS-B from true_params on both obj_hifi and obj_lofi
+  - Compares converged solutions: Euclidean distance, axis-angle displacement (degrees), omega displacement (deg/s)
+- Implemented Experiment 2b: Perturbed starts basin shift analysis
+  - Defined run_local_optimization() wrapper with axis-angle quaternion normalization
+  - Reused sample_in_ball() pattern from notebook 05 with param_scales (1 degree units)
+  - Runs 20 perturbed starts within 2-degree basin radius on both fidelity levels
+  - Computes pairwise displacement statistics: mean, std, max
+  - Qualitative assessment: negligible (<1% basin width), moderate (1-10%), significant (>10%)
+- Added markdown summary cell interpreting basin shift results
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py (appended cells)
+- **Learnings for future iterations:**
+  - run_local_optimization() must be defined locally in notebook 08 (not imported from notebook 05)
+  - sample_in_ball() uses param_scales to measure distance in degrees across heterogeneous parameter types
+  - Basin radius of 2 degrees is a reasonable moderate radius for perturbed start analysis
+  - Qualitative assessment thresholds: <1% = negligible, 1-10% = moderate, >10% = significant shift relative to basin width
+---
+
+## 2026-02-06 - US-005
+- Implemented Experiment 2c: Basin shift visualization
+  - 1D sensitivity analysis across all 6 parameters to identify the 2 most sensitive dimensions
+  - 2D contour overlay plot: hi-fi (solid blue) vs lo-fi (dashed red) contours for the 2 most sensitive parameters
+  - Minima locations marked with stars, true params marked with cross
+  - Dual legends: marker legend (upper right) + linestyle legend (lower left)
+  - Scatter plot of converged hi-fi vs lo-fi parameter values (6 panels, one per dimension)
+  - Identity lines and true parameter reference lines on scatter plots
+  - Updated Experiment 2 Summary markdown cell with visualization interpretation
+- Saves: basin_shift_contours.png, basin_shift_scatter.png to data/results/inversion_diagnostics/
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - Use np.argsort(scores)[::-1][:2] to pick top-2 sensitive dimensions data-driven rather than hardcoding
+  - Delta ranges for 2D contour: ±5 degrees for axis-angle, ±0.5 deg/s for omega parameters gives good basin visibility
+  - For dual legends in matplotlib, create first legend, call ax.add_artist() on it, then create second legend
+  - The matplotlib.lines.Line2D import is needed for custom legend entries with linestyles
+  - n_contour=31 is a good balance between resolution and computation time (31x31=961 evals per fidelity)
+---
+
+## 2026-02-06 - US-006
+- Implemented run_mixed_fidelity() two-stage pipeline function
+  - Stage 1: DE global search on obj_lofi with CountedObjective budget enforcement
+  - Stage 2: L-BFGS-B local refinement on obj_hifi for top N candidates from DE population
+  - Extracts top candidates via result.population / result.population_energies sorted by energy
+  - Each Stage 2 candidate gets its own CountedObjective with hifi_evals_per_candidate budget
+  - Returns dict with x_best, f_best, n_evals, n_evals_lofi, n_evals_hifi, stage1_time, stage2_time, candidates
+- DE config: strategy='best1bin', mutation=(0.5, 1.0), recombination=0.7, popsize=15, polish=False
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - scipy DE result has .population (shape: pop_size x n_params) and .population_energies (shape: pop_size) for accessing the final population
+  - Use np.argsort(energies)[:top_n] to extract the top N candidates by ascending energy
+  - maxiter calculation: max(1, int(budget / (popsize * n_params)) - 1) to stay within eval budget
+  - Each Stage 2 candidate needs its own fresh CountedObjective instance (not shared)
+  - differential_evolution import: from scipy.optimize import differential_evolution
+---
+
+## 2026-02-06 - US-007
+- Implemented Experiment 3b: Pipeline validation on standard test case
+  - Runs mixed-fidelity pipeline once with N=3, lofi_budget=5000, hifi_evals_per_candidate=200
+  - Prints timing breakdown: Stage 1, Stage 2 (total and per-candidate), total pipeline time
+  - Prints evaluation counts: lofi evals, hifi evals, total
+  - Computes and prints parameter errors: axis-angle error (deg), omega error (deg/s), RMS residual (mag)
+  - Evaluates success using evaluate_success() with threshold reporting
+  - Prints best parameters vs true parameters
+  - Added markdown summary cell interpreting pipeline validation results
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - Pipeline result dict contains all needed info: x_best, f_best, n_evals_lofi, n_evals_hifi, stage1_time, stage2_time, candidates
+  - RMS residual from objective: sqrt(obj_value / n_observations) since ObjectiveFunction returns sum(residuals^2)/n_valid
+  - Per-candidate info (n_evals, converged) is accessible via pipeline_result['candidates'][i]
+  - Validation run is a single execution to confirm pipeline mechanics before statistical comparisons in later experiments
+---
+
+## 2026-02-06 - US-008
+- Implemented Experiment 4: Evaluation-count matched baseline comparison
+  - Defined multistart_local(), run_de(), run_basinhopping_strategy() reusing notebook 06 implementations
+  - Implemented run_trial() dispatcher for 4 strategies: Multi-start, DE, Basin-Hopping, Mixed-Fidelity
+  - Mixed-fidelity budget split: lofi_budget=4400, hifi_budget=600 (3×200), total=5000
+  - 10 trials per strategy with seeds = BASE_SEED + trial * 100
+  - Records per-trial: strategy, seed, best_objective, omega_error, rms_residual, success, n_evals, wall_time
+  - Prints formatted comparison table and per-strategy detail statistics
+  - Added markdown summary cell interpreting evaluation-count comparison
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - Baseline strategies (multistart, DE, basin-hopping) all use obj_hifi with CountedObjective for fair comparison
+  - Mixed-fidelity uses run_mixed_fidelity() which handles its own CountedObjective internally
+  - run_basinhopping_strategy() renamed from run_basinhopping() to avoid collision with scipy's basinhopping import
+  - evaluate_success() must use obj_hifi (not obj_lofi) for all strategies for fair comparison
+  - scipy.stats.qmc.LatinHypercube is needed for multistart_local's LHS initialization
+---
+
+## 2026-02-06 - US-009
+- Implemented Experiment 4c: Evaluation-count comparison visualization
+  - Box plot of final objective values per strategy (4 strategies) with colored patches and mean markers
+  - Bar chart of success rates with 95% Wilson score confidence intervals and count annotations
+  - compute_binomial_ci() function reused from notebook 06 pattern
+  - Both figures saved to data/results/inversion_diagnostics/
+- Added markdown summary cell interpreting box plot and bar chart results
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb
+- **Learnings for future iterations:**
+  - Wilson score CI: import scipy.stats as sp_stats (not just stats) to avoid name collision with spearmanr import earlier in notebook
+  - Box plot colors: use patch_artist=True with set_facecolor() on bp['boxes'] patches
+  - For error bars on bar charts, compute asymmetric errors as (rate - lower, upper - rate) for yerr=[lower_err, upper_err]
+  - box_colors array defined once and reused across both box plot and bar chart for visual consistency
+---
+
+## 2026-02-06 - US-010
+- Implemented Experiment 5: Wall-clock matched comparison
+  - Experiment 5a: Full-fidelity DE baseline timing (10 trials, budget=5000, base_seed=2000)
+  - Experiment 5b: Budget calculation using Experiment 1 timing data to match wall-clock time
+    - Wall time model: T_mixed ≈ lofi_budget * t_lofi + hifi_budget * t_hifi
+    - Solves for lofi_budget given T_ref, prints effective evaluation comparison
+  - Experiment 5c: Mixed-fidelity trials with adjusted lo-fi budget, same seeds as DE baseline
+    - Prints detailed comparison table with wall-clock column showing near-equal times
+    - Prints per-trial detail with wall times and success status
+  - Experiment 5d: Visualization
+    - Grouped bar chart: success rate and omega error with wall time annotations
+    - Scatter plot: (wall_time, omega_error) for all trials with Pareto front
+    - Pareto front computed by sorting by wall_time and tracking minimum omega_error
+  - Added markdown summary cell interpreting wall-clock comparison
+- Saves: wallclock_comparison.png, wallclock_pareto.png to data/results/inversion_diagnostics/
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb, scripts/ralph/prd.json
+- **Learnings for future iterations:**
+  - Use different base seed (2000) from Experiment 4 (1000) to get independent trial results
+  - Wall time model uses per-eval timing from Experiment 1 (mean_hifi, mean_lofi) to estimate budget
+  - Pareto front: sort by one axis, then track running minimum of the other axis
+  - Use log scale for omega_error y-axis in scatter plot when range exceeds 100x
+  - compute_binomial_ci() reused from Experiment 4 for Wilson score CI on success rates
+---
+
+## 2026-02-06 - US-011
+- Implemented Experiment 6: Handoff parameter ablation
+  - Sweeps N ∈ {1, 3, 5, 10} with fixed lo-fi budget (5000 evals), hi-fi budget = N × 200
+  - 10 trials per N value with independent seeds (base_seed=3000)
+  - Records per-trial: success, omega_error, wall_time, stage1_time, stage2_time, eval counts
+  - Prints formatted table: N vs (success rate, mean omega error, mean total time, stage2 fraction)
+  - 2-panel figure (handoff_ablation.png):
+    - (a) Success rate vs N with 95% Wilson score CI error bars
+    - (b) Mean wall-clock time vs N with Stage 1 + Stage 2 stacked bar breakdown
+  - Added markdown summary cell with recommended N selection guidance
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb, scripts/ralph/prd.json
+- **Learnings for future iterations:**
+  - Use different base seed (3000) from Experiment 4 (1000) and Experiment 5 (2000) for independent results
+  - Stacked bar chart: pass `bottom=` parameter to second ax.bar() call for correct stacking
+  - ablation_summary list of dicts is a convenient intermediate for both table printing and plotting
+  - Stage 2 time scales linearly with N; Stage 1 time is constant (fixed lo-fi budget)
+---
+
+## 2026-02-06 - US-012
+- Implemented Experiment 7: Phase angle failure regime identification
+  - Defined create_phase_angle_geometry() to rotate observer positions in J2000 frame
+    around the satellite-to-sun axis to achieve target phase angles
+  - Verification step confirms phase angle geometry function produces correct angles
+    and preserves observer distances
+  - Sweeps 17 phase angles from 10° to 170° in 10° steps
+  - For each phase angle:
+    - Rotates observer geometry to target phase angle
+    - Generates new synthetic lightcurve with shadows at rotated geometry
+    - Creates new hi-fi and lo-fi ObjectiveFunction instances
+    - Computes lightcurve discrepancy RMS(mag_hifi - mag_lofi) at true params
+    - Runs 5 mixed-fidelity and 5 full-fidelity DE trials
+  - Identifies crossover phase angle where MF success drops below DE success
+  - Prints results table: phase angle vs discrepancy, success rates, omega errors
+  - Added markdown summary cell interpreting phase angle failure regime
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb, scripts/ralph/prd.json
+- **Learnings for future iterations:**
+  - To rotate observer geometry to a target phase angle: decompose observer direction
+    into components parallel and perpendicular to sun direction, then reconstruct at
+    new angle using cos(target)*e1 + sin(target)*e2
+  - Use different base seed (4000) from Experiments 4 (1000), 5 (2000), 6 (3000)
+  - scipy.spatial.transform.Rotation is available but for this 2D rotation in the
+    sun-observer plane, direct vector math is simpler and more transparent
+  - show_progress=False on compute_shadows() and generate_lightcurves() to reduce
+    output spam during batch phase angle sweep
+  - Phase angle = arccos(dot(sun_unit, obs_unit)) where both are unit vectors from satellite
+---
+
+## 2026-02-06 - US-013
+- Implemented Experiment 7c: Phase angle failure visualization
+  - 3-panel figure (phase_angle_failure.png):
+    - (a) Lightcurve fidelity discrepancy RMS vs phase angle with noise_sigma reference line
+    - (b) Success rate vs phase angle for Mixed-Fidelity and Full-Fidelity DE with Wilson score CI error bars
+    - (c) Mean omega error vs phase angle (log scale) with success threshold line
+  - Crossover phase angle marked on panels (b) and (c) if detected
+- Recommended phase angle range printed: identifies viable and marginal phase angles
+- Comprehensive study summary (mixed_fidelity_summary.txt):
+  - All key numerical results from Experiments 1-7
+  - Timing benchmarks, Spearman correlation, basin shift statistics
+  - Evaluation-count and wall-clock comparison tables
+  - Handoff ablation results
+  - Phase angle failure regime table
+  - Viability assessment against 3 PRD success criteria (speedup, success rate, accuracy)
+- Final markdown summary section with:
+  - Approach description
+  - Key findings per experiment
+  - Viability assessment table against success criteria
+  - Recommendations for practical use
+- Files changed: notebooks/inversion/08_mixed_fidelity_inversion.py, .ipynb, scripts/ralph/prd.json
+- **Learnings for future iterations:**
+  - Use `dir()` or `'varname' in dir()` to check variable availability when building cross-experiment summaries
+  - pairwise_displacements dict has keys: 'euclidean', 'aa_deg', 'omega_deg_s'
+  - compute_binomial_ci() is reusable across experiments for Wilson score CIs on success rates
+  - Use semilogy for omega error plots when range spans multiple orders of magnitude
+  - Offset errorbar x-positions slightly (±1.5) when overlapping two series on same axis
+---

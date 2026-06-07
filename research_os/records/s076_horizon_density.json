@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s076_horizon_density",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-discriminator",
+  "question": "Does the aspect-graph horizon-density score (count of near-horizon facets) track LC dimness, i.e. predict the sharp anchors that the 'dim = sharp' rule identifies?",
+  "hypothesis": "The L3 framing predicts dim epochs sit at high horizon-density (near many aspect-cell boundaries); if true, horizon-density count tracks LC dimness.",
+  "status": "refuted",
+  "run_type": "probe",
+  "seeds": [
+    89
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "spearman_count_dim_eps05": -0.094,
+    "spearman_count_dim_eps15": -0.006,
+    "top50_count_mag_percentile_eps10_pct": 13.9,
+    "unique_normals": 6,
+    "wall_s": 1
+  },
+  "artefacts": [
+    {
+      "path": "results/s076/horizon_density.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s076/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s076/horizon_density_seed89.png",
+      "kind": "plot"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s076_horizon_density.md"
+  ],
+  "parents": [],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "Tested the L3 horizon-density anchor score on IS901 + seed 89. It fails, and in the opposite direction of its prediction: top-50 horizon-density epochs sit at median mag-percentile ~14-23% (brighter than median), Spearman(count, dimness) ~0. Mechanism is body-geometric — the IS901 bus is an axis-aligned cuboid (6 unique normals), so when k1 aligns with one face the orthogonal faces are simultaneously edge-on AND bright. The 'dim = sharp' effect is BRDF-specular, not visibility-driven; L3 refuted on this body. Reads cached truth k1/k2/mag -> oracle_clean false.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ]
+}

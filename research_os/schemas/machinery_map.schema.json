@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/machinery_map.schema.json",
+  "title": "Machinery map (derived)",
+  "description": "A DERIVED render artifact (NOT a canonical store object): the AST-grounded machinery map emitted by render/derive_machinery.py from machinery_overlay.json + the real code. Lives at research_os/render/machinery_map.json, gitignored. The web backend only READS it (indexer.load_machinery_map). Staleness is keyed on the CODE: `code_fingerprint` records a content sha per scanned file; the indexer recomputes it and flags the map stale once the machinery source moves. `drift` is the computed overlay-vs-code cross-check.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["stages", "nodes", "edges", "drift"],
+  "properties": {
+    "generated_at": { "type": "string", "description": "ISO timestamp the map was derived." },
+    "generated_for_code": { "type": "string", "description": "sha over the code_fingerprint; the indexer marks the map stale when it no longer matches the live code." },
+    "code_fingerprint": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Repo-relative path → content sha (12 hex) of every scanned file; the staleness witness."
+    },
+    "stale": { "type": "boolean", "description": "Added by the indexer at read time (not by the derive): true when the live code no longer matches code_fingerprint." },
+    "stages": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["name", "file", "stage", "exists"],
+        "properties": {
+          "name": { "type": "string" },
+          "file": { "type": "string" },
+          "stage": { "type": "string" },
+          "role": { "type": "string" },
+          "substrate_component": { "type": ["string", "null"] },
+          "exists": { "type": "boolean", "description": "False when the curated unit was not found in the code (a `drift.missing` entry)." },
+          "signature": { "type": ["string", "null"], "description": "AST-reconstructed def signature." },
+          "doc": { "type": ["string", "null"], "description": "First docstring line." },
+          "line": { "type": ["integer", "null"] },
+          "calls": { "type": "array", "items": { "type": "string" }, "description": "Other node names this function invokes (the data-flow edges)." }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": { "from": { "type": "string" }, "to": { "type": "string" } }
+      }
+    },
+    "drift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["missing", "uncovered"],
+      "properties": {
+        "missing": {
+          "type": "array",
+          "description": "Curated units no longer found in the code.",
+          "items": { "type": "object", "additionalProperties": true, "required": ["name", "file"] }
+        },
+        "uncovered": {
+          "type": "array",
+          "description": "Public module-level/method defs in scope_files that no unit covers yet.",
+          "items": { "type": "object", "additionalProperties": true, "required": ["name", "file"] }
+        }
+      }
+    }
+  }
+}

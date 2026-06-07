@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s014b_n_rotations_analysis",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Does n_rotations (and PA) correlate with ρ-min, and how do the multi-solution attractors structurally cluster?",
+  "hypothesis": "Low rotational coverage under-determines (q0, ω), so ρ-min worsens with fewer rotations; multi-solution attractors form distinct structural classes.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [6, 10, 18, 21, 28, 41, 48, 60, 84, 91],
+  "N": 10,
+  "claim_scope": "N1",
+  "metrics": {
+    "spearman_nrot_rhomin": -0.648,
+    "spearman_nrot_rhomin_drop_seed10": -0.517,
+    "spearman_pa_mscount": -0.540,
+    "n_distinct_attractors": 9,
+    "n_low_rotation_seeds_lt2": 10
+  },
+  "artefacts": [
+    { "path": "results/s014/analysis_summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s014b_n_rotations_analysis.md"],
+  "parents": ["s014_cohort_rho_band", "s013_rho_band_validation", "s012a_seed10_density_probe", "s011_q4cii_sobol_so3_polish_pilot", "s007_omega_mag_peak_spacing_pilot", "s008_lc_feature_regression_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-01T00:00:00Z",
+  "narrative_md": "Cheap cached-data analysis (~25 s, no new renders). n_rotations vs ρ-min: Spearman -0.648 (n=10), persisting -0.517 after dropping seed 10 — consistent with low-rotation under-determination. The n_rotations<2 cohort tail has 10 seeds (3,10,13,16,31,42,43,72,78,79). 19 ρ<4 multi-solution candidates cluster into 9 distinct attractors across 5 seeds (1 class_1, 4 class_2 q0 30-150° + near-truth ω, 5 class_3 near-180° flips that are NOT pure body-twins). PA shows a weaker secondary correlation (-0.540)."
+}

@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s078_nll_residual_ab",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-discriminator",
+  "question": "Does transplanting Robinson & Frueh 2025's NLL loss (Eq. 3, sigma_k weighting + signal rescaling) improve scoring/polish on seed 89, warranting adoption into the m048 production cost path?",
+  "hypothesis": "RF25's NLL loss addresses the bright-peak overfitting seen in s058/s059 and should out-rank plain MSE; but with the fixed m048 noise floor the sigma-weighting collapses to ~MSE.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [
+    89
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "spearman_mse_vs_hifi": 1.0,
+    "spearman_nll_rescale_vs_hifi": 0.555,
+    "truth_rank_full_lc_mse": "3649/5000",
+    "truth_rank_nll_rescale": "3262/5000",
+    "mse_control_beats_nll": "19/20",
+    "wall_s": 660
+  },
+  "artefacts": [
+    {
+      "path": "results/s078/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s078/s078_step1a_score_vs_hifi.png",
+      "kind": "plot"
+    },
+    {
+      "path": "results/s078/s078_step1b_truth_rank.png",
+      "kind": "plot"
+    },
+    {
+      "path": "results/s078/s078_step2_repolish.png",
+      "kind": "plot"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s078_nll_residual_ab.md"
+  ],
+  "parents": [
+    "s073e_robinson_frueh_2025_full_audit",
+    "s077_l_vector_basin_sweep"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "Staged A/B of RF25's NLL residual (opt-in, no production swap) on seed 89. Plain magnitude MSE tracks hi-fi rho perfectly (Spearman 1.000); NLL-rescale decorrelates it (0.555). Every full-LC score ranks truth worse than the cached local-window score; the full-LC-MSE control beats NLL on 19/20 re-polishes. Mechanism: flux-proportional sigma_k from the fixed 0.05-mag floor makes the weighting ~= MSE, and the signal rescaling hurts shape-wrong phantom basins. Decision: do not adopt into the m048 cost path. Scored against hi-fi/truth -> oracle_clean false. N=1 seed.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ]
+}

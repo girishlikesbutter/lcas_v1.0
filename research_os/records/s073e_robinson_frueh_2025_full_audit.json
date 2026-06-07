@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s073e_robinson_frueh_2025_full_audit",
+  "kind": "run_record",
+  "goal_node": "goal_rf25-audit",
+  "question": "Does Robinson & Frueh 2025 pre-empt the cat-4 L_J2000-ambiguity framing, and which of its implementation pieces are worth transplanting?",
+  "hypothesis": "RF25 does not encroach on the cat-4 framing (their continuous omega-bands are axisymmetric cat-2 symmetry, not body-Casimir analysis); its NLL loss with sigma_k weighting + signal rescaling is the highest-value transplant.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [
+    89
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "rf25_pages": 37,
+    "rf25_polhode_hits": 0,
+    "case2a_converged_solutions": 90,
+    "case2b_converged_solutions": 112,
+    "twoT_rel_diff_pct": 1.118
+  },
+  "artefacts": [
+    {
+      "path": "notebooks/inversion/survey/experiments/s073e_robinson_frueh_2025_full_audit.pdf",
+      "kind": "report"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s073e_robinson_frueh_2025_full_audit.md"
+  ],
+  "parents": [
+    "s073c_literature_novelty_audit",
+    "s073_cluster457_l_vector_check",
+    "s073b_path2_cprofile"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "Full read of Robinson & Frueh 2025 (37 pp). Encroachment: RF25 does NOT pre-empt the cat-4 framing \u2014 their continuous 1D omega-bands are on the axisymmetric rocket body (cat-2 symmetry); on the asymmetric box-wing they find 90/112 solutions but never analyse them through the body-frame Casimir/polhode lens (zero 'polhode' occurrences). Publication path open, conditional on a cohort sweep beyond N=1 and a half-page analytical extension. Implementation: their NLL loss with sigma_k weighting + signal rescaling (Eq. 3) is the highest-value transplant. Residual risk: RF74 conference companion not yet obtained. Cites truth-derived s073 numbers -> oracle_clean false."
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "id": "compute_fisher_uncertainty",
+  "kind": "substrate_component",
+  "name": "compute_fisher_uncertainty",
+  "path": "src/inversion/uncertainty.py",
+  "tier": "substrate",
+  "interface": "(ObjectiveFunction at optimum, optimal_params) -> covariance + std_devs via finite-difference Hessian. The 'quick' uncertainty mode of invert_lightcurve.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:299e90349bad6f13",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/inversion/uncertainty.py:compute_fisher_uncertainty",
+  "ports": {
+    "input": [
+      "candidate-set",
+      "scoring"
+    ],
+    "output": {
+      "covariance": "parameter-uncertainty",
+      "std_devs": "parameter-uncertainty"
+    }
+  },
+  "default_params": {
+    "step_size": 1e-05
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:299e90349bad6f13",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

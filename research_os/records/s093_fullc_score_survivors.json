@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s093_fullc_score_survivors",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-discriminator",
+  "question": "Does full-LC v2-surrogate RMSE rank the 79k s092 cross-cloud survivors toward truth?",
+  "hypothesis": "Full-LC surrogate RMSE scoring isolates the truth pair from the s092 prefilter survivors.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [
+    116
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "truth_rmse": 0.0102,
+    "top1_rmse": 0.544,
+    "top1_w_dir_deg": 112.9,
+    "truthlike_rank": 31515,
+    "n_survivors": 79443,
+    "top500_enrichment_pct": 2.2,
+    "wall_s": 288
+  },
+  "artefacts": [
+    {
+      "path": "notebooks/inversion/survey/results/s093/score.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s093_fullc_score_survivors.md"
+  ],
+  "parents": [
+    "s092_cross_cloud_116",
+    "s003_landscape_vs_omega"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": true,
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "RETRACTED by s097: this conclusion was a times[0]==0 propagator-gauge bug — re-run on correct geometry REVERSES it (most-truth-like survivor ranks 4/79,443, full-LC RMSE is a STRONG discriminator). The original (buggy) finding: full-LC RMSE failed to rank truth up (truthlike rank 31,515/79,443, top-100 within-10° = 0). Truth's own LC fits to 0.0102 mag. Scoring consumes only the observed LC; truth used only for the floor/labels.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ]
+}

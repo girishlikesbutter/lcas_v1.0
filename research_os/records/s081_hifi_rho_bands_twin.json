@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s081_hifi_rho_bands_twin",
+  "kind": "run_record",
+  "goal_node": "goal_body-twin",
+  "question": "Do the s077/s079 competing basins survive a hi-fi rho-band gate, and what is the actual searchable form of the hi-fi Band A-union-B multi-solution set?",
+  "hypothesis": "Retiring the loose-surrogate caveat: some competing basins survive at hi-fi rho<4; the surviving multi-solutions are instances of a low-dimensional searchable form (tested: same-polhode/free-L-direction vs omega-scaling).",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [
+    6,
+    10,
+    21,
+    28,
+    41,
+    44,
+    48,
+    60,
+    84,
+    91
+  ],
+  "N": 10,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_rendered": 145,
+    "truth_control_bandA": "41/41",
+    "surrogate_hifi_band_agreement": "145/145",
+    "competing_bandAB": 30,
+    "groupA_d_twoT_rel_median_pct": 3.3,
+    "lam_sam_split_AB": "28/2",
+    "wall_s": 844.3
+  },
+  "artefacts": [
+    {
+      "path": "results/s081/basin_hifi.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s081/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s081/s081_rho_bands.png",
+      "kind": "plot"
+    },
+    {
+      "path": "results/s081/s081_hifi_vs_surrogate.png",
+      "kind": "plot"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s081_hifi_rho_bands_twin.md"
+  ],
+  "parents": [
+    "s077_l_vector_basin_sweep",
+    "s079_regime_stratified_l_basins",
+    "s068_replicate_s011",
+    "s073f_cluster457_local_geometry"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-20T00:00:00Z",
+  "narrative_md": "Rendered hi-fi the 145 truth + competing basins from the s077 substrate. Truth control 41/41 Band A; surrogate<->hi-fi 145/145 exact band agreement (retires the loose-surrogate caveat). Of 104 competing basins, 30 land hi-fi Band A-union-B, all distinct (no body-X twins). The searchable form (Group A, 19 endpoints) is omega-MAGNITUDE scaling (d_2T~d_L2~2*L_mag_rel signature), NOT the s077 same-polhode/free-L-direction form \u2014 so 'fix omega-direction, sweep |omega| and q0-offset', recoverable given a near-truth omega-direction. s079 LAM/SAM split holds (28/2). Renders vs truth + truth-basin control + truth-omega-seeded polish -> oracle_clean false."
+}

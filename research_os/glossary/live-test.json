@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "live-test",
+  "kind": "glossary_term",
+  "term": "Live-test",
+  "definition": "Exercising the Research OS loop end-to-end on a REAL research task (a live branch_contract, not a schema example or synthetic stub) to surface friction in the machinery itself — ergonomics, communication style, gate behaviour — distinct from whether the experiment's science succeeds. A single passing cycle is NOT a complete live-test; the loop is 'live-tested' only after repeated cycles stop surfacing new friction. As of 2026-06-04 the Phase-1 spine has had ONE cycle (s113) with known residual friction (verbosity); >=1 more is required before it is considered done.",
+  "status": "provisional",
+  "coined_in": "s113",
+  "synonyms_blocked": [
+    "dogfood",
+    "dogfooded",
+    "dogfooding"
+  ],
+  "related_terms": [],
+  "created_at": "2026-06-04T00:00:00Z"
+}

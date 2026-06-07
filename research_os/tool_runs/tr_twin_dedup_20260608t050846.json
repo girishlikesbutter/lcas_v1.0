@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "tr_twin_dedup_20260608t050846",
+  "kind": "tool_run",
+  "tool": "twin_dedup",
+  "tool_version": "1.0.0",
+  "hash_at_run": "sha256:6635c469cdf06eb3",
+  "hash_ok": true,
+  "input": {
+    "q0_arr": {
+      "$artifact": "ai_so3_pool_dedup_20260608t050846_0"
+    },
+    "omega_arr": {
+      "$artifact": "ai_so3_pool_dedup_20260608t050846_1"
+    }
+  },
+  "params": {},
+  "oracle_clean": true,
+  "reason": "Slice 2 live-test: re-feed shelved pools, no recompute",
+  "commit": "29c875d",
+  "source": "cli",
+  "created_at": "2026-06-08T05:08:46",
+  "status": "ok",
+  "wall_s": 0.0001,
+  "metrics": {
+    "return_len": 2,
+    "return_type": "tuple",
+    "wall_s": 0.0001
+  },
+  "artefacts": [],
+  "executed_at": "2026-06-08T05:08:46",
+  "artifacts_produced": [
+    "ai_twin_dedup_20260608t050846_0"
+  ]
+}

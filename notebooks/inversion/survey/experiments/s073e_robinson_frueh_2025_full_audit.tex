@@ -1,0 +1,794 @@
+\documentclass[11pt]{article}
+
+% ---------- packages ----------
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+
+\setlist{itemsep=2pt,topsep=2pt}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+% ---------- shorthand ----------
+\newcommand{\Lvec}{\mathbf{L}}
+\newcommand{\LJ}{\Lvec_{J2000}}
+\newcommand{\Iten}{\mathbf{I}}
+\newcommand{\J}{\mathbf{J}}
+\newcommand{\wvec}{\boldsymbol{\omega}}
+\newcommand{\qvec}{\mathbf{q}}
+\newcommand{\R}{\mathbf{R}}
+\newcommand{\NLL}{f_{\mathrm{NLL}}}
+\newcommand{\ttt}[1]{\texttt{#1}}
+\newcommand{\eq}[1]{Eq.~(\ref{#1})}
+\newcommand{\rf}[1]{RF~Eq.~(\ref{#1})}  % Robinson--Frueh equation
+
+% ---------- metadata ----------
+\title{s073e --- Deep audit of Robinson \& Frueh 2025\\
+       (J.~Astronaut.~Sci.~73:7, DOI 10.1007/s40295-025-00557-9)\\
+       \large Part 1: implementation lessons we can adopt.\\
+              Part 2: does their work encroach on our s073 framing?}
+\author{Girish (PI) --- with Claude as scribe}
+\date{2026-05-14}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Robinson \& Frueh 2025 (RF25 hereafter) is the highest--remaining--threat paper
+flagged by the s073c literature--novelty audit: a 37--page treatment of
+global light--curve attitude inversion under measurement noise and inertia
+uncertainty, by the closest competitor group (Frueh, Purdue). This document is a
+deep read of RF25 with two narrow goals.
+\textbf{Part 1} catalogues every implementation element of RF25 that could
+materially improve our pipeline, with concrete decisions on whether to adopt,
+adapt, or pass. \textbf{Part 2} asks whether their work encroaches on the
+specific framing s073 is hypothesising --- that the body--frame Casimirs
+$(|\Lvec|, 2T)$ plus polhode phase parameterise an inertial--$\LJ$ ambiguity that
+is generic to asymmetric--inertia bodies. The conclusion of Part~2: the framing
+space is \emph{not} closed by RF25, but they have observed adjacent phenomena
+(continuous $\wvec$--bands on axisymmetric bodies) that we must explicitly
+distinguish from our cat--4 claim if we want to publish.
+\end{abstract}
+
+\section*{Reading guide}
+\noindent
+Treat this as a working document, not a paper. It is more thorough than a
+reading note because we may end up citing or reproducing some of these claims;
+it is less polished than a manuscript section because the cat--4 framing is
+still a hypothesis (s073d is ambiguous as of commit \ttt{b6e3482}). Numbers and
+quotes come from the PDF at \ttt{/home/girish/Documents/s40295-025-00557-9.pdf};
+specific page citations use the \emph{print} page numbers shown at the top of
+each PDF page (e.g.\ ``p.~5627'' = the journal's page 5627, not the PDF's nth
+sheet). Citations to RF25's own bibliography use their numbering ([RF\#nn]).
+
+% =====================================================================
+\section{What RF25 is, in one paragraph, before we judge it}
+% =====================================================================
+
+\noindent
+RF25 builds a global light--curve attitude--inversion pipeline that explicitly
+optimises through (a) realistic per--timestep measurement noise and (b)
+uncertainty in the object's principal moments of inertia. The state vector is
+$\mathbf{x} = (p_1, p_2, p_3, \omega_1, \omega_2, \omega_3, J_y/J_x,
+J_z/J_x)^T$ --- three MRP (modified Rodriguez parameter) attitude components,
+three body--frame angular velocity components, and two inertia--tensor ratios.
+The loss is a negative--log--likelihood under a per--timestep Gaussian model.
+The solver is parallel BFGS started from $10^5$ uniform initial guesses
+(uniform on $SO(3)$, uniform in an $\omega$--ball, Gaussian on inertia ratios).
+The forward model uses a Blinn--Phong BRDF and a semi--analytic Sutherland--Hodgman
+polygon--clipping shadow algorithm precomputed into a 4D body--frame
+``shadow cache.'' They demonstrate on two objects: an ATLAS V rocket body (1987--084D,
+axisymmetric inertia) and a HYLAS--4 box--wing satellite (2014--004A,
+asymmetric inertia). They run with both low ($\sigma_J = 0.1$) and high
+($\sigma_J = 1.0$) inertia--ratio prior uncertainty. All cases use a model
+mismatch between the truth shape and the assumed inversion shape, deliberately
+introduced to simulate real--data conditions.
+
+% =====================================================================
+\part{Implementation lessons we can adopt}
+\label{part:implementation}
+% =====================================================================
+
+\noindent
+Twelve elements of RF25 stand out as candidates for transplantation into our
+pipeline. We sort them by ``how much they would change our code'' and tag each
+with a \textbf{decision} of \textsc{adopt} (drop in directly), \textsc{adapt}
+(useful idea, our regime differs), \textsc{evaluate} (worth a small experiment
+to test), or \textsc{pass} (their constraint, not ours).
+
+\subsection{The negative--log--likelihood (NLL) loss with per--timestep~$\sigma_k$ weighting and signal--rescaling \textnormal{[\textsc{adopt}, high--value]}}
+
+\noindent
+RF25's loss function is their single most exportable contribution to our work.
+Their derivation (their \S2.1, p.~5--6 of the article):
+
+\begin{equation}
+\label{eq:rf_nll}
+\NLL(\hat{\mathbf{S}}, \mathbf{S})
+= \frac{1}{m} \sum_{k=1}^{m}
+\left[
+\ln \sigma_k \;+\; \tfrac{1}{2} \left( \tfrac{S_k - \hat{S}_k}{\sigma_k} \right)^2
+\right]
+\end{equation}
+
+\noindent
+where $\hat{S}_k$ is the predicted ADU flux at timestep $k$, $S_k$ is the
+measured ADU flux, and $\sigma_k$ is the predicted measurement standard
+deviation (computed from the full noise model in their \S3.5.1; see Item~\ref{ssec:noise}).
+The $\ln \sigma_k$ term penalises solutions that ``predict noisy regions
+confidently''; the squared term is the usual chi--square.
+
+\textbf{Why we should care.} Our current cost surfaces use surrogate MSE on
+magnitude. RF25 argue (their p.~4--5) that magnitude--space $\ell_2$ ``attributes
+much larger errors to brighter regions of the light curve, leading to solutions
+that overfit bright specular glints while ignoring smaller variations in the
+signal,'' and is blind to per--timestep noise. \emph{This is precisely the bright--peak
+overfit pattern we have seen} --- e.g.\ s058 / s059 LM polish on a 21--epoch
+window converging to phantom basins disagreeing with the full--LC hi--fi by
+$\rho = 30$--$70$ (see memory \ttt{project\_local\_window\_polish\_phantom\_basins.md}).
+
+A subtle but load--bearing trick they add is the \textbf{signal rescaling}: before
+computing the loss, $\hat{\mathbf{S}}$ is multiplied by
+$\|\mathbf{S}\| / \|\hat{\mathbf{S}}\|$, forcing the prediction and observation
+to have equal $\ell_2$ norm in flux (their p.~5).
+This absorbs systematic albedo--area errors and prevents the loss from
+penalising LCs of the correct shape but wrong scale. \textit{This is essentially
+a free correction for the kind of BRDF coefficient uncertainty that haunts our
+m048 forward model.}
+
+\textbf{Concrete adoption path.} Replace the surrogate--MSE residual in
+\ttt{lib/forward.py} (and in the LM cost in \ttt{s058/s059} polish stages)
+with $\NLL$ on ADU flux, computed with our existing per--timestep $\sigma_k$
+(\ttt{lib.noise} already returns this for the m048 noise model). Add the
+$\|\mathbf{S}\|/\|\hat{\mathbf{S}}\|$ rescaling factor inside the residual.
+This is a $\sim$ 30--line change. No retraining of the surrogate is needed
+because the surrogate maps body--frame coordinates $\to$ magnitude, not
+loss--space; we just re--score on top of the same evaluator.
+
+\textbf{Caveat.} Our $\rho$--band convention is rooted in surrogate MSE
+ratios, not NLL. If we adopt NLL we either (a) report both during a
+transition, or (b) re--derive the band thresholds. Either is cheap.
+
+\subsection{The full sensor + sky noise model (Eqs.~35--40) \textnormal{[\textsc{evaluate}, scoped to real--data work]}}
+\label{ssec:noise}
+
+\noindent
+RF25 enumerate \emph{four independent} noise contributors and combine them per
+timestep (their \S3.5.1, p.~17--19):
+
+\begin{itemize}
+\item \textbf{Background Poisson noise} (their Eq.~37):
+$\lambda_{\mathrm{back},k} = n_{\mathrm{pix}} \cdot
+(\lambda_{\mathrm{moon}} + \lambda_{\mathrm{star}} + \lambda_{\mathrm{twi}}
++ \lambda_{\mathrm{zod}} + \lambda_{\mathrm{air}} + \lambda_{\mathrm{poll}})$.
+This is scattered moonlight, integrated background starlight, twilight,
+zodiacal light, airglow, and light pollution, each as an independent
+Poisson term.
+\item \textbf{Scintillation noise} via Young's atmospheric approximation
+(their Eq.~38): a function of telescope aperture diameter $D$, exposure
+time $\Delta t_k$, observation zenith angle $\gamma_k$, and observing
+station altitude $h_{\mathrm{obs}}$.
+\item \textbf{Sensor noise} (their Eq.~35): dark current (Poisson, rate
+$\lambda_{\mathrm{dark}}$ per pixel per second) plus read noise
+(Gaussian, $\sigma_{\mathrm{read}}$). The flat--field term scales as the
+square root of total signal across pixels (their Eq.~36).
+\item \textbf{Shot noise} on the object signal (their Eq.~39):
+$\lambda_{\mathrm{shot},k} = \bar{S}_{\mathrm{SO},k} / \sqrt{g}$.
+\end{itemize}
+
+\noindent
+Total per--timestep variance is their Eq.~(40):
+$\sigma_{S,k}^2 = \lambda_{\mathrm{back},k}
++ \bar{S}_{\mathrm{SO},k} \sigma_{Y,k}^2
++ \lambda_{\mathrm{shot},k} + \sigma_{\mathrm{flat}}^2 + \sigma_{\mathrm{sensor}}$.
+
+\textbf{Why we should care.} Our current noise model uses a fixed apparent--magnitude
+noise floor (the standard $m_{\mathrm{noise}} = 0.05$ mag). RF25 demonstrate
+(their Fig.~6c, 12c) that the noise envelope varies by 4--5$\times$ across a
+single light curve: faint epochs are scintillation--dominated, bright epochs
+are read--noise dominated. \emph{This is precisely the regime where the
+$\NLL$ loss buys you something over surrogate MSE.}
+
+\textbf{Decision.} \textsc{evaluate} not \textsc{adopt}, because our entire
+benchmark cohort (m048 seeds 0--119) was generated with the simpler noise
+model. Swapping to the full noise model mid--cohort would invalidate the
+post--fix replications (s068--s071) we just committed. The right path is:
+
+\begin{enumerate}
+\item Implement the RF25 noise model in a new module \ttt{lib/noise\_rf.py}
+that returns $\sigma_k$ as a function of (geometry, telescope params,
+flux level). Wire it as an optional flag.
+\item Generate a \emph{small} replication cohort (10 seeds, RF--noise) and
+verify the surrogate still resolves Band A--C basins. The surrogate is
+bridge--independent (memory \ttt{feedback\_surrogate\_is\_bridge\_independent.md})
+so it should not need retraining.
+\item If basin structure changes materially, the full noise model becomes a
+secondary publication thread; if not, fold it in for the real--data
+chapter only.
+\end{enumerate}
+
+\subsection{The shadow cache \textnormal{[\textsc{evaluate}, high--leverage if forward--model wall is the bottleneck]}}
+\label{ssec:shadow_cache}
+
+\noindent
+RF25 build a 4D boolean lookup table of shape $n_{\mathrm{Az}} \times
+n_{\mathrm{El}} \times n_f \times n_f$ indexed by (azimuth, elevation, shadower
+face, shadowed face) in the \emph{body frame}. Their \rf{eq:rf_cache}:
+
+\begin{equation}
+\label{eq:rf_cache}
+\hat{\mathbf{e}} = \begin{bmatrix} \cos(\mathrm{El}) \cos(\mathrm{Az}) \\
+                                   \cos(\mathrm{El}) \sin(\mathrm{Az}) \\
+                                   \sin(\mathrm{El}) \end{bmatrix}
+\end{equation}
+
+\noindent
+At evaluation time, the body--frame Sun and observer directions are converted
+to (Az, El), rounded down (their floor--operator scheme, Eqs.~28--29) to the
+nearest cache entry, and the per--face shadowing is read directly. At
+$n_{\mathrm{Az}} = n_{\mathrm{El}} = 200$ and $n_f = 100$, the cache is
+\textbf{50 MB} (one bit per entry). They report the truncation error to
+nearest cached cell is ``negligible'' because the only faces that flip due to
+the rounding are those that are nearly tangent to the illuminator.
+
+\textbf{Why we should care.} The shadow computation is currently a notable
+fraction of our forward--model wall time. For Path~2 (s072 closed--form $q(t)$)
+in particular, where the dynamics step is now microseconds, shadow ray--casting
+becomes the dominant cost. The s073b cprofile shows the $\phi$--ODE is 81\% of
+Path 2 wall (\ttt{experiments/s073b\_path2\_cprofile.md}); after we replace
+that with elliprj, shadow cost rises in the ranking.
+
+\textbf{Decision.} \textsc{evaluate}. Build a one--object prototype on m048
+geometry, measure speedup vs the trimesh batched ray cast. If the speedup is
+$\geq$~5$\times$ on a representative LC, integrate; if less, the engineering
+cost (cache invalidation when components articulate) is not worth it.
+
+\textbf{Caveat for articulated geometry.} m048 has solar panels that sun--track
+(\ttt{src/articulation/behaviors/sun\_tracking.py}). RF25's cache assumes
+\emph{static} geometry in the body frame. We would need either (a) separate
+caches per panel orientation, or (b) compute static--component shadows from the
+cache and articulated--component shadows from ray casting. Option (b) matches
+how our current shadow engine already factors the mesh (cf.\ \ttt{src/computation/shadow\_engine.py}'s
+static/articulated separation), so adoption is mechanical.
+
+\subsection{Semi--analytic Sutherland--Hodgman shadowing \textnormal{[\textsc{pass} for now]}}
+
+\noindent
+The clipping algorithm RF25 use to compute the shadowed area on each face
+(their \S3.3.1--3.3.3, p.~11--14) replaces pixel--wise ray casting with
+analytic polygon clipping. Eq.~24 is the inclusion--exclusion formula for
+mutual higher--order shadow intersections:
+
+\begin{equation}
+\bar{a} = a - \sum_{d=1}^{n} \sum_{K \in \mathrm{comb}(n,d)}
+(-1)^{d+1} A\!\left( \bigcap_{k \in K} \mathcal{P}_k \right)
+\end{equation}
+
+\noindent
+truncated at depth $d=2$ in their work. They report ``nearly identical'' light
+curves to pixel--wise reference (their Fig.~6d and 12d).
+
+\textbf{Decision.} \textsc{pass}. We already use trimesh's batched ray
+intersection, which is well--optimised and handles arbitrary non--convex
+geometry without the truncation--depth trade--off. The Sutherland--Hodgman
+approach is most useful when the geometry is exactly polygonal (which RF25's
+simplified models are); our m048 STL is a 30k+ triangle mesh where the
+inclusion--exclusion combinatorics grow uncomfortably. The shadow--cache
+(Item~\ref{ssec:shadow_cache}) likely subsumes the speedup that would
+motivate switching the underlying algorithm.
+
+\subsection{State parameterisation: MRP attitude + inertia ratios \textnormal{[\textsc{evaluate} for asymmetric--inertia uncertainty work; \textsc{pass} for our main pipeline]}}
+
+\noindent
+RF25 search over $(p_1, p_2, p_3, \omega_1, \omega_2, \omega_3, J_y/J_x, J_z/J_x)$,
+with $J_x \equiv 1$. Two pieces here.
+
+\textbf{(a) MRP vs quaternion.} The MRP \rf{eq:rf_mrp_to_dcm} maps to the
+DCM via $C(\mathbf{p}) = I_3 + (8\tilde{p}\tilde{p} - 4(1 - \|\mathbf{p}\|^2)\tilde{p})
+/ (1 + \|\mathbf{p}\|^2)^2$ (their Eq.~9). MRPs avoid the
+unit--norm constraint of quaternions and are 3--dimensional, simplifying BFGS.
+They have a singularity at the antipode of identity which RF25 handle via
+shadow MRPs (their reference [37]).
+
+\textbf{Decision: pass.} Our quaternion infrastructure is mature, the
+propagator--fix work hardened it, and the convention bug experience
+makes us cautious about changing representations. The MRP advantage is mainly
+for unconstrained optimisation, which is not our bottleneck.
+
+\textbf{(b) Inertia ratios in the search state.} This \emph{is} interesting.
+RF25 directly optimise $J_y/J_x$ and $J_z/J_x$ jointly with $(q, \omega)$.
+For real--data work on objects without precise inertia knowledge, this is
+the right architecture. Their Case 2a (box--wing, low uncertainty) achieves
+0.78\% median $|\omega(0)|$ error; Case 2b (high uncertainty) achieves 2.36\%.
+\textit{The inertia uncertainty does not prevent inversion convergence on
+the asymmetric body.}
+
+\textbf{Decision: \textsc{evaluate}.} For the m048 cohort (known inertia by
+construction) this is unnecessary. But the Frueh group's framing is
+``real--data inversion needs inertia--ratio search'' and ours is implicitly
+``we know the inertia exactly.'' If we want a real--data chapter we will
+need this. Slot it for after the cat--4 framing is settled.
+
+\subsection{Loss--based convergence classification: the $\alpha$ threshold \textnormal{[\textsc{adapt}]}}
+
+\noindent
+RF25 define $f_{\mathrm{best}}$ as the loss obtained by placing the truth state
+in the assumed--model forward simulation (their \S2.5.1, p.~8). Then:
+solutions with $f_i < f_{\mathrm{best}}$ are flagged as \emph{overfits}
+(discarded); solutions with $f_{\mathrm{best}} < f_i < \alpha \cdot
+f_{\mathrm{best}}$ are accepted, with $\alpha \in [1.5, 2]$ chosen by the
+user.
+
+\textbf{Why we should care.} This is structurally the same construct as our
+$\rho$--band convention but with two important differences:
+\begin{itemize}
+\item It explicitly \emph{filters out overfits} (any solution below the
+truth--model loss). We do not do this. We have spent significant
+debugging time on solutions that scored ``better than truth'' because of
+surrogate--vs--hi--fi gap or noise overfitting.
+\item It is parameterised by an interpretable $\alpha$ that the user can
+loosen if the model mismatch is high (RF25 used $\alpha = 2$ for the
+matched--shape cases and $\alpha = 1.5$ for the box--wing cases with
+heavier mismatch).
+\end{itemize}
+
+\textbf{Decision: adapt.} Define an analogous threshold in $\rho$--space:
+$\rho_{\mathrm{best}} := \rho(\hat{S}(\text{truth}), S_{\mathrm{obs}})$,
+discard $\rho_i < \rho_{\mathrm{best}}$ as overfits, accept up to
+$\rho_i < \alpha \cdot \rho_{\mathrm{best}}$ for some $\alpha$ calibrated to
+the m048 noise level. This would have caught the s058 oracle--injection
+artefact earlier.
+
+\subsection{Initial--condition sampling: uniform $SO(3)$ + $r^{1/3}$--scaled ball for $\omega$ \textnormal{[\textsc{evaluate}]}}
+
+\noindent
+RF25's sampling (their \S2.3, p.~6):
+\begin{itemize}
+\item \textbf{Attitude:} sample $(g_1, g_2, g_3, g_4) \sim \mathcal{N}(0,1)$
+independently, normalise to unit length; this gives a uniform quaternion
+on $S^3$ (Marsaglia 1972). Then convert to MRP via \rf{eq:rf_q_to_mrp}
+$\mathbf{p} = \mathbf{q}_{1:3} / (1 + q_4)$. The uniform--$SO(3)$ property
+holds for our quaternion grid too if we sample $S^3$ uniformly.
+\item \textbf{Angular velocity:} sample $r \sim \mathcal{U}(0,1)$,
+scale by $r^{1/3}$, multiply by $\omega_{\max}$, and direct uniformly on
+$S^2$ (again Marsaglia). The $r^{1/3}$ factor gives uniform volume
+density inside the 3--ball (their Eq.~8).
+\end{itemize}
+
+\textbf{Why we should care.} Our current $\omega$ sampling is a Fibonacci
+direction grid $\times$ magnitude grid (\ttt{project\_omega\_grid\_architecture.md}).
+This is structured, deterministic, and aligned with the polhode geometry, but
+\emph{biases magnitude} (uniform over the magnitude grid is not uniform over
+the ball). RF25's uniform--ball sampling is unbiased.
+
+\textbf{Decision: \textsc{evaluate}.} For surrogate--scoring (where the cost
+is per--sample) Sobol or Fibonacci with explicit magnitude weighting is fine.
+For BFGS or LM polish starts (where the cost is per--converged--point),
+uniform--ball is more honest. Add as an option, A/B--test on a 10--seed cohort
+slice.
+
+\subsection{The BFGS solver with $10^5$ parallel starts in Taichi \textnormal{[\textsc{pass} for now, \textsc{evaluate} for GPU port]}}
+
+\noindent
+RF25 use BFGS from $10^5$ initial conditions, compiled in Taichi for parallel
+execution (their \S2.4--2.5, p.~7). The full Case 1a took 9.8~minutes on an
+Apple M1 CPU. Comparable: our s059k with $N_{\mathrm{DIRS}}=800$ Fibonacci grid
+$\times$ 50 polish starts is 105--127~min per seed on Pool(24+8) (memory
+\ttt{project\_s059k\_cohort\_viable\_band\_A.md}). The factor--$\sim$10
+speedup they report is real, but most of it is from (a) the simpler forward
+model and (b) Taichi's GPU--compiled inner loop.
+
+\textbf{Decision.} \textsc{pass} on BFGS itself --- our LM polish is well--tuned
+and the BFGS Hessian approximation is not better in this regime. \textsc{evaluate}
+the Taichi port if the m048 forward model becomes the rate--limiter again.
+
+\subsection{Inertia ratios visualisation \textnormal{[\textsc{adopt} as analysis tool]}}
+
+\noindent
+RF25 plot the converged $(J_y/J_x, J_z/J_x)$ histogram (their Fig.~8b, 10b,
+13b, 14b). For the axisymmetric rocket body the inertia--ratio cloud spreads
+along the $J_z/J_x$ axis (Case 1a, Fig.~8b); for the asymmetric box--wing it
+collapses onto truth (Case 2a, Fig.~13b). This is a clean diagnostic for
+``does the LC discriminate the inertia tensor.''
+
+\textbf{Decision: adopt} as a plot we should add to the s073d / s074
+diagnostic kit. If our hypothesised cat--4 family at fixed $(|\Lvec|, 2T)$
+exists, it should appear as a particular curve in the $(J_y, J_z)$--ratio
+plane (because $|\Lvec|^2 = \sum_i J_i^2 \omega_i^2$ and $2T = \sum_i J_i
+\omega_i^2$ couple them).
+
+\subsection{Solution--space visualisation in body--frame ($\omega_x, \omega_y, \omega_z$) \textnormal{[\textsc{adopt}]}}
+
+\noindent
+RF25's Fig.~7b is a 3D scatter of converged $\omega$ solutions in body
+frame, with the truth in red. The cylindrical bands they describe (axisymmetric
+case) are visually obvious in this plot. For the asymmetric case (Fig.~8d,
+13d, 14d) they plot $(\omega(0)$ azimuth, $\omega(0)$ elevation) as a 2D
+density histogram.
+
+\textbf{Decision: adopt.} We have produced similar plots ad hoc in s053 and
+s059i; standardise the plot script so every multi--solution analysis ends with
+this view. For cat--4 specifically, the polhode signature (closed curve in
+body frame $\omega$) is the right thing to look at, and this is the canonical
+view.
+
+\subsection{The ``averaging destroys solution--space structure'' point \textnormal{[\textsc{adopt} as policy]}}
+
+\noindent
+RF25's \S4.3, p.~32: ``While it may be attractive to apply an averaging
+procedure for the initial orientations or angular velocities to produce a
+single state vector, doing so will generally destroy the structure of the
+solution space spanned by the original solution set. Instead, we recommend
+that densely clustered regions of the solution space may be thinned without
+impacting this structure.''
+
+\textbf{Decision: adopt as policy.} This crystallises a discipline we have
+been intuitively following but never written down. Add to memory under
+\ttt{feedback\_multi\_solution.md}.
+
+\subsection{Ground--truth $f_{\mathrm{best}}$ requires placing truth in the assumed model \textnormal{[\textsc{adopt} as gate]}}
+
+\noindent
+Subtle but important. RF25 do not compute $f_{\mathrm{best}}$ from truth in
+the truth--model; they compute it from truth in the \emph{assumed} (inversion)
+model. The reason: when there is model mismatch, the truth state in the
+truth model produces a noiseless LC that, when scored against noisy
+observations, yields a residual purely from noise. But the truth state in
+the assumed (mismatched) model yields a residual that captures
+both noise \emph{and} model--mismatch bias --- which is the right denominator
+for ``how good can any solution legally be.''
+
+\textbf{Decision: adopt.} Our ``noise floor'' for $\rho$ is set by the
+m048 noise model alone; we should add an analogous quantity that places
+truth in a deliberately--perturbed forward model (e.g.\ surrogate v2 vs
+hi--fi) and use that as the discard threshold for overfits.
+
+% =====================================================================
+\part{Does RF25 encroach on the s073 framing?}
+\label{part:encroachment}
+% =====================================================================
+
+\noindent
+This is the question s073c flagged as load--bearing. RF25 is the closest
+competitor paper to the cat--4 framing; if it pre--empts us we redirect.
+
+\subsection{The s073 framing, stated precisely so it can be compared}
+
+\noindent
+What s073 measured (verified, source \ttt{notebooks/inversion/survey/results/s073/summary.json}):
+on m048 seed~89, the Band A polish output \ttt{cluster\_457} and the truth
+attitude have $|\Lvec|$ matching to 0.55\% but $\LJ$--directions differing by
+$128.6^\circ$ at $t=0$, with hi--fi $\rho = 0.904$ (within the noise floor).
+The s073 framing extrapolates this single observation into a structural claim:
+
+\begin{quote}
+\textbf{Hypothesised cat--4 ambiguity:} \emph{For a torque--free rigid body
+with no shape symmetry, an LC computed under a fixed inertial geometry
+$(\hat{u}, \hat{s})$ over a short observing arc depends on the body--frame
+sun/observer trajectory only --- which is determined by $(|\Lvec|, 2T)$
+plus a polhode--phase scalar, not by the inertial orientation of $\LJ$. Thus
+there exists a continuous 2--parameter family of inertial $\LJ$--directions
+producing similar LCs.}
+\end{quote}
+
+\noindent
+The framing has two distinct claims, which we must judge separately against
+RF25:
+\begin{description}
+\item[Claim A (mechanism)] LC depends on body--frame geometry only; therefore
+the inertial direction of $\LJ$ is (to leading order) unobservable on a
+short arc.
+\item[Claim B (cardinality)] The ambiguity is \emph{continuous} (a
+2--parameter manifold over the $S^2$ of $\LJ$--directions, modulo discrete
+flip).
+\item[Claim C (generality)] This applies on \emph{asymmetric--inertia}
+bodies --- it is not the cat--2 ``visual symmetry'' phenomenon.
+\end{description}
+
+\noindent
+We assess each below.
+
+\subsection{What RF25 actually report about solution--space geometry}
+
+\noindent
+RF25 enumerate ambiguities through their empirical solution clouds, not
+through theoretical analysis. The relevant passages and figures:
+
+\paragraph{(p.~23, Case 1a, axisymmetric rocket body, $\sigma_J = 0.1$.)}
+Quote: ``Figure 7a shows that the initial state MRP solutions lie on
+\textbf{two disjoint tubes}. The two families of orientation solutions
+correspond to reflecting the assumed cylinder about the phase angle
+bisector plane spanned by the vector halfway between the observer and Sun
+and their cross product --- \textbf{identical to the mediatrix plane
+identified in [33]}.''
+
+This is the cat--1 flip problem (Burton--Robinson--Frueh 2024). The two
+``tubes'' are the two sides of the flip mirror.
+
+\paragraph{(p.~23--25, Case 1a continued.)}
+Quote: ``Figure 7b reveals that the angular velocity solutions lie mainly
+along \textbf{four cylindrical sections symmetric about the body's axis of
+symmetry to maintain a constant precession rate}.''
+
+The cylinders are continuous 1D bands in body--frame $\omega$. RF25 attribute
+them to the axisymmetric--inertia structure of this rocket body: rotation
+about the symmetry axis is dynamically free (the precession rate is set by
+$|\omega(0)|J_t / J_a$ from their Eq.~14, while the spin rate
+$\omega_s = (J_t - J_a)/J_t \cdot \omega_a(0)$ contributes nothing to the
+LC when the symmetry axis is also a geometric axis of symmetry).
+\emph{This is the cat--2 ``visual symmetry'' phenomenon, in its axisymmetric
+form.}
+
+\paragraph{(p.~25, Case 1a, spin rate observability.)}
+Quote: ``The spin rate of this axisymmetric object about its axis of
+symmetry is weakly observable in the light curve (at best), we cannot
+reliably determine the angular velocity magnitude or the axial moment of
+inertia. This observed ambiguity does not contradict well--accepted methods
+for angular velocity determination that use brightness ratios [77] or the
+periodogram [78], which do not attempt to estimate axial rotation rates
+and assume the object's attitude is well--approximated as a single--axis
+spin.''
+
+Median spin--rate error: $-95.60\%$ (Table~7) --- basically undetermined.
+
+\paragraph{(p.~27, Case 2a, asymmetric box--wing.)}
+Quote: ``Compared to Case 1, there is better convergence in the inertia
+tensor ratios as the object has three unique moments of inertia and no
+geometric axis of symmetry, \textbf{removing the spin rate ambiguity seen
+in the rocket body cases}. While this light curve does not uniquely
+determine the initial angular velocity direction, the angular velocity
+magnitude estimates have a median close to the truth.''
+
+Median $|\omega(0)|$ error: 0.78\% (Case 2a, Table~10), 2.36\% (Case 2b,
+Table~11).
+
+\paragraph{(Figs.~13c--d, 14c--d.)}
+For the asymmetric box--wing, the initial orientation--angle error scatters
+across $0^\circ$--$180^\circ$ with no clear clustering structure visible at
+the resolution of their 2D histograms. The $(\omega(0)$ azimuth, $\omega(0)$
+elevation) plots also show scattered solutions across both hemispheres
+without obvious continuous bands.
+
+\paragraph{(p.~33, Conclusion, summary of ambiguities.)}
+Quote: ``Our results indicate that under realistic conditions of
+measurement noise and model mismatch, estimating the orientation of a
+space object uniquely from its light curve is unlikely. Even if attitude
+inversion indicates only one solution, the non--convex nature of the
+problem makes it difficult to determine if one or more better solutions
+were missed.''
+
+\subsection{Encroachment analysis, claim by claim}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Each s073 claim versus what RF25 actually states.}
+\label{tab:encroachment}
+\begin{tabularx}{\linewidth}{@{} l X X l @{}}
+\toprule
+\textbf{Claim} & \textbf{What RF25 says} & \textbf{Encroachment verdict}
+& \textbf{Risk} \\
+\midrule
+
+A. \emph{LC depends on body--frame geometry only}
+& \emph{Stated in their references} (BRF24~\S4 is cited as the source of the
+flip--problem; the body--frame--only dependence is the explicit foundation of
+BRF24). RF25 do not re--state it.
+& \textbf{Not novel} --- the body--frame--only dependence is the
+acknowledged starting point of the Frueh--group programme. Anything we say
+about it has to cite BRF24.
+& Low. Use as setup, not finding.
+\\[6pt]
+
+B. \emph{Continuous 2--parameter $\LJ$--family on asymmetric bodies}
+& RF25 demonstrate \emph{continuous 1--parameter bands in body--frame
+$\omega$} for the \emph{axisymmetric} case (Fig.~7b, four cylindrical
+sections about the body symmetry axis). For the \emph{asymmetric} case
+(Fig.~13d, 14d) the solution structure is widely--distributed but not
+analysed as a continuous family.
+& \textbf{Partially open.} RF25 demonstrate cat--2 (axisymmetric) continuous
+$\omega$--bands but explicitly attribute them to body symmetry. They do not
+identify a continuous family on asymmetric bodies. They also do not compute
+or plot $|\Lvec|$, $2T$, or $\LJ$--direction for any of their solution sets.
+& \textbf{This is the gap our framing fills, if the framing converts.}
+\\[6pt]
+
+C. \emph{Generic to asymmetric--inertia bodies}
+& RF25's asymmetric case (box--wing, Cases 2a/2b) has \emph{many fewer}
+converged solutions (90 and 112 vs.\ 2357 for Case 1a) and the authors
+\emph{do not} characterise the residual multi--solutions by Casimir
+invariants or $\LJ$--direction. They attribute the residual multiplicity
+to ``the non--convex nature of the problem'' (p.~33, Conclusion).
+& \textbf{Open.} RF25's data may well contain cat--4 instances among
+the 90 Case 2a solutions; their analysis would not have surfaced them.
+& Medium. If a careful re--analysis of their published results revealed
+cat--4 structure their work would still claim priority on the dataset,
+even though they did not interpret it that way. \emph{We should not
+re--analyse their data; we should build the case on our own m048 results.}
+\\
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{The most dangerous overlap, in detail}
+
+\noindent
+The single passage in RF25 that comes closest to our framing is the
+description of the \emph{axisymmetric} rocket body Case 1a (p.~23--25):
+they observe continuous 1D $\omega$--bands and identify them as preserving
+the precession rate while varying the spin rate. The precession rate is
+$\omega_p = |\omega(0)| J_t / J_a$ (their Eq.~14). Notice: \emph{this is a
+function of $|\Lvec|$ at fixed inertia.} The spin rate $\omega_s$ varies
+along the band, and the body--frame polhode (for axisymmetric inertia) is
+a circle in the $\omega$--plane perpendicular to the symmetry axis, traced at
+the precession rate while the body spins at $\omega_s$ about the symmetry
+axis. The cat--2 axisymmetric phenomenon they describe \emph{is literally
+``LC depends on $(|\Lvec|, 2T)$ only, modulo spin phase about the symmetry
+axis.''}
+
+The danger: a careless reader (or referee) sees our cat--4 framing and
+says ``isn't this just RF25's Case 1a generalised?'' We need a clean answer
+to that critique, and the answer has to live in two places:
+
+\begin{enumerate}
+\item \textbf{For axisymmetric inertia,} body--frame polhode--invariance
+\emph{plus visual rotational symmetry of the body} together produce
+the continuous spin--rate ambiguity RF25 observes (cat--2 + axisymmetric
+inertia). The body--frame--polhode geometry alone cannot explain it
+without the visual symmetry --- because for asymmetric body geometry on
+the same axisymmetric inertia, the spin rotation would still change the
+LC by rotating non--symmetric facets through the body--frame
+sun/observer directions.
+
+\item \textbf{For asymmetric inertia + asymmetric body geometry} (our
+m048 regime), there is no symmetry to invoke. The body--frame polhode is
+not a circle, the rotation has no axis of symmetry, and yet
+\emph{cluster\_457 on seed 89 has $|\Lvec|$ matching truth to 0.55\%
+but $\LJ$--direction differing by $128.6^\circ$.} This is the empirical
+observation that RF25 has not made and that, if it converts to a
+class--level finding, fills the gap.
+\end{enumerate}
+
+\noindent
+The key insight is that the \emph{rotational degree of freedom in inertial
+space} (orienting $\LJ$ in $J2000$) is logically independent of any body
+symmetry. RF25 collapses it for the axisymmetric body because their
+particular case has visual symmetry; on an asymmetric body the same
+inertial--rotation DOF should still exist (because the LC depends on
+body--frame geometry only) but RF25 do not look for it. Our s073 measurement
+is consistent with that DOF being present on asymmetric bodies.
+
+\subsection{What RF25 does \emph{not} provide}
+
+\noindent
+A precise inventory of the gaps in RF25 that the s073/cat--4 framing could
+fill:
+
+\begin{itemize}
+\item \textbf{No use of body--frame Casimir invariants.} ``Polhode'' does
+not appear anywhere in RF25. ``Conservation'' is mentioned only in the
+context of the BRDF being energy--conserving. The body--frame
+$(|\Lvec|, 2T)$ structure is not invoked.
+
+\item \textbf{No computation or plotting of $\LJ$ direction across solutions.}
+This is the most striking absence. They have $10^5$ converged solutions
+across four cases and never plot the inertial $\LJ$ direction. Our
+s073 plot (the one we should produce as a follow--up) is a direct
+fill of this gap.
+
+\item \textbf{No analytical proof of the body--frame--only LC dependence
+extended to L--direction ambiguity.} BRF24~\S4 proves it for the
+discrete flip; the continuous version (claim A above) follows by the
+same argument applied to any inertial rotation that preserves
+$(\hat{u}, \hat{s})$, but RF25 / BRF24 do not write that argument down.
+
+\item \textbf{No multi--anchor / two--epoch architecture.} RF25 is purely
+single--epoch initial--condition optimisation. The s073 idea of using
+$\LJ$ conservation at two anchors as a discriminator (s060) is
+orthogonal to their approach.
+
+\item \textbf{No connection to the asteroid--LC literature} (Kaasalainen
+2001), which is the only place where a continuous--L--family
+discussion exists in the literature. They cite the Frueh-group papers
+heavily but not Kaasalainen.
+\end{itemize}
+
+\subsection{Verdict on encroachment}
+
+\noindent
+\textbf{RF25 does not pre--empt the cat--4 framing.} It documents adjacent
+phenomena (cat--2 continuous $\omega$--bands on axisymmetric bodies) using
+machinery (BFGS clouds, $10^5$ starts) that should have produced the cat--4
+observation if it exists, but \emph{they did not analyse their solutions
+through the body--frame Casimir lens that would surface it.}
+
+The publication path remains open under two conditions, neither of which is
+secured yet:
+
+\begin{enumerate}
+\item \textbf{Empirical: cat--4 must be more than N=1.} The cohort sweep
+proposed in s073c step~3 (other Band--A multi--sols across seeds 10, 14,
+28, 91, \ldots) must show the pattern repeats. If only seed 89's
+cluster\_457 exhibits the $(|\Lvec|, 2T)$--match with $\LJ$ mismatch,
+the framing is one anomaly.
+
+\item \textbf{Theoretical: the analytical proof of claim A's continuous
+version.} A few lines of algebra showing that for any rotation $R \in
+SO(3)$ acting on $\LJ$ that preserves the inertial sun and observer
+directions over the observing arc, the LC is invariant. The argument is
+that the LC depends on body--frame $(\hat{s}_{\mathrm{body}}(t),
+\hat{o}_{\mathrm{body}}(t))$, which is determined by the body--frame
+trajectory $q_{\mathrm{body}}(t)$ around $\LJ$; rotating $\LJ$ in
+inertial space and simultaneously rotating the initial body orientation
+by the same $R$ leaves the body--frame trajectory unchanged.
+This is the analogue of BRF24's flip argument, written for arbitrary
+rotations of $\LJ$ rather than the single $180^\circ$ rotation about
+the bisector. It should be a half--page derivation.
+\end{enumerate}
+
+\noindent
+\textbf{The risk if we ignore RF25.} A referee will ask ``how is this
+different from RF25 Case 1a?'' The answer is: ``RF25 Case 1a's continuous
+ambiguity is cat--2 (visual + dynamical symmetry); ours is cat--4 (dynamical
+only); the discriminator is whether the body shape carries the symmetry,
+and our box--wing m048 geometry does not.'' We need to make this distinction
+front and centre in any writeup.
+
+\subsection{Robinson \& Frueh 2025 ECSD~2025 conference paper [RF\#74]}
+
+\noindent
+RF25 cite their own ECSD 2025 paper ([RF74]: ``Optimal light curve attitude
+inversion with measurement noise: two case studies'') as a companion work.
+That paper is not in our possession. \emph{Action item:} check ECSD 2025
+proceedings for the cited paper; it may add to or weaken the encroachment
+assessment, particularly if it explicitly treats asymmetric--inertia
+multi--solution structure.
+
+% =====================================================================
+\section*{Bottom line, both parts together}
+% =====================================================================
+
+\noindent
+\textbf{Part 1 (implementation).} The single highest--value adoption is the
+NLL loss with $\sigma_k$ weighting and signal rescaling (\eq{eq:rf_nll}). Cheap
+to implement, well--motivated, addresses the bright--peak overfitting we have
+seen empirically. Second--tier: the shadow cache (if forward--model wall
+becomes the bottleneck post--elliprj), the $\alpha$--overfit gate, the inertia
+ratio visualisation, and the body--frame $\omega$ scatter plot. Pass on:
+MRPs, Sutherland--Hodgman, BFGS swap.
+
+\textbf{Part 2 (encroachment).} RF25 does not close the cat--4 framing. The
+adjacent finding they do publish --- continuous $\omega$--bands on
+axisymmetric bodies (Case 1a) --- is cat--2 with axisymmetric inertia and a
+visually--symmetric body, not the cat--4 hypothesis. The publication path is
+still open conditional on (i) showing cat--4 holds beyond N=1 via the
+cohort sweep, and (ii) writing the half--page analytical extension of BRF24's
+flip argument to continuous rotations of $\LJ$. RF25's [RF74] companion
+paper is a residual risk and should be obtained.
+
+\textbf{Next compute, if Part 2 conclusions are accepted.} Two cheap
+actions:
+\begin{enumerate}
+\item Plot $\LJ$--direction for the converged clusters of seed 89 (s069
+results), seed 10 (s069), seed 14 (s068), seed 28 (existing surveys) ---
+all already in checkpoints. Re--scoring + plotting, no new BFGS, $\leq$30 min
+total. This is the cohort sweep step 3 from s073c, on cached data.
+\item Write the analytical extension of BRF24 \S4 to continuous $\LJ$
+rotation (Part 2 condition ii). No compute, $\sim$an hour of
+derivation, can be done in the same session.
+\end{enumerate}
+
+\noindent
+If both clear, the framing has moved from N=1 anecdote to cohort--validated
+class--level claim plus theorem --- and a writeup is in scope.
+
+\end{document}

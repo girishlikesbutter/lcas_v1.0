@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057c_truth_pair_omega",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "What omega does the truth-representative anchor pair imply, and what is the pool-discretisation noise floor on omega-direction?",
+  "hypothesis": "The cloud has a near-truth representative pair, so the architecture's weak concentration is a pool-discretisation noise floor, not a missing truth-pair.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "closest_pair_w_dir_err": 20.4,
+    "closest_pair_w_mag_err_pct": 28.4,
+    "topK_best_w_dir_err": 6.45,
+    "topK_median_w_dir_err": 33.5,
+    "closest_in_cloud_qb_deg": 6.30,
+    "abs_closest_qb_deg": 4.73
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057c_truth_pair_omega.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Diagnostic: the truth-representative pair DOES exist in the cloud (closest-in-cloud q_b 6.30deg vs 4.73deg absolute-closest), so s057's weak concentration is a pool-discretisation noise floor. The rank-0/rank-0 closest-survivor pair gives omega 20.4deg off truth direction with |omega| +28.4%; top-25 truth-adjacent pairs best 6.45deg, median 33.5deg. Even truth-adjacent pairs have ~30deg median omega-direction error at this dt/density. Reads truth-pair -- oracle-leak, N=1."
+}

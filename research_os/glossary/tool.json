@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "tool",
+  "kind": "glossary_term",
+  "term": "Tool",
+  "definition": "A reusable, value-neutral CAPABILITY: a named operation — a composition of primitives with a defined input→output — promoted because it earns reuse. Has NO hypothesis (cf. Pipeline, which is a bet). Store object: `substrate_component`; ADR-0005 names it Tool ('what-we-can-do'). Edges: a Pipeline composes Tools; a Tool is promoted-from an Experiment. Girish's informal word is 'block'. Operationally a Tool should bind to exactly ONE code entry-point + version (the single agreed version), so '3 versions of a generator' surfaces as drift to reconcile, not silent rot.",
+  "status": "canon",
+  "promoted_on": "2026-06-07",
+  "coined_in": "research_os/decisions/0005-pipeline-as-first-class-node.md",
+  "synonyms_blocked": [],
+  "related_terms": ["pipeline", "primitive", "artifact"],
+  "created_at": "2026-06-07T00:00:00Z"
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "id": "pr_so3_pool_dedup_20260607t211540",
+  "kind": "pipeline_run",
+  "pipeline": "pipeline_so3-pool-dedup",
+  "input": {},
+  "params": {
+    "sample": {
+      "n_samples": 2000
+    }
+  },
+  "oracle_clean": true,
+  "reason": "Slice-1 reify live-test",
+  "commit": "70b620a",
+  "source": "cli",
+  "created_at": "2026-06-07T21:15:40",
+  "status": "ok",
+  "wall_s": 0.1605,
+  "steps": [
+    {
+      "step": "sample",
+      "tool": "sample_so3_pool",
+      "op": "compose",
+      "status": "ok",
+      "tool_version": "1.0.0",
+      "hash_at_run": "sha256:3893ace4b5223f1b",
+      "hash_ok": true,
+      "wall_s": 0.0009,
+      "metrics": {
+        "returned_keys": [
+          "R_cache",
+          "q_pool_wxyz",
+          "q_pool_xyzw",
+          "rotvec_pool"
+        ],
+        "R_cache_shape": [
+          2000,
+          3,
+          3
+        ],
+        "q_pool_wxyz_shape": [
+          2000,
+          4
+        ],
+        "q_pool_xyzw_shape": [
+          2000,
+          4
+        ],
+        "rotvec_pool_shape": [
+          2000,
+          3
+        ]
+      },
+      "error": null,
+      "artifacts_produced": [
+        "ai_so3_pool_dedup_20260607t211540_0"
+      ]
+    },
+    {
+      "step": "dedup",
+      "tool": "twin_dedup",
+      "op": "compose",
+      "status": "ok",
+      "tool_version": "1.0.0",
+      "hash_at_run": "sha256:6635c469cdf06eb3",
+      "hash_ok": true,
+      "wall_s": 0.0002,
+      "metrics": {
+        "return_len": 2,
+        "return_type": "tuple"
+      },
+      "error": null,
+      "artifacts_produced": [
+        "ai_so3_pool_dedup_20260607t211540_1"
+      ]
+    }
+  ],
+  "error": null,
+  "executed_at": "2026-06-07T21:15:40"
+}

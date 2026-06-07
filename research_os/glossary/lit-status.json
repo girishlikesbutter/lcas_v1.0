@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "lit-status",
+  "kind": "glossary_term",
+  "term": "lit-status",
+  "definition": "Per-facet boolean shadow mask Dict[component -> (N_epochs, num_facets) bool] produced by the shadow engine, consumed by the LC renderer.",
+  "status": "provisional",
+  "coined_in": "research_os/backfill/W-D_tool_pipeline_scour.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [],
+  "created_at": "2026-06-07T00:00:00Z"
+}

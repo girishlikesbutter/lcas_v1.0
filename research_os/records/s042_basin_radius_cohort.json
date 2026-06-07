@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s042_basin_radius_cohort",
+  "kind": "run_record",
+  "goal_node": "goal_basin-width",
+  "question": "How do joint-LM (q0, omega) basin radii scale across an |omega|-stratified cohort, and what is the binding cohort tolerance for the omega prior?",
+  "hypothesis": "The s040 (n=3) finding that low-|omega| tumblers have wide omega-mag basins and high-|omega| tumblers have narrow ones generalises to the cohort; truth/twin basins are reflection-symmetric.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [
+    6,
+    14,
+    16,
+    19,
+    23,
+    28,
+    42,
+    44,
+    57,
+    62,
+    79,
+    84,
+    89
+  ],
+  "N": 13,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_LMs": 780,
+    "wall_s": 2178,
+    "tightest_omega_mag_basin_pct": "+0.5/-2 (seed 14)",
+    "tightest_omega_dir_basin_deg": 0.5,
+    "truth_twin_symmetric": "12/13",
+    "new_multisol_seed14": "rho 2.78 (Band B), q0_err 86 deg, omega+0.5%"
+  },
+  "artefacts": [
+    {
+      "path": "results/s042_basin_radius_cohort/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s042_basin_radius_cohort/run.log",
+      "kind": "log"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s042_basin_radius_cohort.md"
+  ],
+  "parents": [
+    "s040_basin_radius_3seed"
+  ],
+  "substrate_versions": {
+    "propagator": "1.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "13-seed |omega|-stratified joint-LM basin probe (780 LMs, 36 min). The omega-mag basin inversely correlates with |omega| (rough rule ~1-2% / |omega|_dps^0.5..1); the binding case is seed 14 at +0.5%/-2% omega-mag and 0.5 deg omega-dir. Truth/twin basins are reflection-symmetric on 12/13 seeds (seed 89 the lone asymmetry). Surfaced a new uncatalogued seed-14 multi-solution attractor at rho 2.78 / q0_err 86 deg. Perturbs from truth and twin states, so it reads truth as input."
+}

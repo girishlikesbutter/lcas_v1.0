@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "rotation_matrices_from_angles",
+  "kind": "substrate_component",
+  "name": "compute_rotation_matrices_from_angles",
+  "path": "src/articulation/articulation_engine.py",
+  "tier": "substrate",
+  "interface": "(component-angles dict, satellite) -> Dict[component, rotation_matrices(N,4,4)]; the angle->matrix block consumed by shadow_engine.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:0e018079dac0bc80",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/articulation/articulation_engine.py:compute_rotation_matrices_from_angles",
+  "ports": {
+    "input": [
+      "component-angles"
+    ],
+    "output": {
+      "component_matrices": "component-rotation-matrices"
+    }
+  },
+  "default_params": {
+    "articulation_engine": null
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:0e018079dac0bc80",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

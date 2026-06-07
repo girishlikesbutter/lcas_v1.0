@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s060_anchor_topology",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "Do bright-peak and dim-extreme sharp anchors have qualitatively different survivor cluster topology on SO(3)?",
+  "hypothesis": "Bright anchors spread along a direction (multi-specular) while dim anchors collapse into a few discrete clusters.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [28, 89, 10],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "bright_clusters": "7-8",
+    "bright_top3_frac": "0.55-0.71",
+    "dim_clusters": "4-5",
+    "dim_top3_frac": "0.88-0.92",
+    "pool_N": 25000,
+    "cluster_threshold_deg": 40,
+    "wall_s": 30
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s060_sharpness_map/seed028/anchor_topology.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s060_anchor_topology.md"],
+  "parents": ["s060_sharpness_map", "s060_cohort_anchor_topology"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-09T00:00:00Z",
+  "narrative_md": "Greedy clustering of survivor sets at sharp anchors on SO(3) (20 deg / 40 deg thresholds) confirms the user's intuition: bright-peak anchors fragment into 7-8 small clusters separated by ~170 deg (body-twin specular) with no consolidation, while dim-extreme anchors collapse into 4-5 clean clusters carrying 88-92% of survivors in the top-3. Dim anchors play the discrete-enumerator role; bright anchors play the passage-validator role. Foundation for the s060 multi-anchor design."
+}

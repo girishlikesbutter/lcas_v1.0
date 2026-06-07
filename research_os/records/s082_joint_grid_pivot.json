@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s082_joint_grid_pivot",
+  "kind": "run_record",
+  "goal_node": "goal_blind-pipeline",
+  "question": "On a dense joint (q0, omega) grid scored by full-LC Jacobi+surrogate MSE, does the truth-nearest cell rank in a polishable top-K, picking Branch v2 vs v3 for the blind inversion pipeline?",
+  "hypothesis": "Branch v2: full-LC surrogate scoring puts truth-near cells inside a top-K<=200 polishable set on a 320k joint grid.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [
+    116,
+    119,
+    103
+  ],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "truth_nearest_rank_median": "70823/320000",
+    "rank_116": 70823,
+    "rank_119": 259195,
+    "rank_103": 36568,
+    "min_w_mag_err_pct": "20-43",
+    "top50_median_q_geo_deg": 140,
+    "ms_per_candidate_surrogate": 48,
+    "wall_s": 6030
+  },
+  "artefacts": [
+    {
+      "path": "results/s082/holdout_stratification.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s082/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s082/seed_116/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s082/seed_119/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s082/seed_103/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s082/seed_116/candidates.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s082/seed_119/candidates.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s082/seed_103/candidates.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s082/seed_116/pivot_diagnostics.png",
+      "kind": "plot",
+      "caption": "MSE histogram + top-1000 q-geo x omega-dir scatter, seed 116"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s082_joint_grid_pivot.md"
+  ],
+  "parents": [
+    "s019_ls_bracket_omega_mag",
+    "s005_joint_local_descent",
+    "s072_path2_closed_form_q",
+    "s074_elliprj_path2",
+    "s068_replicate_s011",
+    "s043_twin_hifi_verify",
+    "s003_landscape_vs_omega",
+    "s081_hifi_rho_bands_twin"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-20T00:00:00Z",
+  "narrative_md": "Joint (q0, omega) grid pivot on 3 fresh holdout seeds (116/119/103), 320k candidates each: median truth-nearest rank 70823/320000 -- far outside any polishable top-K. Branch v2 (dense grid + top-K polish) is DECISIVELY DEAD: top-50 are ~140-deg-from-truth random LC fitters, no Band A in the grid. The bottleneck axis is the 5-cell LS-bracket |omega| coarseness (20-43% off), not N_dir or N_q. Decision: Branch v3 (multi-anchor consistency) with N_mag densified to 10-15. Surrogate cost realised ~10x the plan estimate (48 ms/candidate). Scoring is blind, but truth-nearest rank reads truth (oracle-leak); N=3 holdout.",
+  "tests": [
+    "pipeline_joint-grid-pivot"
+  ]
+}

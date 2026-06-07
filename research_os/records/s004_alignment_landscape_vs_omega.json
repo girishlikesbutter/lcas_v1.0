@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s004_alignment_landscape_vs_omega",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Does the m103 alignment cost have a wider truth-ω tube than surrogate-MSE, enabling an outer ω-search the surrogate cannot?",
+  "hypothesis": "Alignment cost could have a wider truth-ω tube and feed an outer ω-search around a surrogate q0-inner.",
+  "status": "refuted",
+  "run_type": "cheap",
+  "seeds": [6, 18, 28],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_cells_argmin_within_10deg": "5/72",
+    "n_cells_argmin_ge_30deg": "65/72",
+    "n_cells_argmin_ge_100deg": "43/72",
+    "seed28_baseline_argmin_deg": 176.8,
+    "n_cohort_alignment_undefined": "24/100"
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s004_alignment_landscape_vs_omega.md"],
+  "parents": ["s001_cost_at_truth_cohort", "s003_landscape_vs_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "Same sweep shape as s003 but scoring the m103 alignment cost (peak-bisector dot vs allowed normals). The alignment cost is strictly worse than surrogate-MSE: only 5/72 cells keep argmin within 10° of truth (vs s003's 11/72), tubes are zero/near-zero in mag, seed 28's argmin is 176.8° from truth even at baseline truth-ω, and the cost is structurally undefined on 24/100 seeds (incl. seed 91). Alignment cost adds no ω-search value; joint (q0, ω) local descent remains the only viable architecture."
+}

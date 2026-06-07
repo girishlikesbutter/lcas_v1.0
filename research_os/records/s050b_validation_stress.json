@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s050b_validation_stress",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Can any smarter validation re-scoring of the s049 cascade pool (tol/K sweep, continuous-score rank, bright epochs, per-q_a rank) concentrate mass on truth?",
+  "hypothesis": "A better validation strategy can lift truth-q_a enrichment above the random baseline and make the cascade a usable seed generator.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [14],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "filters_tested": "100+",
+    "max_enrichment_any_filter": "5.98x (1/155, n.s.)",
+    "best_continuous_top1000_enrichment": "0.0x",
+    "truth_qa_per_qa_rank": "516-958 / 1113",
+    "wall_s": 261
+  },
+  "artefacts": [
+    { "path": "results/s050b_validation_stress/stress.npz", "kind": "checkpoint" },
+    { "path": "results/s050b_validation_stress/summary.json", "kind": "data" },
+    { "path": "results/s050b_validation_stress/phase2_dmag_distributions.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s050b_validation_stress.md"],
+  "parents": ["s049_cascade_seed14", "s050a_cluster_geometry", "s048_peak_cascade_smoke"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Closes path B: across 100+ validation re-scorings (tol/K, continuous-score top-N, bright-epoch augmentation, per-q_a ranking) no filter exceeds random by a meaningful margin -- max enrichment 5.98x is one survivor in 155, and truth-q_a's best per-q_a score ranks 516-958 of 1113 (bottom half). Mechanism: at 17% omega-noise, drift produces surrogate-mag errors comparable to random hypotheses, so mag-agreement carries no separable truth signal. Phase 3 (omega-noise reduction) is mandatory. Reads truth-q_a enrichment throughout."
+}

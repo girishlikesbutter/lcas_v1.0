@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_full-lc-rmse-fails-needs-windowing",
+  "kind": "claim_card",
+  "deck": "research",
+  "statement": "Full-LC RMSE fails to rank truth and windowed photometry is required to discriminate the truth basin. (Pre-audit conclusion of s093/s094/s095 \u2014 later shown to be an artefact of the times[0]==0 propagator-gauge bug, which mis-referenced trajectories ~108deg.)",
+  "supporting_runs": [],
+  "refuting_runs": [
+    "s097_times0_gauge_bug_audit"
+  ],
+  "trust_stamp": {
+    "confidence": "low",
+    "gates_passed": [],
+    "oracle_clean": true
+  },
+  "scope": {
+    "N": 1,
+    "kind": "N1"
+  },
+  "depends_on": [
+    "propagator@2.0.0",
+    "surrogate@v2",
+    "scorer@1.0.0"
+  ],
+  "status": "superseded",
+  "superseded_by": "claim_full-lc-rmse-discriminator-works",
+  "supersedes": null,
+  "links_to_writeups": [
+    "notebooks/inversion/survey/experiments/s097_times0_gauge_bug_audit.md"
+  ],
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

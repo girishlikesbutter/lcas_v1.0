@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s055a_pol_diam_lc_regression",
+  "kind": "run_record",
+  "goal_node": "goal_lc-omega-priors",
+  "question": "Is pol_diam (polhode L2 diameter) recoverable from the 28-dim LC feature set well enough to drive the s053 adaptive-bracket rule at inversion time?",
+  "hypothesis": "pol_diam can be estimated from the LC alone, making the polhode prior an inversion architecture (not just a post-hoc explanation).",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 120,
+  "claim_scope": "cohort",
+  "metrics": {
+    "pol_diam_best_holdout_MAPE_pct": 24.84,
+    "pol_diam_cohort_LOO_MAPE_pct": 21.07,
+    "omega_sanity_LOO_MAPE_pct": 15.75,
+    "s008_baseline_MAPE_pct": 16.4,
+    "decision": "COARSE_USEFUL",
+    "top_feature": "dmag_mean_abs (0.26)",
+    "wall_s": 124
+  },
+  "artefacts": [
+    { "path": "results/s055a_pol_diam_lc_regression/features.npz", "kind": "checkpoint" },
+    { "path": "results/s055a_pol_diam_lc_regression/regression.npz", "kind": "checkpoint" },
+    { "path": "results/s055a_pol_diam_lc_regression/summary.json", "kind": "data" },
+    { "path": "results/s055a_pol_diam_lc_regression/actual_vs_predicted_holdout.png", "kind": "plot" },
+    { "path": "results/s055a_pol_diam_lc_regression/feature_importance.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s055a_pol_diam_lc_regression.md"],
+  "parents": ["s008_lc_feature_regression_omega", "s053_cohort_polhode_survey", "s054_generate_holdout"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "pol_diam is LC-recoverable at ~25% holdout MAPE on seeds 100-119 -- decision COARSE_USEFUL, inside the s053 adaptive-bracket tolerance (which tolerates ~2x pol_diam error). The |omega| sanity control reproduces s008's LOO MAPE within 0.65pp, confirming lib.lc_features is faithful. Top features (dmag_mean_abs, acf_lag1) are exactly the modulation-rate signatures polhode amplitude predicts. The polhode prior is operational, not just analytical. Supervised regression on truth pol_diam/|omega| labels, so it reads truth as input."
+}

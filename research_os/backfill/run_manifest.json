@@ -1,0 +1,2971 @@
+[
+  {
+    "id": "s001_cost_at_truth_cohort",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s001_cost_at_truth_cohort.md",
+    "type": "experiment",
+    "title": "s001 — cost-at-truth, cohort-scale (100 m048 seeds, post-fix)",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "data/results/inversion_diagnostics/m048_trajectories/per_trajectory/traj_seed*.npz (post-fix; commit ac1fdf4)",
+      "data/results/inversion_diagnostics/m048_trajectories/m048_trajectories.npz (master, for unique_normals)",
+      "~/surrogate_model (v2 residual ensemble; bridge-independent)"
+    ],
+    "related": [
+      "concepts/known_pathologies_to_revalidate.md (alignment-cost anti-truth, m135 buggy-era)",
+      "concepts/surrogate_model.md (intrinsic accuracy, m145 caveat)",
+      "concepts/rho_band.md",
+      "concepts/q_omega_coupling.md"
+    ]
+  },
+  {
+    "id": "s002_surrogate_landscape_probe",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s002_surrogate_landscape_probe.md",
+    "type": "experiment",
+    "title": "s002 — surrogate landscape probe (PA-stratified seeds, Sobol-SO(3))",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "data/results/inversion_diagnostics/m048_trajectories/per_trajectory/traj_seed*.npz (post-fix; commit ac1fdf4)",
+      "data/results/inversion_diagnostics/m048_trajectories/m048_trajectories.npz (inertia tensor)",
+      "~/surrogate_model (v2 residual ensemble; bridge-independent)",
+      "lib/forward.py (post-fix propagator + scipy Rotation; round-trips cached k1/k2 at machine precision)"
+    ],
+    "related": [
+      "experiments/s001_cost_at_truth_cohort.md (Q1 — cost-at-truth)",
+      "concepts/known_pathologies_to_revalidate.md (m145 deceptive q0=135° claim on seed 91)",
+      "concepts/surrogate_model.md (bridge-independence)",
+      "concepts/twin_degeneracy.md (q_180x · q0 antipode)",
+      "concepts/quaternion_convention.md (post-fix propagator + xyzw scipy reshuffle)"
+    ]
+  },
+  {
+    "id": "s003_landscape_vs_omega",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s003_landscape_vs_omega.md",
+    "type": "experiment",
+    "title": "s003 — surrogate landscape under ω-misspecification (3 seeds × 24 ω perturbations)",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "data/results/inversion_diagnostics/m048_trajectories/per_trajectory/traj_seed*.npz (post-fix; commit ac1fdf4)",
+      "data/results/inversion_diagnostics/m048_trajectories/m048_trajectories.npz (inertia tensor)",
+      "~/surrogate_model",
+      "lib/forward.py (q0+ω → body-frame; round-trips at machine precision)"
+    ],
+    "related": [
+      "experiments/s001_cost_at_truth_cohort.md (Q1 — cost-at-truth, cohort-scale)",
+      "experiments/s002_surrogate_landscape_probe.md (Q2 — landscape at fixed truth-ω; argmin = truth on 8/8 seeds)",
+      "concepts/known_pathologies_to_revalidate.md (m115 per-ω DE failure on seed 91)",
+      "concepts/q_omega_coupling.md (q0 and ω-dir inseparable)",
+      "concepts/surrogate_model.md"
+    ]
+  },
+  {
+    "id": "s004_alignment_landscape_vs_omega",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s004_alignment_landscape_vs_omega.md",
+    "type": "experiment",
+    "title": "s004 — m103 alignment-cost landscape under ω-misspecification (3 seeds × 24 ω perturbations)",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "data/results/inversion_diagnostics/m048_trajectories/per_trajectory/traj_seed*.npz (post-fix; commit ac1fdf4)",
+      "data/results/inversion_diagnostics/m048_trajectories/m048_trajectories.npz (inertia tensor, unique_normals)",
+      "lib/forward.py (q0+ω → quaternions; round-trips at machine precision)",
+      "experiments/s003_landscape_vs_omega.py (sweep shape — same 24 perturbations, same Sobol seed)"
+    ],
+    "related": [
+      "experiments/s001_cost_at_truth_cohort.md (Q1 — alignment cost at truth, cohort-scale)",
+      "experiments/s003_landscape_vs_omega.md (Q3 — surrogate landscape under ω-misspecification)",
+      "concepts/known_pathologies_to_revalidate.md (m103 alignment cost sphere of applicability)"
+    ]
+  },
+  {
+    "id": "s005_joint_local_descent",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s005_joint_local_descent.md",
+    "type": "experiment",
+    "title": "s005 — joint (q0, ω) LM local-descent validation (5 seeds × 10 ICs)",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "data/results/inversion_diagnostics/m048_trajectories/per_trajectory/traj_seed*.npz (post-fix; commit ac1fdf4)",
+      "data/results/inversion_diagnostics/m048_trajectories/m048_trajectories.npz (inertia tensor)",
+      "~/surrogate_model",
+      "lib/forward.py (q0+ω → body-frame; round-trips at machine precision)",
+      "results/s001/per_seed.csv (truth surrogate-MSE references per seed)",
+      "results/s002/summary.json (truth = argmin at fixed truth-ω, on s002 seeds)",
+      {
+        "results/s003/summary.json (truth-ω tube width": "~1° dir, ~2-5% mag)"
+      }
+    ],
+    "related": [
+      "experiments/s001_cost_at_truth_cohort.md",
+      "experiments/s002_surrogate_landscape_probe.md",
+      "experiments/s003_landscape_vs_omega.md (tube width)",
+      "experiments/s004_alignment_landscape_vs_omega.md (decoupled architectures closed)",
+      "concepts/q_omega_coupling.md (joint-coupled basin)",
+      "concepts/known_pathologies_to_revalidate.md (m115 anchor seed 91)"
+    ]
+  },
+  {
+    "id": "s006_seed28_landscape_at_truth_omega",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s006_seed28_landscape_at_truth_omega.md",
+    "type": "experiment",
+    "title": "s006 — seed 28 surrogate landscape probe at fixed truth-ω",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "data/results/inversion_diagnostics/m048_trajectories/per_trajectory/traj_seed028.npz (post-fix; commit ac1fdf4)",
+      "data/results/inversion_diagnostics/m048_trajectories/m048_trajectories.npz (inertia tensor)",
+      "~/surrogate_model (v2 residual ensemble; bridge-independent)",
+      "lib/forward.py (post-fix propagator + scipy Rotation)",
+      "results/s002/per_seed_landscape.npz (8-seed baseline at fixed truth-ω)",
+      "results/s005/runs.npz (joint LM convergence; seed 28 = 3/10 ICs)"
+    ],
+    "related": [
+      "experiments/s002_surrogate_landscape_probe.md (Q2 — argmin at truth on 8/8)",
+      "experiments/s005_joint_local_descent.md (Q4a/Q4b — joint LM works; seed 28 has tight ~2° basin)",
+      {
+        "experiments/s004_alignment_landscape_vs_omega.md (alignment cost on seed 28": "argmin 176.8° from truth at baseline ω; 2 Sobol below truth)"
+      },
+      "concepts/q_omega_coupling.md (basin geometry)"
+    ]
+  },
+  {
+    "id": "s007_omega_mag_peak_spacing_pilot",
+    "goal_node": "goal_lc-omega-priors",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s007_omega_mag_peak_spacing_pilot.md",
+    "type": "experiment",
+    "title": "s007 — peak-spacing ω-magnitude prior pilot (Q4c-iii)",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "results/s007/peakspacing.npz",
+      "results/s007/summary.json",
+      "results/s007/periodograms.png",
+      "results/s007/truth_vs_estimate.png"
+    ],
+    "related": [
+      "[[s001_cost_at_truth_cohort]]",
+      "[[s003_landscape_vs_omega]]",
+      "[[s005_joint_local_descent]]",
+      "[[s006_seed28_landscape_at_truth_omega]]"
+    ]
+  },
+  {
+    "id": "s008_lc_feature_regression_omega",
+    "goal_node": "goal_lc-omega-priors",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s008_lc_feature_regression_omega.md",
+    "type": "experiment",
+    "title": "s008 — LC-feature regression for ω-magnitude prior (Q4c-iv)",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "results/s008/features.npz",
+      "results/s008/predictions.npz",
+      "results/s008/summary.json",
+      "results/s008/scatter.png",
+      "results/s008/feature_importance.png"
+    ],
+    "related": [
+      "[[s007_omega_mag_peak_spacing_pilot]]",
+      "[[s003_landscape_vs_omega]]",
+      "[[s005_joint_local_descent]]"
+    ]
+  },
+  {
+    "id": "s009_cohort_basin_radius_probe",
+    "goal_node": "goal_basin-width",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s009_cohort_basin_radius_probe.md",
+    "type": "experiment",
+    "title": "s009 — cohort basin-radius probe (Q4b extension)",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "results/s009/runs.npz",
+      "results/s009/summary.json",
+      "results/s009/cohort_basins.png",
+      "results/s009/error_panels.png"
+    ],
+    "related": [
+      "[[s002_surrogate_landscape_probe]]",
+      "[[s005_joint_local_descent]]",
+      "[[s006_seed28_landscape_at_truth_omega]]",
+      "[[s007_omega_mag_peak_spacing_pilot]]",
+      "[[s008_lc_feature_regression_omega]]"
+    ]
+  },
+  {
+    "id": "s010_seed44_landscape_at_truth_omega",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s010_seed44_landscape_at_truth_omega.md",
+    "type": "experiment",
+    "title": "s010 — seed-44 surrogate landscape probe at fixed truth-ω",
+    "created": "2026-04-30",
+    "updated": "2026-04-30",
+    "confidence": "high",
+    "sources": [
+      "results/s010/landscape.npz",
+      "results/s010/summary.json",
+      "results/s010_run.log",
+      "results/s009/runs.npz"
+    ],
+    "related": [
+      "[[s002_surrogate_landscape_probe]]",
+      "[[s006_seed28_landscape_at_truth_omega]]",
+      "[[s009_cohort_basin_radius_probe]]",
+      "[[concepts/twin_degeneracy]]"
+    ]
+  },
+  {
+    "id": "s011_q4cii_sobol_so3_polish_pilot",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s011_q4cii_sobol_so3_polish_pilot.md",
+    "type": "experiment",
+    "title": "s011 — Q4c-ii cohort pilot: multi-axis Sobol(q0) on SO(3) × LM polish at truth-ω",
+    "created": "2026-04-30",
+    "updated": "2026-05-01",
+    "confidence": "high",
+    "sources": [
+      "results/s011/runs.npz",
+      "results/s011/summary.json",
+      "results/s011_run.log"
+    ],
+    "related": [
+      "[[s002_surrogate_landscape_probe]]",
+      "[[s005_joint_local_descent]]",
+      "[[s006_seed28_landscape_at_truth_omega]]",
+      "[[s009_cohort_basin_radius_probe]]",
+      "[[s010_seed44_landscape_at_truth_omega]]"
+    ]
+  },
+  {
+    "id": "s012a_seed10_density_probe",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s012a_seed10_density_probe.md",
+    "type": "experiment",
+    "title": "s012a — seed-10 single-seed N=256 probe (Q4c-ii diagnostic)",
+    "created": "2026-05-01",
+    "updated": "2026-05-01",
+    "confidence": "high",
+    "sources": [
+      "data/results/inversion_diagnostics/m048_trajectories/m048_trajectories.npz (inertia_tensor)",
+      "data/trajectories/traj_seed010.npz (truth state, observation grid, mag_hifi)",
+      "results/s011/runs.npz (first 64 of the same Sobol sequence)"
+    ],
+    "related": [
+      "experiments/s011_q4cii_sobol_so3_polish_pilot.md",
+      "experiments/s005_joint_local_descent.md",
+      "experiments/s006_seed28_landscape_at_truth_omega.md",
+      "experiments/s010_seed44_landscape_at_truth_omega.md",
+      "concepts/observational_indistinguishability.md",
+      "concepts/rho_band.md"
+    ]
+  },
+  {
+    "id": "s013_rho_band_validation",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s013_rho_band_validation.md",
+    "type": "experiment",
+    "title": "s013 — hi-fi ρ-band validation of s011 / s012a candidates",
+    "created": "2026-05-01",
+    "updated": "2026-05-01",
+    "confidence": "high",
+    "sources": [
+      {
+        "results/s011/runs.npz (cohort A": "36 in-basin landings)"
+      },
+      {
+        "results/s012a/runs_combined.npz (cohort B": "256 seed-10 final states)"
+      },
+      "data/trajectories/traj_seed{XXX}.npz (per-seed truth + cached SPICE state)",
+      "lib/hifi_render.py (smoke-tested round-trip on seeds 6/10/91)"
+    ],
+    "related": [
+      "experiments/s011_q4cii_sobol_so3_polish_pilot.md",
+      "experiments/s012a_seed10_density_probe.md",
+      "experiments/s005_joint_local_descent.md",
+      "concepts/observational_indistinguishability.md",
+      "concepts/rho_band.md",
+      "concepts/known_pathologies_to_revalidate.md"
+    ]
+  },
+  {
+    "id": "s014_cohort_rho_band",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s014_cohort_rho_band.md",
+    "type": "experiment",
+    "title": "s014 — cohort-scale hi-fi ρ-band of s011 non-basin + s005",
+    "created": "2026-05-01",
+    "updated": "2026-05-01",
+    "confidence": "high",
+    "sources": [
+      "results/s011/runs.npz (s011 non-basin non-seed-10 = 540 LM landings)",
+      "results/s005/runs.npz (all 50 LM landings on 5 seeds)",
+      "results/s013/rho_in_basin.npz (s011 in-basin landings — combined for full-64 per-seed analysis)",
+      "data/trajectories/traj_seed{XXX}.npz (per-seed truth + cached SPICE state)",
+      "lib/hifi_render.py (smoke-tested round-trip on seeds 6/10/91)"
+    ],
+    "related": [
+      "experiments/s013_rho_band_validation.md",
+      "experiments/s011_q4cii_sobol_so3_polish_pilot.md",
+      "experiments/s005_joint_local_descent.md",
+      "concepts/observational_indistinguishability.md",
+      "concepts/rho_band.md",
+      "concepts/surrogate_model.md"
+    ]
+  },
+  {
+    "id": "s014b_n_rotations_analysis",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s014b_n_rotations_analysis.md",
+    "type": "experiment",
+    "title": "s014b — n_rotations / PA correlation with ρ-min and multi-solution clusters",
+    "created": "2026-05-01",
+    "updated": "2026-05-01",
+    "confidence": "medium-high (10-seed pilot; load-bearing claim explicitly",
+    "sources": [],
+    "related": []
+  },
+  {
+    "id": "s015_joint_q0_omega_pilot",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s015_joint_q0_omega_pilot.md",
+    "type": "experiment",
+    "title": "s015 — joint (q0, ω) inversion pilot: random-ω stitched-Sobol + 6-DOF LM",
+    "created": "2026-05-01",
+    "updated": "2026-05-01",
+    "confidence": "high",
+    "sources": [
+      "results/s015_smoke/runs.npz",
+      "results/s015_diagnostic_n64/runs.npz",
+      "results/s015_diagnostic_n64/summary.json"
+    ],
+    "related": [
+      "[[s003_landscape_vs_omega]]",
+      "[[s005_joint_local_descent]]",
+      "[[s011_q4cii_sobol_so3_polish_pilot]]",
+      "[[s014_cohort_rho_band]]",
+      "[[s014b_n_rotations_analysis]]",
+      "[[s016_omega_mag_frozen_polish]]",
+      "[[s016c_prime_fresh_sobol_fixed_omag]]"
+    ]
+  },
+  {
+    "id": "s016_omega_mag_frozen_polish",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s016_omega_mag_frozen_polish.md",
+    "type": "experiment",
+    "title": "s016 — ω-mag-frozen 5-DOF polish from harvested s015 ICs (Option C, first pass)",
+    "created": "2026-05-01",
+    "updated": "2026-05-01",
+    "confidence": "high",
+    "sources": [
+      "results/s016c/runs.npz",
+      "results/s016c/summary.json",
+      "results/s016c/run.log"
+    ],
+    "related": [
+      "[[s003_landscape_vs_omega]]",
+      "[[s015_joint_q0_omega_pilot]]",
+      "[[s016c_prime_fresh_sobol_fixed_omag]]"
+    ]
+  },
+  {
+    "id": "s016c_prime_fresh_sobol_fixed_omag",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s016c_prime_fresh_sobol_fixed_omag.md",
+    "type": "experiment",
+    "title": "s016-C' — fresh Sobol(q0 × ω-dir) at fixed harvested ω-mag (proper C test)",
+    "created": "2026-05-01",
+    "updated": "2026-05-01",
+    "confidence": "high",
+    "sources": [
+      "results/s016c_prime/runs.npz",
+      "results/s016c_prime/summary.json",
+      "results/s016c_prime/run.log"
+    ],
+    "related": [
+      "[[s003_landscape_vs_omega]]",
+      "[[s011_q4cii_sobol_so3_polish_pilot]]",
+      "[[s014_cohort_rho_band]]",
+      "[[s015_joint_q0_omega_pilot]]",
+      "[[s016_omega_mag_frozen_polish]]"
+    ]
+  },
+  {
+    "id": "s017_hifi_rho_band_s016c_prime",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s017_hifi_rho_band_s016c_prime.md",
+    "type": "experiment",
+    "title": "s017 — hi-fi ρ-band of s016c_prime cohort-selector winners (multi-solution acceptance test)",
+    "created": "2026-05-01",
+    "updated": "2026-05-01",
+    "confidence": "high",
+    "sources": [
+      "results/s017/rho_top3.npz",
+      "results/s017/summary.json",
+      "results/s017/run.log"
+    ],
+    "related": [
+      "[[s013_rho_band_validation]]",
+      "[[s014_cohort_rho_band]]",
+      "[[s014b_n_rotations_analysis]]",
+      "[[s015_joint_q0_omega_pilot]]",
+      "[[s016c_prime_fresh_sobol_fixed_omag]]"
+    ]
+  },
+  {
+    "id": "s018a_bright_band_calibration",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s018a_bright_band_calibration.md",
+    "type": "experiment",
+    "title": "s018a — Bright-band PAB-alignment calibration on post-fix m048 cohort",
+    "created": "2026-05-02",
+    "updated": "2026-05-02",
+    "confidence": "high",
+    "sources": [
+      "results/s018a/calibration.npz",
+      "results/s018a/summary.json",
+      "results/s018a_run.log"
+    ],
+    "related": [
+      "[[s018b_face_identity_tiers]]",
+      "[[s001_cost_at_truth_cohort]]",
+      "[[concepts/known_pathologies_to_revalidate]]"
+    ]
+  },
+  {
+    "id": "s018b_face_identity_tiers",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s018b_face_identity_tiers.md",
+    "type": "experiment",
+    "title": "s018b — Face-identity tier classifier from peak brightness, post-fix m048",
+    "created": "2026-05-02",
+    "updated": "2026-05-02",
+    "confidence": "high",
+    "sources": [
+      "results/s018b/face_tiers.npz",
+      "results/s018b/summary.json",
+      "results/s018b_run.log"
+    ],
+    "related": [
+      "[[s018a_bright_band_calibration]]",
+      "[[s001_cost_at_truth_cohort]]",
+      "[[concepts/known_pathologies_to_revalidate]]"
+    ]
+  },
+  {
+    "id": "s018c_phi_sweep_pilot",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s018c_phi_sweep_pilot.md",
+    "type": "experiment",
+    "title": "s018c — phi-sweep IC generator + ω-grab diagnostic (pilot CANCELLED at the grab gate)",
+    "created": "2026-05-02",
+    "updated": "2026-05-02",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s018b_face_identity_tiers.md",
+      "notebooks/inversion/survey/experiments/s018a_bright_band_calibration.md",
+      "notebooks/inversion/survey/experiments/s011_q4cii_sobol_so3_polish_pilot.md",
+      "notebooks/inversion/survey/experiments/s015_joint_q0_omega_pilot.md",
+      "notebooks/inversion/survey/experiments/s016c_prime_fresh_sobol_fixed_omag.md",
+      "notebooks/inversion/survey/experiments/s017_hifi_rho_band_s016c_prime.md",
+      "notebooks/inversion/survey/experiments/s003_landscape_vs_omega.md"
+    ],
+    "related": [
+      "notebooks/inversion/survey/concepts/quaternion_convention.md",
+      "notebooks/inversion/survey/concepts/q_omega_coupling.md",
+      "notebooks/inversion/survey/concepts/known_pathologies_to_revalidate.md"
+    ]
+  },
+  {
+    "id": "s019_ls_bracket_omega_mag",
+    "goal_node": "goal_ls-bracket",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s019_ls_bracket_omega_mag.md",
+    "type": "experiment",
+    "title": "s019 — LS-bracket / harmonic-division ω-mag coverage on 100 post-fix m048",
+    "created": "2026-05-03",
+    "updated": "2026-05-03",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/wiki/wiki/experiments/m138_seed47_lombscargle_bracket.md",
+      "notebooks/inversion/wiki/wiki/concepts/omega-magnitude-estimation.md",
+      "notebooks/inversion/m138_ls_bracket_probe.py",
+      "notebooks/inversion/survey/experiments/s007_omega_mag_peak_spacing_pilot.md",
+      "notebooks/inversion/survey/experiments/s008_lc_feature_regression_omega.md"
+    ],
+    "related": [
+      "notebooks/inversion/survey/experiments/s018c_phi_sweep_pilot.md",
+      "notebooks/inversion/survey/concepts/q_omega_coupling.md",
+      "notebooks/inversion/survey/concepts/known_pathologies_to_revalidate.md"
+    ]
+  },
+  {
+    "id": "s019b_omega_dir_basin_at_truth_mag",
+    "goal_node": "goal_ls-bracket",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s019b_omega_dir_basin_at_truth_mag.md",
+    "type": "experiment",
+    "title": "s019b — ω-direction basin width at pinned truth-ω-mag (3 seeds)",
+    "created": "2026-05-03",
+    "updated": "2026-05-03",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s018c_phi_sweep_pilot.md",
+      "notebooks/inversion/survey/experiments/s019_ls_bracket_omega_mag.md",
+      "notebooks/inversion/survey/experiments/s003_landscape_vs_omega.md"
+    ],
+    "related": [
+      "notebooks/inversion/survey/concepts/q_omega_coupling.md",
+      "notebooks/inversion/survey/concepts/known_pathologies_to_revalidate.md"
+    ]
+  },
+  {
+    "id": "s020_seed_pipeline",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s020_seed_pipeline.md",
+    "type": "experiment",
+    "title": "s020 — bracket-augmented filter pipeline (NO LM polish), seed-6 diagnostic",
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "confidence": "high — first end-to-end run on 432k candidates; clear positive (architecture works) AND clear negative (truth-basin filtered out by strict thresholds)",
+    "sources": [
+      "experiments/s020_seed_pipeline.py",
+      "experiments/s020_seed_animate.py",
+      "results/s020/seed006/"
+    ],
+    "related": [
+      "s019 (bracket prior)",
+      "s019b (ω-dir basin width)",
+      "s018a + s018b (tier classifier)",
+      "s018c (phi-sweep IC)",
+      "s021..s027 (filter framework)"
+    ]
+  },
+  {
+    "id": "s021_truth_vs_random",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s021_truth_vs_random.md",
+    "type": "experiment",
+    "title": "s021 — Truth-vs-random filter score distributions, 100-seed cohort",
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/concepts/known_pathologies_to_revalidate.md",
+      "notebooks/inversion/survey/concepts/twin_degeneracy.md",
+      "notebooks/inversion/survey/results/s018a/calibration.npz",
+      "notebooks/inversion/survey/results/s018b/face_tiers.npz",
+      "notebooks/inversion/survey/lib/filter_costs.py"
+    ],
+    "related": [
+      "notebooks/inversion/survey/experiments/s022_known_good.md",
+      "notebooks/inversion/survey/experiments/s023_filter_composition.md",
+      "notebooks/inversion/survey/experiments/s027_cluster_topology.md"
+    ]
+  },
+  {
+    "id": "s022_known_good",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s022_known_good.md",
+    "type": "experiment",
+    "title": "s022 — Known-good validation: filters preserve multi-solution + in-basin candidates",
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s021_truth_vs_random.md",
+      "notebooks/inversion/survey/results/s014/rho_s011_nb.npz",
+      "notebooks/inversion/survey/lib/filter_costs.py"
+    ],
+    "related": [
+      "notebooks/inversion/survey/experiments/s023_filter_composition.md",
+      "notebooks/inversion/survey/concepts/observational_indistinguishability.md"
+    ]
+  },
+  {
+    "id": "s023_filter_composition",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s023_filter_composition.md",
+    "type": "experiment",
+    "title": "s023 — Filter composition + class stratification on s021 cohort",
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/results/s021/score_distributions.npz",
+      "notebooks/inversion/survey/results/s018b/face_tiers.npz"
+    ],
+    "related": [
+      "notebooks/inversion/survey/experiments/s021_truth_vs_random.md",
+      "notebooks/inversion/survey/experiments/s022_known_good.md",
+      "notebooks/inversion/survey/experiments/s027_cluster_topology.md"
+    ]
+  },
+  {
+    "id": "s024_omega_prior_pilot",
+    "goal_node": "goal_lc-omega-priors",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s024_omega_prior_pilot.md",
+    "type": "experiment",
+    "title": "s024 — Alignment-cost ω-prior pilot: filter, not localizer",
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/lib/filter_costs.py",
+      "notebooks/inversion/survey/results/s019/summary.json"
+    ],
+    "related": [
+      "notebooks/inversion/survey/experiments/s019_ls_bracket_omega_mag.md",
+      "notebooks/inversion/survey/experiments/s025_tube_shape.md",
+      "notebooks/inversion/survey/experiments/s021_truth_vs_random.md"
+    ]
+  },
+  {
+    "id": "s025_tube_shape",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s025_tube_shape.md",
+    "type": "experiment",
+    "title": "s025 — Tube-shape characterization: filter roll-off on each axis",
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/lib/filter_costs.py"
+    ],
+    "related": [
+      "notebooks/inversion/survey/experiments/s003_landscape_vs_omega.md",
+      "notebooks/inversion/survey/experiments/s019b_omega_dir_basin_at_truth_mag.md",
+      "notebooks/inversion/survey/experiments/s021_truth_vs_random.md"
+    ]
+  },
+  {
+    "id": "s027_cluster_topology",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s027_cluster_topology.md",
+    "type": "experiment",
+    "title": "s027 — Filter-conditioned cluster topology of survivor candidates",
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/results/s021/score_distributions.npz"
+    ],
+    "related": [
+      "notebooks/inversion/survey/experiments/s021_truth_vs_random.md",
+      "notebooks/inversion/survey/experiments/s022_known_good.md",
+      "notebooks/inversion/survey/experiments/s023_filter_composition.md",
+      "notebooks/inversion/survey/experiments/s014b_n_rotations_analysis.md"
+    ]
+  },
+  {
+    "id": "s030_relax_thresholds",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s030_relax_thresholds.md",
+    "type": "experiment",
+    "title": "s030 — relax-threshold sweep on cached s020 seed-6 data",
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "confidence": "high — pure post-process on cached 432k IC pool, basin-coverage counts are exact",
+    "sources": [
+      "experiments/s030_relax_thresholds.py",
+      "results/s030/seed006/"
+    ],
+    "related": [
+      "s020 (filter pipeline; cached candidates)",
+      "s022 (truth-calibration on n=15 known-good; off-truth-ω regime untested)",
+      "s023 (filter rejection rate on random panels)"
+    ]
+  },
+  {
+    "id": "s031_hifi_rerank_seed6",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s031_hifi_rerank_seed6.md",
+    "type": "experiment",
+    "title": "s031 — surrogate-MSE rank + hi-fi rerank of s030 relaxed survivors, seed 6",
+    "created": "2026-05-04",
+    "updated": "2026-05-05",
+    "confidence": "high — Stage A is decisive (n_pred_BandC = 0 across all levels) and Stage B confirms (0/200 Band A∪B; all 5 basin candidates also Band D)",
+    "sources": [
+      "experiments/s031_hifi_rerank_seed6.py  (Stage A driver — original; ran Stage A then was killed before useable Stage B)",
+      "experiments/s031b_hifi_only.py         (Stage B re-runner — fork context, BLAS=1, top-50/level + 5 basin extras)",
+      "results/s031/seed006/"
+    ],
+    "related": [
+      "s020 (filter pipeline)",
+      "s030 (relax-threshold sweep)",
+      "s014 (surrogate↔hi-fi Spearman 0.9952 outside basin)",
+      "s001 (cohort-scale truth surrogate-MSE = 3e-4 median, 2.9e-3 on seed 6)"
+    ]
+  },
+  {
+    "id": "s032_cohort_fast",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s032_cohort_fast.md",
+    "type": "experiment",
+    "title": "s032 — 100-seed cohort run of s020 with geo-fail gate",
+    "created": "2026-05-05",
+    "updated": "2026-05-05",
+    "confidence": "high",
+    "sources": [
+      "s020_seed_pipeline.py",
+      "s032_cohort_fast.sh",
+      "all 100 m048 trajectories"
+    ],
+    "related": [
+      "s020",
+      "s019",
+      "s018b",
+      "s031"
+    ]
+  },
+  {
+    "id": "s033_density_sensitivity",
+    "goal_node": "goal_cost-at-truth",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s033_density_sensitivity.md",
+    "type": "experiment",
+    "title": "s033 — density sensitivity (N_mag, N_dir, N_phi) on seed 89",
+    "created": "2026-05-05",
+    "updated": "2026-05-05",
+    "confidence": "high",
+    "sources": [
+      "s020_seed_pipeline.py",
+      "traj_seed089.npz"
+    ],
+    "related": [
+      "s032",
+      "s003",
+      "s019",
+      "s019b",
+      "s031",
+      "s034"
+    ]
+  },
+  {
+    "id": "s034_lm_polish_seed89",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s034_lm_polish_seed89.md",
+    "type": "experiment",
+    "title": "s034 — LM polish on top-50 surrogate-MSE survivors of seed 89 — basin hit",
+    "created": "2026-05-05",
+    "updated": "2026-05-05",
+    "confidence": "high",
+    "sources": [
+      "s033_n2000_m20_smoke/seed089/",
+      "traj_seed089.npz"
+    ],
+    "related": [
+      "s033",
+      "s003",
+      "s005",
+      "s017",
+      "s031"
+    ]
+  },
+  {
+    "id": "s035_hifi_confirm_seed89",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s035_hifi_confirm_seed89.md",
+    "type": "validation",
+    "title": "s035: Hi-fi confirmation of s034 polished candidates — seed 89",
+    "created": "2026-05-05",
+    "updated": "2026-05-05",
+    "confidence": "definitive",
+    "sources": [
+      "experiments/s034_lm_polish_seed89.md",
+      "results/s034_lm_polish_seed089/polish_summary.json"
+    ],
+    "related": [
+      "s034_lm_polish_seed89",
+      "s017_hifi_rho_band",
+      "s033_density_sensitivity"
+    ]
+  },
+  {
+    "id": "s036_multi_seed_pilot",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s036_multi_seed_pilot.md",
+    "type": "experiment",
+    "title": "s036: Multi-seed generalisation pilot — density+polish chain",
+    "created": "2026-05-05",
+    "updated": "2026-05-05",
+    "confidence": "definitive",
+    "sources": [
+      "experiments/s035_hifi_confirm_seed89.md",
+      "experiments/s033_density_sensitivity.md",
+      "experiments/s034_lm_polish_seed89.md",
+      "results/s032_cohort_fast/"
+    ],
+    "related": [
+      "s035_hifi_confirm_seed89",
+      "s034_lm_polish_seed89",
+      "s033_density_sensitivity",
+      "s011_sobol_shoemake_pilot",
+      "s006_narrow_basin_seeds"
+    ]
+  },
+  {
+    "id": "s037_sobol_lm_pilot",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s037_sobol_lm_pilot.md",
+    "type": "experiment",
+    "title": "s037: Sobol-Shoemake q0 + LM polish at bracket cells — architecture validated",
+    "created": "2026-05-05",
+    "updated": "2026-05-06",
+    "confidence": "definitive",
+    "sources": [
+      "experiments/s037b_sobol_lm_pilot.py",
+      "experiments/s037b_focused.py",
+      "experiments/s037_sobol_bracket_pilot.py",
+      "results/s037b_sobol_lm_pilot/"
+    ],
+    "related": [
+      "s036_multi_seed_pilot",
+      "s035_hifi_confirm_seed89",
+      "s011_q4cii_sobol_so3_polish_pilot",
+      "s003",
+      "s006"
+    ]
+  },
+  {
+    "id": "s038_filter_diagnostics_seed023",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s038_filter_diagnostics_seed023.md",
+    "type": "experiment",
+    "title": "s038: Filter diagnostics on seed 23 — why phi-sweep + LM lost the basin",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "definitive",
+    "sources": [
+      "experiments/s038_handoff_diagnosis_gaps.md",
+      "experiments/s036_multi_seed_pilot.md",
+      "experiments/s037_sobol_lm_pilot.md",
+      "results/s036_multi_seed_pilot/seed023/",
+      "results/s037b_sobol_lm_pilot/seed023_L1_result.json"
+    ],
+    "related": [
+      "s020",
+      "s034",
+      "s036",
+      "s037b"
+    ]
+  },
+  {
+    "id": "s038_handoff_diagnosis_gaps",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s038_handoff_diagnosis_gaps.md",
+    "type": "handoff",
+    "title": "s038 handoff: s036/s037 diagnosis was surface-level — what next agent must investigate",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "low (this is a problem statement, not a result)",
+    "sources": [
+      "experiments/s036_multi_seed_pilot.md",
+      "experiments/s037_sobol_lm_pilot.md",
+      "results/s036_multi_seed_pilot/seed023/",
+      "lib/filter_costs.py"
+    ],
+    "related": [
+      "s032",
+      "s033",
+      "s036",
+      "s037"
+    ]
+  },
+  {
+    "id": "s040_basin_radius_3seed",
+    "goal_node": "goal_basin-width",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s040_basin_radius_3seed.md",
+    "type": "experiment",
+    "title": "s040 — joint-LM basin radius on seeds 23/28/89 × {truth, twin}",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "high",
+    "sources": [
+      "experiments/s038_filter_diagnostics_seed023.md",
+      "experiments/s037_sobol_lm_pilot.md",
+      "experiments/s034_lm_polish_seed89.md",
+      "results/s040_basin_radius_3seed/"
+    ],
+    "related": [
+      "s011",
+      "s034",
+      "s037b",
+      "s038",
+      "s039_smoke_basin_walk"
+    ]
+  },
+  {
+    "id": "s042_basin_radius_cohort",
+    "goal_node": "goal_basin-width",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s042_basin_radius_cohort.md",
+    "type": "experiment",
+    "title": "s042 — joint-LM basin radius cohort probe (10 stratified seeds + s040's 3 = 13 seeds)",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "high",
+    "sources": [
+      "experiments/s040_basin_radius_3seed.md",
+      "experiments/s041_q0_saturation_probe.py",
+      "results/s042_basin_radius_cohort/",
+      "results/s032_cohort_fast/cohort_progress.csv"
+    ],
+    "related": [
+      "s011",
+      "s014b",
+      "s034",
+      "s040",
+      "s041"
+    ]
+  },
+  {
+    "id": "s043_twin_hifi_verify",
+    "goal_node": "goal_body-twin",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s043_twin_hifi_verify.md",
+    "type": "experiment",
+    "title": "s043 — body-twin LC equivalence verified bit-exact in hi-fi",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "definitive",
+    "sources": [
+      "lib/hifi_render.py",
+      "data/trajectories/traj_seed{023,028,089}.npz"
+    ],
+    "related": [
+      "s040",
+      "s042",
+      "feedback_twin_degeneracy.md"
+    ]
+  },
+  {
+    "id": "s044_canonical_validation",
+    "goal_node": "goal_body-twin",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s044_canonical_validation.md",
+    "type": "experiment",
+    "title": "s044 — canonical(q0, ω) implementation + validation",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "high",
+    "sources": [
+      "s043_twin_hifi_verify.md",
+      "concepts/twin_degeneracy.md"
+    ],
+    "related": [
+      "s042_basin_radius_cohort.md",
+      "s043_twin_hifi_verify.md"
+    ]
+  },
+  {
+    "id": "s045_bracket_density_projection",
+    "goal_node": "goal_ls-bracket",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s045_bracket_density_projection.md",
+    "type": "experiment",
+    "title": "s045 — |ω|-aware bracket density projection (pure-math, cached data)",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "medium",
+    "sources": [
+      "s032_cohort_fast.md",
+      "s042_basin_radius_cohort.md",
+      "s019_summary.json"
+    ],
+    "related": [
+      "s032_cohort_fast.md",
+      "s019_*",
+      "s039a_relaxed_filter_rescore.py"
+    ]
+  },
+  {
+    "id": "s046_s019_bracket_basin_coverage",
+    "goal_node": "goal_ls-bracket",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s046_s019_bracket_basin_coverage.md",
+    "type": "experiment",
+    "title": "s046 — s019 LS-bracket strategies re-scored against the s042 basin rule",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "high",
+    "sources": [
+      "experiments/s019_ls_bracket_omega_mag.md",
+      "experiments/s042_basin_radius_cohort.md",
+      "experiments/s045_bracket_density_projection.md"
+    ],
+    "related": [
+      "experiments/s032_cohort_fast.md",
+      "experiments/s039a_relaxed_filter_rescore.py"
+    ]
+  },
+  {
+    "id": "s047a_cell_filter_informativeness",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s047a_cell_filter_informativeness.md",
+    "type": "experiment",
+    "title": "s047a — cell-filter score picks the closest-to-truth cell on 72% of seeds (top-1) / 95% (top-2)",
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "confidence": "high",
+    "sources": [
+      "experiments/s032_cohort_fast.md",
+      "experiments/s046_s019_bracket_basin_coverage.md"
+    ],
+    "related": [
+      "experiments/s044_canonical_validation.md",
+      "experiments/s045_bracket_density_projection.md"
+    ]
+  },
+  {
+    "id": "s047b_seed14_full_bracket_cell_filter",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s047b_seed14_full_bracket_cell_filter.md",
+    "type": "experiment",
+    "title": "s047b — cell-filter rank match on seed 14's full s019 bracket (97 cells)",
+    "created": "2026-05-06",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "experiments/s047a_cell_filter_informativeness.md",
+      "experiments/s046_s019_bracket_basin_coverage.md",
+      "experiments/s019_ls_bracket_omega_mag.md"
+    ],
+    "related": [
+      "experiments/s032_cohort_fast.md",
+      "experiments/s042_basin_radius_cohort.md",
+      "experiments/s044_canonical_validation.md",
+      "experiments/s045_bracket_density_projection.md"
+    ]
+  },
+  {
+    "id": "s048_peak_cascade_smoke",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s048_peak_cascade_smoke.md",
+    "type": "experiment",
+    "title": "s048 — peak cascade smoke test (v2 surrogate, single seed)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "medium",
+    "sources": [
+      "user_idea",
+      "lib.surrogate_eval",
+      "lib.twin",
+      "lib.filter_costs",
+      "src.dynamics.attitude_propagator"
+    ],
+    "related": [
+      "s019",
+      "s032",
+      "s042",
+      "s043",
+      "s044",
+      "s047",
+      "s048b"
+    ]
+  },
+  {
+    "id": "s048b_per_epoch_spread_v1",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s048b_per_epoch_spread_v1.md",
+    "type": "experiment",
+    "title": "s048b — per-epoch C_t spread sweep (v1 surrogate, seed 89, 30 epochs)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "user_idea",
+      "s048",
+      "surrogate_v1",
+      "lib.filter_costs"
+    ],
+    "related": [
+      "s048",
+      "s019",
+      "s032",
+      "s042",
+      "s048c (planned animation)"
+    ]
+  },
+  {
+    "id": "s048c_cloud_viewer",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s048c_cloud_viewer.md",
+    "type": "tool",
+    "title": "s048c — cloud-evolution browser viewer (implementation)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07b",
+    "confidence": "high",
+    "sources": [
+      "s048",
+      "s048b",
+      "s048c_handoff",
+      "project_pab_manifold_viewer"
+    ],
+    "related": [
+      "s048",
+      "s048b",
+      "s048c_handoff"
+    ]
+  },
+  {
+    "id": "s048c_handoff",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s048c_handoff.md",
+    "type": "handoff",
+    "title": "s048c — handoff for cloud-evolution animation (next agent)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "s048",
+      "s048b",
+      "project_pab_manifold_viewer"
+    ],
+    "related": [
+      "s048",
+      "s048b",
+      "lib/hifi_isoshell_viewer.py"
+    ]
+  },
+  {
+    "id": "s049_cascade_seed14",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s049_cascade_seed14.md",
+    "type": "experiment",
+    "title": "s049 — multi-epoch consistency cascade on seed 14 (high-|ω|)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "experiments/s048_peak_cascade_smoke.md",
+      "experiments/s048b_per_epoch_spread_v1.md",
+      "experiments/s042_basin_radius_cohort.md"
+    ],
+    "related": [
+      "experiments/s044_canonical_validation.md"
+    ]
+  },
+  {
+    "id": "s050a_cluster_geometry",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s050a_cluster_geometry.md",
+    "type": "experiment",
+    "title": "s050a — Phase 1a cluster geometry of s049 cascade survivors (seed 14)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "experiments/s049_cascade_seed14.md"
+    ],
+    "related": [
+      "experiments/s048_peak_cascade_smoke.md",
+      "experiments/s048b_per_epoch_spread_v1.md",
+      "experiments/s042_basin_radius_cohort.md"
+    ]
+  },
+  {
+    "id": "s050b_validation_stress",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s050b_validation_stress.md",
+    "type": "experiment",
+    "title": "s050b — validation-step stress test on s049 cascade hypotheses",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "experiments/s049_cascade_seed14.md",
+      "experiments/s050a_cluster_geometry.md"
+    ],
+    "related": [
+      "experiments/s048_peak_cascade_smoke.md"
+    ]
+  },
+  {
+    "id": "s050cde_c1_concentration_dead",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s050cde_c1_concentration_dead.md",
+    "type": "experiment",
+    "title": "s050c/d/e — C1 quick test (multi-pair concentration) closed negative across three variants",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "experiments/s050a_cluster_geometry.md",
+      "experiments/s050b_validation_stress.md",
+      "experiments/s049_cascade_seed14.md"
+    ],
+    "related": [
+      "feedback_lc_spectral_omega_prior_dead.md"
+    ]
+  },
+  {
+    "id": "s051_polhode_observation",
+    "goal_node": "goal_polhode-prior",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s051_polhode_observation.md",
+    "type": "insight",
+    "title": "s051 — polhode-conditioned ω prior identified by direct visual observation",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "medium-high (architectural; numbers below need cohort-scale confirmation)",
+    "sources": [
+      "s048c_cloud_viewer (s048c+ side panels)",
+      "data/trajectories/traj_seed089.npz",
+      "s042_basin_radius_cohort"
+    ],
+    "related": [
+      "s048c_cloud_viewer",
+      "s042_basin_radius_cohort",
+      "concepts/polhode_prior",
+      "wiki/concepts/polhode-prior"
+    ]
+  },
+  {
+    "id": "s052_polhode_overlay",
+    "goal_node": "goal_polhode-prior",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s052_polhode_overlay.md",
+    "type": "experiment",
+    "title": "s052 — polhode-prior cannot rescue cascade noise on seed 14 (three diagnostics)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "experiments/s049_cascade_seed14.md",
+      "experiments/s050a_cluster_geometry.md",
+      "experiments/s050b_validation_stress.md",
+      "experiments/s050cde_c1_concentration_dead.md",
+      "experiments/s051_polhode_observation.md",
+      "concepts/polhode_prior.md"
+    ],
+    "related": [
+      "project_polhode_prior.md",
+      "feedback_visual_artefacts_unlock_insight.md"
+    ]
+  },
+  {
+    "id": "s053_cohort_polhode_survey",
+    "goal_node": "goal_basin-width",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s053_cohort_polhode_survey.md",
+    "type": "experiment",
+    "title": "s053 — cohort polhode survey + s042 basin-width cross-correlation",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "experiments/s042_basin_radius_cohort.md",
+      "experiments/s051_polhode_observation.md",
+      "experiments/s052_polhode_overlay.md",
+      "concepts/polhode_prior.md"
+    ],
+    "related": [
+      "project_omega_mag_basin_scales_with_omega.md",
+      "project_polhode_prior.md"
+    ]
+  },
+  {
+    "id": "s054_generate_holdout",
+    "goal_node": "goal_blind-fast-invert",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s054_generate_holdout.md",
+    "type": "experiment",
+    "title": "s054 — generate holdout trajectories with the m048 post-fix generator",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high",
+    "sources": [
+      "experiments/s053_cohort_polhode_survey.md"
+    ],
+    "related": [
+      "feedback_holdout_validation.md",
+      "feedback_analytical_vs_operational.md"
+    ]
+  },
+  {
+    "id": "s055a_pol_diam_lc_regression",
+    "goal_node": "goal_lc-omega-priors",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s055a_pol_diam_lc_regression.md",
+    "type": "experiment",
+    "title": "s055a — pol_diam regression from LC features",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "medium-high",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s055a_pol_diam_lc_regression.py",
+      "notebooks/inversion/survey/lib/lc_features.py",
+      "notebooks/inversion/survey/results/s053_cohort_polhode_survey/cohort.npz",
+      "notebooks/inversion/survey/results/s054_holdout/holdout_polhode.npz"
+    ],
+    "related": [
+      "s008 — LC-feature regression for ω-mag (LOO MAPE 16.4%; closed LC-only ω priors)",
+      "s053 — cohort polhode survey (pol_diam ρ=−0.94 vs basin width)",
+      "s054 — holdout corpus (m048 seeds 100..119)",
+      "feedback_holdout_validation.md — holdout-validate cohort priors"
+    ]
+  },
+  {
+    "id": "s055b_lhat_lc_regression",
+    "goal_node": "goal_lc-omega-priors",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s055b_lhat_lc_regression.md",
+    "type": "experiment",
+    "title": "s055b — L̂ (inertial angular momentum direction) regression from LC features",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (negative result)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s055b_lhat_lc_regression.py",
+      "notebooks/inversion/survey/lib/lc_features.py",
+      "notebooks/inversion/survey/lib/hifi_render.py (cached inertia tensor)"
+    ],
+    "related": [
+      "s055a — pol_diam regression (COARSE_USEFUL @ 25% holdout MAPE)",
+      "s053 — cohort polhode survey (pol_diam ρ=−0.94 vs basin width)",
+      "s048c+ — cloud-evolution viewer (visual surfacing of polhode framework)",
+      "s008 — LC-feature regression for ω-mag (closed LC-only |ω| priors)",
+      "feedback_holdout_validation.md"
+    ]
+  },
+  {
+    "id": "s055c_aux_priors",
+    "goal_node": "goal_lc-omega-priors",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s055c_aux_priors.md",
+    "type": "experiment",
+    "title": "s055c — Auxiliary scalar priors from LC: |cos(L̂,PAB)| and polhode-topology class",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (negative result)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s055c_aux_priors.py",
+      "notebooks/inversion/survey/lib/lc_features.py",
+      "notebooks/inversion/survey/lib/hifi_render.py"
+    ],
+    "related": [
+      "s055a — pol_diam regression (COARSE_USEFUL @ 25% holdout MAPE)",
+      "s055b — L̂ direction regression (WEAK @ 74° holdout median)",
+      "s053 — cohort polhode survey (pol_diam ρ=−0.94, D NOT correlated with basin width)"
+    ]
+  },
+  {
+    "id": "s055d_cascade_pol_diam_filter",
+    "goal_node": "goal_polhode-prior",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s055d_cascade_pol_diam_filter.md",
+    "type": "experiment",
+    "title": "s055d — Cascade-pool pol_diam filter on cached s049 seed-14 pool",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (negative result, two independent scenarios both close)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s055d_cascade_pol_diam_filter.py",
+      "notebooks/inversion/survey/results/s049_cascade_seed14/cascade.npz",
+      "notebooks/inversion/survey/results/s055a_pol_diam_lc_regression/regression.npz",
+      "notebooks/inversion/survey/results/s053_cohort_polhode_survey/cohort.npz"
+    ],
+    "related": [
+      "s055a — pol_diam regression (✓ COARSE_USEFUL @ 25% holdout MAPE)",
+      "s055b — L̂ direction regression (✗ WEAK @ 74° holdout)",
+      "s055c — |cos(L̂,PAB)| + polhode-binary class (✗ both WEAK)",
+      "s049 — cascade architecture works on seed 14 (truth-q_a survives)",
+      "s050a — cascade survivor pool 0.59× anti-enrichment, Phase-2 gated out",
+      {
+        "s050b/c/d/e — re-aggregate cascade pool": "closed negative across mag-agreement, multipair, q-space, peak-stationarity formulations"
+      }
+    ]
+  },
+  {
+    "id": "s056_ct_breathing_spectrum",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s056_ct_breathing_spectrum.md",
+    "type": "experiment",
+    "title": "s056 — |C_t|(t) breathing-spectrum sanity look on seed 89",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (single-seed result; methodology robust)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s056_ct_breathing_spectrum.py",
+      "notebooks/inversion/survey/results/s048c_cloud_viewer/seed089/8bb9b81f1602/spread.npz",
+      "notebooks/inversion/survey/results/s053_cohort_polhode_survey/cohort.npz",
+      "notebooks/inversion/survey/data/trajectories/traj_seed089.npz"
+    ],
+    "related": [
+      "s048c — cloud viewer (substrate)",
+      "s055a — pol_diam LC-recoverable at ~25% MAPE (the OTHER cloud-derived prior)",
+      "s055b/c/d — closed ω-direction priors from LC features alone",
+      "s056b — residual spectrum after regressing out mag (companion)"
+    ]
+  },
+  {
+    "id": "s056b_ct_residual_spectrum",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s056b_ct_residual_spectrum.md",
+    "type": "experiment",
+    "title": "s056b — log|C_t|(t) residual spectrum after regressing out mag_hifi",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (single-seed; methodology robust)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s056b_ct_residual_spectrum.py",
+      "notebooks/inversion/survey/results/s056_ct_breathing_spectrum/breathing_data.npz"
+    ],
+    "related": [
+      "s056 — primary breathing-spectrum analysis (mag-correlation finding)"
+    ]
+  },
+  {
+    "id": "s057_anchor_propagation",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057_anchor_propagation.md",
+    "type": "experiment",
+    "title": "s057 — anchor-propagation pilot on seed 89 (single anchor, single Δt)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "medium (Δt=10 chosen analytically, not empirically — see s057d)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s057_anchor_propagation.py",
+      "notebooks/inversion/survey/results/s048c_cloud_viewer/seed089/8bb9b81f1602/spread.npz",
+      "notebooks/inversion/survey/data/trajectories/traj_seed089.npz"
+    ],
+    "related": [
+      "s048c — cloud viewer (substrate)",
+      "s057b — anchor scan",
+      "s057c — truth-pair ω diagnostic",
+      "s057d — Δt sweep",
+      "s057f — per-q_a consistency",
+      "s057g — forward-propagation discrimination (the major outcome of this series)"
+    ]
+  },
+  {
+    "id": "s057b_anchor_scan",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057b_anchor_scan.md",
+    "type": "experiment",
+    "title": "s057b — anchor scan: where is truth-q in cloud at both t_a and t_b?",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (pure cached-data lookup)",
+    "sources": [],
+    "related": []
+  },
+  {
+    "id": "s057c_truth_pair_omega",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057c_truth_pair_omega.md",
+    "type": "experiment",
+    "title": "s057c — locate the truth-representative pair and check what ω it implies",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (deterministic measurement, no statistical noise)",
+    "sources": [],
+    "related": []
+  },
+  {
+    "id": "s057d_dt_sweep",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057d_dt_sweep.md",
+    "type": "experiment",
+    "title": "s057d — Δt sweep at single anchor t_a=411, addressing s057's analytic-Δt critique",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (single-anchor sweep, repeatable)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s057d_dt_sweep.py"
+    ],
+    "related": [
+      "s057 — used Δt=10 chosen analytically (per-pair SNR estimate)",
+      "s057c — per-pair noise floor diagnosis"
+    ]
+  },
+  {
+    "id": "s057e_multi_anchor",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057e_multi_anchor.md",
+    "type": "experiment",
+    "title": "s057e — multi-anchor aggregation at Δt=3 on seed 89",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "medium (anchor selection by closest-in-cloud sum is suboptimal; see status)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s057e_multi_anchor.py"
+    ],
+    "related": [
+      "s057d — Δt=3 best concentration ratio at single anchor",
+      "s057b — anchor pair candidates"
+    ]
+  },
+  {
+    "id": "s057f_per_qa_consistency",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057f_per_qa_consistency.md",
+    "type": "experiment",
+    "title": "s057f — per-q_a multi-Δt consistency test (geometric structural failure)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (decisive structural finding; oracle test isolates noise vs architecture)",
+    "sources": [],
+    "related": []
+  },
+  {
+    "id": "s057g_forward_propagation",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057g_forward_propagation.md",
+    "type": "experiment",
+    "title": "s057g — forward-propagation discrimination on seed 89 (4400× over null)",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (discrimination ratio 4400× over null is qualitatively decisive; multi-solution interpretation requires s057h/i for full picture)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s057g_forward_propagation.py"
+    ],
+    "related": [
+      "s057f — per-q_a centroid metric failed structurally; this pivots to forward-prop",
+      "s057h — canonicalisation + clustering on top of these candidates",
+      "s057i — hi-fi validation reframes interpretation"
+    ]
+  },
+  {
+    "id": "s057h_canonical_cluster",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057h_canonical_cluster.md",
+    "type": "experiment",
+    "title": "s057h — body-twin canonicalisation + cluster-rank candidates from s057g",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (deterministic clustering on canonical space)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s057h_canonical_cluster.py",
+      "notebooks/inversion/survey/lib/twin.py"
+    ],
+    "related": [
+      "s057g — forward-propagation candidates (548 total, truth at 90th %ile by score)",
+      "s057i — hi-fi validation"
+    ]
+  },
+  {
+    "id": "s057i_hifi_validate",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s057i_hifi_validate.md",
+    "type": "experiment",
+    "title": "s057i — hi-fi LC validation of top forward-prop candidate clusters",
+    "created": "2026-05-07",
+    "updated": "2026-05-07",
+    "confidence": "high (16 hi-fi renders + smoke tests both pass; the methodology limit is real)",
+    "sources": [],
+    "related": []
+  },
+  {
+    "id": "s058_lm_polish_clusters",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s058_lm_polish_clusters.md",
+    "type": "experiment",
+    "title": "s058 — LM polish on s057h cluster representatives",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high",
+    "sources": [
+      "results/s058_lm_polish_clusters/",
+      "experiments/s058_lm_polish_clusters.py"
+    ],
+    "related": [
+      "s057g_forward_propagation",
+      "s057h_canonical_cluster",
+      "s057i_hifi_validate",
+      "s044_canonical_validation",
+      "s011_*",
+      "s014b_*"
+    ]
+  },
+  {
+    "id": "s059_thread",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s059_thread.md",
+    "type": "experiment-thread",
+    "title": "s059 thread — cloud-data architecture cohort validation, diagnosis, and reframe",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high (negative result on architecture-as-was; positive on the diagnostic chain)",
+    "sources": [
+      "s058_lm_polish_clusters.md (precursor)",
+      "s059_pilot.py",
+      "s059b_diagnose_seed28.py",
+      "s059c_anchor_polish.py",
+      "s059d_early_anchor.py",
+      "s059e_local_window.py",
+      "s059f_score_diagnostic.py",
+      "s059g_realdyn_score.py",
+      "s059h_omega_grid.py"
+    ],
+    "related": [
+      "feedback_oracle_injection_taints_yield.md",
+      "feedback_use_existing_lib_forward.md",
+      "project_score_function_broken_const_omega.md",
+      "project_omega_grid_architecture.md"
+    ]
+  },
+  {
+    "id": "s059i_cohort_density_scan",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s059i_cohort_density_scan.md",
+    "type": "validator",
+    "title": "s059i_cohort_density_scan — closest-to-truth at T_A=25 across 8-seed cohort vs SO(3) pool density",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high (8 seeds × 4 densities × 3 RNGs; cohort-viability decisively positive at N=400k)",
+    "sources": [
+      "experiments/s059i_cohort_density_scan.py",
+      "experiments/s059i_density_scan.md",
+      "experiments/s059i_validator_perturbed.md"
+    ],
+    "related": [
+      "project_omega_grid_architecture.md"
+    ]
+  },
+  {
+    "id": "s059i_density_scan",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s059i_density_scan.md",
+    "type": "validator",
+    "title": "s059i_density_scan — closest-to-truth in survival cloud at T_A vs SO(3) pool size",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high (single seed, 3 RNG trials per density; surfaces a structural variance issue not captured by raw sample count)",
+    "sources": [
+      "experiments/s059i_density_scan.py",
+      "experiments/s059i_validator_perturbed.md",
+      "experiments/s059_thread.md"
+    ],
+    "related": [
+      "project_omega_grid_architecture.md"
+    ]
+  },
+  {
+    "id": "s059i_validator",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s059i_validator.md",
+    "type": "validator",
+    "title": "s059i_validator — local-window ω-grid cost surface at truth q_a",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high (clean positive on the q_a=truth case; cloud-q_a noise sensitivity not yet tested)",
+    "sources": [
+      "experiments/s059i_validator.py",
+      "experiments/s059_thread.md",
+      "experiments/s059e_local_window.py"
+    ],
+    "related": [
+      "project_omega_grid_architecture.md",
+      "project_score_function_broken_const_omega.md",
+      "feedback_use_existing_lib_forward.md"
+    ]
+  },
+  {
+    "id": "s059i_validator_perturbed",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s059i_validator_perturbed.md",
+    "type": "validator",
+    "title": "s059i_validator_perturbed — q_a noise sensitivity of the ω-grid cost surface",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high (3 trials × 6 perturbation magnitudes; bimodal regime at the realistic cloud-quantization scale identified clearly)",
+    "sources": [
+      "experiments/s059i_validator_perturbed.py",
+      "experiments/s059i_validator.md",
+      "experiments/s059_thread.md"
+    ],
+    "related": [
+      "project_omega_grid_architecture.md"
+    ]
+  },
+  {
+    "id": "s059j_cloud_data_omega_grid",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s059j_cloud_data_omega_grid.md",
+    "type": "experiment",
+    "title": "s059j — cloud-data ω-grid search single-seed pilot on seed 28",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high (pipeline correct; bottleneck identified post-hoc by W-sweep + axis-decoupled probe)",
+    "sources": [
+      "experiments/s059j_cloud_data_omega_grid.py",
+      "experiments/s059j_design.md",
+      "experiments/s059i_validator.md",
+      "experiments/s059i_validator_perturbed.md",
+      "experiments/s059i_cohort_density_scan.md"
+    ],
+    "related": [
+      "project_omega_grid_architecture.md",
+      "feedback_oracle_injection_taints_yield.md",
+      "feedback_use_existing_lib_forward.md",
+      "feedback_lm_cost_use_surrogate.md"
+    ]
+  },
+  {
+    "id": "s059j_design",
+    "goal_node": "goal_cloud-data-seedgen",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s059j_design.md",
+    "type": "design",
+    "title": "s059j — design doc for the cloud-data ω-grid search (anchor-selection-aware)",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high (architecture validated end-to-end at cohort scale; implementation is straight-ahead)",
+    "sources": [
+      "experiments/s059i_validator.md",
+      "experiments/s059i_validator_perturbed.md",
+      "experiments/s059i_density_scan.md",
+      "experiments/s059i_cohort_density_scan.md",
+      "experiments/s059_thread.md"
+    ],
+    "related": [
+      "project_omega_grid_architecture.md",
+      "feedback_use_existing_lib_forward.md",
+      "feedback_oracle_injection_taints_yield.md",
+      "feedback_lm_cost_use_surrogate.md",
+      "feedback_surrogate_first_hifi_last.md"
+    ]
+  },
+  {
+    "id": "s059k_densify_ndirs",
+    "goal_node": "goal_densify-ndirs",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s059k_densify_ndirs.md",
+    "type": "experiment",
+    "title": "s059k — densified ω-grid (N_DIRS=800) inversion attempt + diagnostics",
+    "created": "2026-05-08",
+    "updated": "2026-05-08",
+    "confidence": "high",
+    "sources": [
+      "experiments/s059j_cloud_data_omega_grid.md",
+      "experiments/s059i_validator_perturbed.md",
+      "experiments/s058_lm_polish_clusters.md",
+      "results/s059j_cloud_data_omega_grid/seed028/"
+    ],
+    "related": [
+      "project_omega_grid_architecture.md",
+      "feedback_oracle_injection_taints_yield.md",
+      "feedback_validators_must_match_production_cost.md"
+    ]
+  },
+  {
+    "id": "s060_anchor_topology",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s060_anchor_topology.md",
+    "type": "experiment",
+    "title": "s060 — anchor topology classifier (cluster structure of survivors)",
+    "created": "2026-05-09",
+    "updated": "2026-05-09",
+    "confidence": "high (direct measurement; user's geometric intuition validated on 3 seeds)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s060_anchor_topology.py",
+      "notebooks/inversion/survey/results/s060_sharpness_map/seed{028,089,010}/anchor_topology.json"
+    ],
+    "related": [
+      "s060_sharpness_map — full-LC |C_t|(t) (substrate)",
+      "s060_cohort_anchor_topology — generalization across 11 PA-stratified seeds",
+      "feedback_finite_diff_small_geodesic_noise — s057f-era observation"
+    ]
+  },
+  {
+    "id": "s060_cohort_anchor_topology",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s060_cohort_anchor_topology.md",
+    "type": "experiment",
+    "title": "s060 — cohort generalization of bright/dim anchor topology",
+    "created": "2026-05-09",
+    "updated": "2026-05-10",
+    "confidence": "high (11-seed sample, two extreme regions per seed)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s060_cohort_anchor_topology.py",
+      "notebooks/inversion/survey/results/s060_cohort_topology/seed*.json"
+    ],
+    "related": [
+      "s060_sharpness_map — full-LC |C_t|(t) on 3 seeds",
+      "s060_anchor_topology — per-anchor cluster structure on 3 seeds",
+      "s060_multi_anchor_design — architectural design",
+      "s011 — PA-stratified pilot cohort {6, 10, 21, 28, 41, 44, 48, 60, 84, 91}"
+    ]
+  },
+  {
+    "id": "s060_multi_anchor_design",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s060_multi_anchor_design.md",
+    "type": "design",
+    "title": "s060 — multi-anchor C_t architecture design (post-s059k)",
+    "created": "2026-05-09",
+    "updated": "2026-05-10",
+    "confidence": "medium (untested architecture; sharpness + topology + cohort substrate confirmed)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s060_sharpness_map.py",
+      "notebooks/inversion/survey/results/s060_sharpness_map/seed028/summary.json",
+      "notebooks/inversion/survey/experiments/s059j_design.md",
+      "notebooks/inversion/survey/experiments/s059k_full_lc_from_seeds.py"
+    ],
+    "related": [
+      "s059j — single-anchor cloud-data ω-grid (failed go/no-go on seed 28)",
+      "s059k — densified s059j + multi-mag-start (Band A on seeds 89+10)",
+      "s057f — per-pair finite-diff failure (small Δt geometric noise)",
+      "s057g — forward-propagation discrimination (4400× over null, all-cloud weighting)",
+      "s018b — face-identity tier classifier (buggy-era predecessor)",
+      "project_sharpness_not_brightness.md — sharp anchors include dim moments"
+    ]
+  },
+  {
+    "id": "s060_sharpness_map",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s060_sharpness_map.md",
+    "type": "experiment",
+    "title": "s060 — full-LC |C_t|(t) sharpness diagnostic",
+    "created": "2026-05-09",
+    "updated": "2026-05-09",
+    "confidence": "high (direct measurement on 3 seeds; full-LC scan)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s060_sharpness_map.py",
+      "notebooks/inversion/survey/results/s060_sharpness_map/seed{028,089,010}/"
+    ],
+    "related": [
+      "s059j_design — single-anchor argmin|C_t|(t) restricted to early window [3, 30)",
+      "s048c+ cloud viewer — frame-by-frame visualization of survivor cloud",
+      "project_sharpness_not_brightness.md — sharpness ≠ brightness"
+    ]
+  },
+  {
+    "id": "s060_v1_v2_cloud_compare",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s060_v1_v2_cloud_compare.md",
+    "type": "experiment",
+    "title": "s060 — v1 vs v2 cloud comparison at LC extrema (seed 14)",
+    "created": "2026-05-10",
+    "updated": "2026-05-10",
+    "confidence": "high (direct measurement, cached pool reproduced exact v1 |C_t|)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s060_v1_v2_cloud_compare.py",
+      "notebooks/inversion/survey/results/s060_v1_v2_compare/seed14_extrema_v1_vs_v2_cloud.png",
+      "notebooks/inversion/survey/results/s049_cascade_seed14/scan.npz"
+    ],
+    "related": [
+      "s060_v1_v2_lc_compare.md (the LC-regime predecessor)",
+      "s049_cascade_seed14 (source of cached 500k v1 pool)",
+      "feedback_finite_diff_small_geodesic_noise.md (s057f finding now flagged for v1 retest)",
+      "project_surrogate_model.md (v1↔v2 benchmarks)"
+    ]
+  },
+  {
+    "id": "s060_v1_v2_lc_compare",
+    "goal_node": "goal_anchor-selection",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s060_v1_v2_lc_compare.md",
+    "type": "experiment",
+    "title": "s060 — v1 vs v2 surrogate LC residuals on seed 28",
+    "created": "2026-05-10",
+    "updated": "2026-05-10",
+    "confidence": "high (direct render of cached k1/k2)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s060_v1_v2_render.py",
+      "notebooks/inversion/survey/results/s060_v1_v2_compare/seed28_v1_vs_truth.png",
+      "notebooks/inversion/survey/results/s060_v1_v2_compare/seed28_v2_vs_truth.png"
+    ],
+    "related": [
+      "project_surrogate_model.md (v1↔v2 benchmarks)",
+      "s060_v1_v2_cloud_compare.md (the cloud-regime sequel that flipped the conclusion)"
+    ]
+  },
+  {
+    "id": "s061a_thread_smoke",
+    "goal_node": "goal_threading",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s061a_thread_smoke.md",
+    "type": "experiment",
+    "title": "s061a — 1-step cloud-threading smoke (seed 89, ω_max=1.5 dps)",
+    "created": "2026-05-10",
+    "updated": "2026-05-10",
+    "confidence": "high (mechanism check; truth tracks)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s061a_thread_smoke.py",
+      "notebooks/inversion/survey/results/s061a_thread_smoke/seed089/summary.json",
+      "notebooks/inversion/survey/results/s060_sharpness_map/seed089/anchor_topology.json"
+    ],
+    "related": [
+      "s048c — cloud viewer (substrate)",
+      "s060_anchor_topology — clean-dim anchor at seed 89 t=208",
+      "s060_multi_anchor_design — uses Newton-shoot ω instead of tube sampling"
+    ]
+  },
+  {
+    "id": "s061b_multi_step_thread",
+    "goal_node": "goal_threading",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s061b_multi_step_thread.md",
+    "type": "experiment",
+    "title": "s061b — multi-step cloud threading on seed 89 (30 epochs each direction)",
+    "created": "2026-05-10",
+    "updated": "2026-05-10",
+    "confidence": "high (mechanism + truth-tracking measurement on slow seed)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s061b_multi_step_thread.py",
+      "notebooks/inversion/survey/results/s061b_multi_step_thread/seed089/summary.json"
+    ],
+    "related": [
+      "s061a — 1-step smoke (substrate)",
+      "s061c — same architecture on seed 28 (high-\\|ω\\| contrast case)"
+    ]
+  },
+  {
+    "id": "s061c_seed28_thread",
+    "goal_node": "goal_threading",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s061c_seed28_thread.md",
+    "type": "experiment",
+    "title": "s061c — multi-step threading on seed 28 (high-\\|ω\\| where s059j ω-grid failed)",
+    "created": "2026-05-10",
+    "updated": "2026-05-10",
+    "confidence": "medium-high (clear cluster-death signal; truth-lineage tracking",
+    "sources": [],
+    "related": []
+  },
+  {
+    "id": "s062_jacobi",
+    "goal_node": "goal_jacobi-propagator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s062_jacobi.md",
+    "type": "experiment",
+    "title": "s062 — Jacobi-elliptic closed-form omega(t) validated across the post-fix m048 cohort",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (cohort-validated; closed-form omega agreement to integration-noise floor on 120 trajectories)",
+    "sources": [
+      "concepts/jacobi_propagation.md",
+      "experiments/s062_jacobi_design.md",
+      "src/dynamics/attitude_propagator.py",
+      "lib/jacobi_propagator.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "project_polhode_prior.md",
+      "feedback_verify_quaternion_convention.md"
+    ]
+  },
+  {
+    "id": "s062_jacobi_design",
+    "goal_node": "goal_jacobi-propagator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s062_jacobi_design.md",
+    "type": "design",
+    "title": "s062 — design doc for Jacobi-elliptic closed-form propagation",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (math + literature are settled; risk is in convention bookkeeping during the q(t) implementation — gated by a non-negotiable round-trip test)",
+    "sources": [
+      "concepts/jacobi_propagation.md",
+      "concepts/polhode_prior.md",
+      "concepts/quaternion_convention.md",
+      "src/dynamics/attitude_propagator.py",
+      "experiments/s061c_seed28_thread.md"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "project_polhode_prior.md",
+      "feedback_verify_quaternion_convention.md",
+      "feedback_use_existing_lib_forward.md"
+    ]
+  },
+  {
+    "id": "s062b_jacobi_quaternion",
+    "goal_node": "goal_jacobi-propagator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s062b_jacobi_quaternion.md",
+    "type": "experiment",
+    "title": "s062b — closed-form Jacobi q(t) attempted via Path 2; convention puzzle resolved by s065; hybrid retained as production",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (hybrid validated; Path 2 convention puzzle root-caused by s065 — propagator has an omega-sign convention residual, not a quaternion bug)",
+    "sources": [
+      "lib/jacobi_propagator.py",
+      "experiments/s062_jacobi_design.md",
+      "experiments/s065_propagator_convention_spice_test.md",
+      "concepts/jacobi_propagation.md",
+      "concepts/quaternion_convention.md",
+      "src/dynamics/attitude_propagator.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "feedback_verify_quaternion_convention.md"
+    ]
+  },
+  {
+    "id": "s063a_polhode_bijectivity",
+    "goal_node": "goal_polhode-prior",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s063a_polhode_bijectivity.md",
+    "type": "experiment",
+    "title": "s063a — Polhode coordinates ↔ omega_a bijectivity (200-case round-trip)",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (200/200 cases pass at machine precision)",
+    "sources": [
+      "lib/jacobi_propagator.py",
+      "experiments/s062_jacobi.md"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "project_polhode_prior.md"
+    ]
+  },
+  {
+    "id": "s063b_polhode_curvature",
+    "goal_node": "goal_polhode-prior",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s063b_polhode_curvature.md",
+    "type": "experiment",
+    "title": "s063b — Cost-surface curvature: polhode tangent vs polhode-normal at truth (3 seeds)",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "medium-high (3 seeds; consistent direction; deeper-perturbation saturation limits the curvature ratio precision)",
+    "sources": [
+      "lib/jacobi_propagator.py",
+      "lib/surrogate_eval.py",
+      "lib/forward.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "project_polhode_prior.md",
+      "project_omega_mag_basin_scales_with_omega.md"
+    ]
+  },
+  {
+    "id": "s063c_polhode_census",
+    "goal_node": "goal_polhode-prior",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s063c_polhode_census.md",
+    "type": "experiment",
+    "title": "s063c — Cohort polhode census via closed-form Jacobi (120 m048 seeds)",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (cohort-complete; closed-form is exact)",
+    "sources": [
+      "lib/jacobi_propagator.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "project_polhode_prior.md"
+    ]
+  },
+  {
+    "id": "s063d_polhode_identity_filter",
+    "goal_node": "goal_polhode-prior",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s063d_polhode_identity_filter.md",
+    "type": "experiment",
+    "title": "s063d — Jacobi polhode-identity filter retest on s055d pool (seed 14, ORACLE upper bound)",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (numerical filter result; the architectural conclusion follows directly)",
+    "sources": [
+      "lib/jacobi_propagator.py",
+      "results/s055d_cascade_pol_diam_filter/pool.npz"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "project_polhode_prior.md",
+      "project_score_function_broken_const_omega.md",
+      "feedback_finite_diff_small_geodesic_noise.md"
+    ]
+  },
+  {
+    "id": "s064_jacobi_polish",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s064_jacobi_polish.md",
+    "type": "experiment",
+    "title": "s064 — Jacobi-coord LM polish: 5/50 Band A on seed 89 vs s059k baseline 4/50, with NEW truth-basin cluster id=125",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (Gates 1, 2, 3 PASS on seed 89; new Band A cluster id=125 not in s059k baseline)",
+    "sources": [
+      "experiments/s058_lm_polish_clusters.py",
+      "experiments/s059k_full_lc_from_seeds.py",
+      "experiments/s059k_densify_ndirs.md",
+      "experiments/s063b_polhode_curvature.md",
+      "lib/jacobi_propagator.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "feedback_local_window_polish_phantom_basins"
+    ]
+  },
+  {
+    "id": "s065_propagator_convention_spice_test",
+    "goal_node": "goal_convention-bug",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s065_propagator_convention_spice_test.md",
+    "type": "experiment",
+    "title": "s065 — Propagator-vs-SPICE convention test (resolves s062b puzzle)",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (machine-precision SPICE comparison, reproducible script)",
+    "sources": [
+      "src/dynamics/attitude_propagator.py",
+      "src/spice/spice_handler.py",
+      "data/spice_kernels/missions/dst-is901/INTELSAT_901-metakernel.tm"
+    ],
+    "related": [
+      "experiments/s062b_jacobi_quaternion.md",
+      "concepts/quaternion_convention.md",
+      "feedback_verify_quaternion_convention.md"
+    ]
+  },
+  {
+    "id": "s066_lj2000_nonconservation",
+    "goal_node": "goal_convention-bug",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s066_lj2000_nonconservation.md",
+    "type": "experiment",
+    "title": "s066 — L_J2000 non-conservation: m048 codebase trajectories are non-physical",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (empirical, reproduced on a controlled toy AND the m048 cohort, with an independent textbook integrator as control)",
+    "sources": [
+      "src/dynamics/attitude_propagator.py",
+      "experiments/s065_propagator_convention_spice_test.md",
+      "experiments/s062b_jacobi_quaternion.md",
+      "concepts/quaternion_convention.md"
+    ],
+    "related": [
+      "feedback_propagator_omega_sign_convention.md",
+      "project_convention_bug_2026_04_30.md"
+    ]
+  },
+  {
+    "id": "s067_postfix_propagator_validation",
+    "goal_node": "goal_convention-bug",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s067_postfix_propagator_validation.md",
+    "type": "experiment",
+    "title": "s067 — Post-fix propagator validation: SPICE pxform + L_J2000 + Jacobi cross-check, all 4 gates PASS",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (4-gate regression test, all PASS)",
+    "sources": [
+      "src/dynamics/attitude_propagator.py (post-2026-05-12 sign fix)",
+      "lib/jacobi_propagator.py (post-2026-05-12 sign fix)",
+      "experiments/s065_propagator_convention_spice_test.md",
+      "experiments/s066_lj2000_nonconservation.md"
+    ],
+    "related": [
+      "feedback_propagator_omega_sign_convention.md"
+    ]
+  },
+  {
+    "id": "s068_replicate_s011",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s068_replicate_s011.md",
+    "type": "experiment",
+    "title": "s068 — Replicate s011 (Q4c-ii cohort baseline) on post-fix m048: 10/10 yield (improved from 9/10)",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (full cohort run, direct pre/post comparison)",
+    "sources": [
+      "experiments/s011_q4cii_sobol_so3_polish_pilot.py (unchanged)",
+      "results/s011/ (post-fix)",
+      "results_prefix/s011/ (pre-fix baseline)"
+    ],
+    "related": [
+      "experiments/s067_postfix_propagator_validation.md",
+      "experiments/s067b_cohort_lj2000_audit.py"
+    ]
+  },
+  {
+    "id": "s069_replicate_s059k",
+    "goal_node": "goal_densify-ndirs",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s069_replicate_s059k.md",
+    "type": "experiment",
+    "title": "s069 — Replicate s059k (Band A on cohort, no oracle) on post-fix m048: architecture works, seed 89 yield shifts 4→1",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (full pipeline + 5 mag-offsets, direct pre/post comparison)",
+    "sources": [
+      "experiments/s059j_cloud_data_omega_grid.py (unchanged)",
+      "experiments/s059k_full_lc_from_seeds.py (unchanged)"
+    ],
+    "related": [
+      "experiments/s067_postfix_propagator_validation.md",
+      "results/s059k_nd800_seed89/seed089/ (post-fix s059j output)",
+      "results/s059k_nd800_seed89/seed089/full_lc_seeds/summary.json (post-fix s059k full_lc)"
+    ]
+  },
+  {
+    "id": "s070_replicate_s064",
+    "goal_node": "goal_joint-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s070_replicate_s064.md",
+    "type": "experiment",
+    "title": "s070 — Replicate s064 (Jacobi-coord LM polish) on post-fix m048 seed 89: 1/50 yield, matches s069 vanilla",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (Gate 3 cohort regression with 5 mag-offsets, direct comparison to s069 + pre-fix)",
+    "sources": [
+      "experiments/s064_jacobi_polish.py (unchanged; uses post-fix lib/jacobi_propagator.py)",
+      "results/s059k_nd800_seed89/seed089/ (post-fix s059j output, shared with s069)"
+    ],
+    "related": [
+      "experiments/s067_postfix_propagator_validation.md",
+      "experiments/s069_replicate_s059k.md"
+    ]
+  },
+  {
+    "id": "s071_replicate_s062a",
+    "goal_node": "goal_jacobi-propagator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s071_replicate_s062a.md",
+    "type": "experiment",
+    "title": "s071 — Replicate s062a (Jacobi closed-form ω(t) cohort validation) on post-fix m048",
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "confidence": "high (cohort-wide replication PASS, direct comparison to pre-fix)",
+    "sources": [
+      "lib/jacobi_propagator.py (post-2026-05-12 sign fix)",
+      "experiments/s062_jacobi.py",
+      "experiments/s062_jacobi.md (pre-fix original)"
+    ],
+    "related": [
+      "experiments/s067_postfix_propagator_validation.md",
+      "experiments/s067b_cohort_lj2000_audit.py"
+    ]
+  },
+  {
+    "id": "s072_path2_closed_form_q",
+    "goal_node": "goal_jacobi-propagator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s072_path2_closed_form_q.md",
+    "type": "experiment",
+    "title": "s072 — Path 2 closed-form q(t) lands post-fix; three-gate validation passes strict 1e-9",
+    "created": "2026-05-13",
+    "updated": "2026-05-13",
+    "confidence": "high (numerical evidence + math is closed-form)",
+    "sources": [
+      "experiments/s062_jacobi_design.md",
+      "experiments/s062b_jacobi_quaternion.md",
+      "concepts/jacobi_propagation.md",
+      "concepts/quaternion_convention.md",
+      "lib/jacobi_propagator.py",
+      "src/dynamics/attitude_propagator.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "feedback_verify_quaternion_convention.md",
+      "s067_postfix_propagator_validation.md"
+    ]
+  },
+  {
+    "id": "s073_cluster457_l_vector_check",
+    "goal_node": "goal_l-vector-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s073_cluster457_l_vector_check.md",
+    "type": "experiment",
+    "title": "s073 — cluster_457 L-vector check: L-conservation cross-anchor discriminates the seed-89 Band A multi-sol",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "high (one number, computed two ways agreeing)",
+    "sources": [
+      "experiments/s069_replicate_s059k.md",
+      "experiments/s066_lj2000_nonconservation.py",
+      "lib/jacobi_propagator.py",
+      "lib/traj_load.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "feedback_propagator_omega_sign_convention.md"
+    ]
+  },
+  {
+    "id": "s073b_path2_cprofile",
+    "goal_node": "goal_jacobi-propagator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s073b_path2_cprofile.md",
+    "type": "experiment",
+    "title": "s073b — Path 2 cProfile: solve_ivp(phi_dot) is 81% of wall; elliprj replacement is the right axis",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "high (single-candidate profile, clear hot-path)",
+    "sources": [
+      "experiments/s072_path2_closed_form_q.md",
+      "lib/jacobi_propagator.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md"
+    ]
+  },
+  {
+    "id": "s073c_literature_novelty_audit",
+    "goal_node": "goal_rf25-audit",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s073c_literature_novelty_audit.md",
+    "type": "audit",
+    "title": "s073c — literature novelty audit of the L_J2000-ambiguity framing + scope correction on s073 claims",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "high (literature triangulated from three independent searches; scope correction stated explicitly)",
+    "sources": [
+      "experiments/s073_cluster457_l_vector_check.md",
+      "experiments/s073b_path2_cprofile.md"
+    ],
+    "related": [
+      "experiments/s073_cluster457_l_vector_check.md",
+      "experiments/s073b_path2_cprofile.md",
+      "experiments/s072_path2_closed_form_q.md"
+    ]
+  },
+  {
+    "id": "s073e_robinson_frueh_2025_full_audit",
+    "goal_node": "goal_rf25-audit",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s073e_robinson_frueh_2025_full_audit.md",
+    "type": "audit",
+    "title": "s073e — Robinson & Frueh 2025 full-paper audit: implementation lessons + encroachment assessment on the cat-4 framing",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "high (entire 37-page paper read; quotes pulled from the PDF with page numbers; encroachment analysis triangulated against s073/s073c/s073d data we already have)",
+    "sources": [
+      "/home/girish/Documents/s40295-025-00557-9.pdf  (Robinson & Frueh 2025, J. Astronaut. Sci. 73:7, DOI 10.1007/s40295-025-00557-9)",
+      "experiments/s073c_literature_novelty_audit.md",
+      "experiments/s073d_polhode_match_cluster457.md"
+    ],
+    "related": [
+      "experiments/s073_cluster457_l_vector_check.md",
+      "experiments/s073b_path2_cprofile.md",
+      "experiments/s073c_literature_novelty_audit.md",
+      "experiments/s073d_polhode_match_cluster457.md"
+    ]
+  },
+  {
+    "id": "s073f_cluster457_local_geometry",
+    "goal_node": "goal_l-vector-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s073f_cluster457_local_geometry.md",
+    "type": "experiment",
+    "title": "s073f — cluster_457 local geometry: the seed-89 Band-A attractor is a locally isolated point",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "high (decisive on the narrow question; 63 hi-fi renders, every number traced to results/s073f/summary.json; N=1 — one cluster on one seed)",
+    "sources": [
+      "results/s073f/summary.json",
+      "results/s073f/states.npz",
+      "results/s059k_nd800_seed89/seed089/full_lc_seeds/summary.json  (cluster_457 polished state)"
+    ],
+    "related": [
+      "experiments/s073_cluster457_l_vector_check.md",
+      "experiments/s073d_polhode_match_cluster457.md",
+      "experiments/s077_l_vector_basin_sweep.md"
+    ]
+  },
+  {
+    "id": "s074_elliprj_path2",
+    "goal_node": "goal_jacobi-propagator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s074_elliprj_path2.md",
+    "type": "experiment",
+    "title": "s074 — Path 2 phi(t) closed-form via scipy.special.elliprj; 3.4x faster, all 4 gates PASS",
+    "created": "2026-05-20",
+    "updated": "2026-05-20",
+    "confidence": "high (4-gate numerical evidence; closed-form math is DLMF-standard)",
+    "sources": [
+      "experiments/s072_path2_closed_form_q.md",
+      "experiments/s073b_path2_cprofile.md",
+      "concepts/jacobi_propagation.md",
+      "report/blind_inversion_15min_plan_2026-05-20.md",
+      "lib/jacobi_propagator.py"
+    ],
+    "related": [
+      "project_jacobi_propagation_priority.md",
+      "feedback_blas_threads_for_pool.md"
+    ]
+  },
+  {
+    "id": "s076_horizon_density",
+    "goal_node": "goal_cross-cloud-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s076_horizon_density.md",
+    "type": "forward-model-diagnostic",
+    "title": "s076 — aspect-graph horizon-density anchor score (L3 from report)",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "high (single-seed, but mechanism is body-geometric and applies to whole cohort)",
+    "sources": [
+      "report/aspect_graph_synthesis.tex §4 L3",
+      "project_sharpness_not_brightness.md"
+    ],
+    "related": [
+      "s073d (cluster_457 polhode match)",
+      "report/aspect_graph_synthesis.tex"
+    ]
+  },
+  {
+    "id": "s077_l_vector_basin_sweep",
+    "goal_node": "goal_l-vector-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s077_l_vector_basin_sweep.md",
+    "type": "experiment",
+    "title": "s077 — L-vector ↔ basin cohort sweep: |L| magnitude is pinned, L direction is free",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "high (pure re-score of cached post-fix endpoints; 104 competing basins across 9 seeds; every number traced to results/s077/summary.json)",
+    "sources": [
+      "results/s011/runs.npz  (post-fix s011/s068 cohort pilot, 640 converged basins)",
+      "experiments/s073_cluster457_l_vector_check.md",
+      "experiments/s073d_polhode_match_cluster457.md",
+      "experiments/s073e_robinson_frueh_2025_full_audit.md"
+    ],
+    "related": [
+      "experiments/s073_cluster457_l_vector_check.md",
+      "experiments/s073d_polhode_match_cluster457.md"
+    ]
+  },
+  {
+    "id": "s078_nll_residual_ab",
+    "goal_node": "goal_cross-cloud-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s078_nll_residual_ab.md",
+    "type": "experiment",
+    "title": "s078 — RF25 NLL residual A/B: does not help on seed 89, do not adopt into the m048 cost path",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "high for the negative result on seed 89 (3-stage A/B with a proper full-LC-MSE control); N=1 seed — see Out of scope",
+    "sources": [
+      "results/s059k_nd800_seed89/seed089/polished_states.npz  (20 cached s069 polished states)",
+      "results/s059k_nd800_seed89/seed089/clusters.npz          (5000 score-grid candidates)",
+      "experiments/s073e_robinson_frueh_2025_full_audit.md      (RF25 Eq. 3 spec)"
+    ],
+    "related": [
+      "experiments/s073e_robinson_frueh_2025_full_audit.md",
+      "experiments/s077_l_vector_basin_sweep.md"
+    ]
+  },
+  {
+    "id": "s079_regime_stratified_l_basins",
+    "goal_node": "goal_l-vector-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s079_regime_stratified_l_basins.md",
+    "type": "experiment",
+    "title": "s079 — regime-stratified L-basin re-score: the equal-|L|/free-direction class is a long-axis-mode phenomenon",
+    "created": "2026-05-14",
+    "updated": "2026-05-14",
+    "confidence": "medium (clean split on the 10-seed pilot, every number traced to results/s079/summary.json; but n=10 and the basin gate is the loose surrogate final_mse<0.5, not a hi-fi rho-band)",
+    "sources": [
+      "results/s079/summary.json",
+      "results/s077/basin_l_metrics.npz  (640 converged basins, 10 pilot seeds)",
+      {
+        "results/s077/summary.json  (cross-check": "truth_regime via omega_jacobi)"
+      }
+    ],
+    "related": [
+      "experiments/s077_l_vector_basin_sweep.md",
+      "experiments/s073f_cluster457_local_geometry.md",
+      "experiments/s073d_polhode_match_cluster457.md"
+    ]
+  },
+  {
+    "id": "s081_hifi_rho_bands_twin",
+    "goal_node": "goal_body-twin",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s081_hifi_rho_bands_twin.md",
+    "type": "experiment",
+    "title": "s081 — hi-fi ρ-band + twin classification of s011/s068 competing basins; Group-A 'searchable form' is ω-scaling, not same-polhode",
+    "created": "2026-05-20",
+    "updated": "2026-05-20",
+    "confidence": "high (41/41 pipeline control PASS; 145/145 surrogate↔hi-fi exact band agreement; polhode invariants read directly from cached s077 metrics)",
+    "sources": [
+      "experiments/s081_hifi_rho_bands_twin.py",
+      "results/s081/basin_hifi.npz",
+      "results/s081/summary.json",
+      "results/s081/s081_rho_bands.png",
+      "results/s081/s081_hifi_vs_surrogate.png",
+      "scratch/s081_error_table.py",
+      "scratch/s081_form_check.py"
+    ],
+    "related": [
+      "experiments/s077_l_vector_basin_sweep.md",
+      "experiments/s079_regime_stratified_l_basins.md",
+      "experiments/s068_replicate_s011.md",
+      "experiments/s073d_polhode_match_cluster457.md",
+      "experiments/s073f_cluster457_local_geometry.md"
+    ]
+  },
+  {
+    "id": "s082_joint_grid_pivot",
+    "goal_node": "goal_joint-grid-pivot",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s082_joint_grid_pivot.md",
+    "type": "experiment",
+    "title": "s082 — joint (q0, ω) grid pivot: Branch v2 is dead; v3 is the path, conditional on |ω|-bracket densification",
+    "created": "2026-05-20",
+    "updated": "2026-05-20",
+    "confidence": "high (3-seed pivot with stable per-axis decomposition; results consistent across LAM-slow / LAM-fast / SAM)",
+    "sources": [
+      "experiments/s082_joint_grid_pivot.py",
+      "results/s082/holdout_stratification.json",
+      "results/s082/summary.json",
+      "results/s082/seed_116/summary.json",
+      "results/s082/seed_119/summary.json",
+      "results/s082/seed_103/summary.json",
+      "results/s082/seed_{116,119,103}/candidates.npz",
+      "results/s082/seed_{116,119,103}/pivot_diagnostics.png"
+    ],
+    "related": [
+      "report/blind_inversion_15min_plan_2026-05-20.md (§3.4 grid-density math, §4 branch specs, §5 pivot spec, §10.7 surrogate cost risk)",
+      "experiments/s019_ls_bracket_omega_mag.md  (LS-bracket method; pre-fix ~50-cell variant 98/100 within 5%)",
+      "experiments/s005_joint_local_descent.md   (LM grab radius q0 5-15°, ω-dir 1-2°, |ω| 3-5%)",
+      "experiments/s072_path2_closed_form_q.md   (Path 2 closed-form q(t))",
+      "experiments/s074_elliprj_path2.md         (elliprj φ(t) integration — landed alongside s082, default Path 2 method now)",
+      {
+        "experiments/s068_replicate_s011.md        (Sobol N=64 + LM @ truth-ω": "10/10 PA-stratified)"
+      },
+      "experiments/s043_twin_hifi_verify.md      (body-X twin halving free 2×)",
+      {
+        "experiments/s003_landscape_vs_omega.md    (truth-ω tube width": "~1° dir, ~2-5% mag; outside is incoherent)"
+      },
+      "experiments/s081_hifi_rho_bands_twin.md   (surrogate↔hi-fi 145/145 band agreement)"
+    ]
+  },
+  {
+    "id": "s083_nmag_sensitivity",
+    "goal_node": "goal_omega-mag-basin",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s083_nmag_sensitivity.md",
+    "type": "experiment",
+    "title": "s083 — |ω| basin sharpness probe (the s082 Day-2 #1 N_mag sensitivity check)",
+    "created": "2026-05-21",
+    "updated": "2026-05-21",
+    "confidence": "high (1-D measurement, cross-validated against DOP853 propagator; basin width scales as constant accumulated-phase across 3 seeds)",
+    "sources": [
+      "experiments/s083_nmag_sensitivity.py",
+      "scratch/s083_bugcheck.py",
+      "results/s083/summary.json",
+      "results/s083/seed_{116,119,103}.json"
+    ],
+    "related": [
+      "experiments/s082_joint_grid_pivot.md",
+      "experiments/s084_omega_refine_viability.md",
+      "experiments/s019_ls_bracket_omega_mag.md",
+      "project_omega_mag_basin_scales_with_omega.md"
+    ]
+  },
+  {
+    "id": "s084_omega_refine_viability",
+    "goal_node": "goal_omega-mag-basin",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s084_omega_refine_viability.md",
+    "type": "experiment",
+    "title": "s084 — is 1-D |ω|-refine viable? (aliasing + realistic-anchor budget)",
+    "created": "2026-05-21",
+    "updated": "2026-05-21",
+    "confidence": "high (1-D full-bracket scan, 3 seeds; q-perturbation over 3 random axes per error level)",
+    "sources": [
+      "experiments/s084_omega_refine_viability.py",
+      "results/s084/summary.json"
+    ],
+    "related": [
+      "experiments/s083_nmag_sensitivity.md",
+      "experiments/s082_joint_grid_pivot.md",
+      "project_q_wdir_coupling.md",
+      "project_omega_mag_basin_scales_with_omega.md"
+    ]
+  },
+  {
+    "id": "s085_anchor_accuracy_gate",
+    "goal_node": "goal_anchor-accuracy-gate",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s085_anchor_accuracy_gate.md",
+    "type": "experiment",
+    "title": "s085 — anchor q-accuracy go/no-go gate on fast tumblers",
+    "created": "2026-05-21",
+    "updated": "2026-05-21",
+    "confidence": "high (blind anchor delivery; controlled-perturbation polish ladder, 3 fast + 1 slow seed, 3 axes/level)",
+    "sources": [
+      "experiments/s085_anchor_accuracy_gate.py",
+      "results/s085/summary.json"
+    ],
+    "related": [
+      "experiments/s084_omega_refine_viability.md",
+      "experiments/s086_omega_refine_rescue.md",
+      "project_anchor_selection_coarse_then_dense.md"
+    ]
+  },
+  {
+    "id": "s086_omega_refine_rescue",
+    "goal_node": "goal_anchor-accuracy-gate",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s086_omega_refine_rescue.md",
+    "type": "experiment",
+    "title": "s086 — does a 1-D |ω| refine rescue seed 119 at L1? (no: the failure is direction-driven)",
+    "created": "2026-05-21",
+    "updated": "2026-05-21",
+    "confidence": "high (Layer 1 decomposition over 6 q_pert×axis is deterministic; Layer 2 polish over 6 axes/treatment, 2 seeds, hi-fi spot-checked)",
+    "sources": [
+      "experiments/s086_omega_refine_rescue.py",
+      "results/s086/summary.json"
+    ],
+    "related": [
+      "experiments/s085_anchor_accuracy_gate.md",
+      "experiments/s084_omega_refine_viability.md",
+      "experiments/s087_omega_dir_threshold.md",
+      "project_q_wdir_coupling.md"
+    ]
+  },
+  {
+    "id": "s087_omega_dir_threshold",
+    "goal_node": "goal_anchor-accuracy-gate",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s087_omega_dir_threshold.md",
+    "type": "experiment",
+    "title": "s087 — ω-direction tolerance for fast-seed polish convergence (~1.25°)",
+    "created": "2026-05-21",
+    "updated": "2026-05-21",
+    "confidence": "medium-high (5 axes/level, 3 fast LAM seeds; sharp cliff on 119, noisier on 108/100; surrogate-band with hi-fi spot-check)",
+    "sources": [
+      "experiments/s087_omega_dir_threshold.py",
+      "results/s087/summary.json"
+    ],
+    "related": [
+      "experiments/s086_omega_refine_rescue.md",
+      "experiments/s085_anchor_accuracy_gate.md",
+      "experiments/s082_joint_grid_pivot.md",
+      "feedback_body_twin_search_space_halving.md"
+    ]
+  },
+  {
+    "id": "s088_bvp_shoot_conditioning",
+    "goal_node": "goal_bvp-shoot",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s088_bvp_shoot_conditioning.md",
+    "type": "experiment",
+    "title": "s088 — two-point attitude BVP shoot: validates the primitive, maps multiplicity, and beats finite-diff ω on fast tumblers",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "high (truth-pair gates exact; conditioning measured on 2 regime-extreme seeds, N=200–300 noise)",
+    "sources": [
+      "notebooks/inversion/survey/lib/shoot.py",
+      "notebooks/inversion/survey/experiments/s088_gateA1_truth_pair.py",
+      "notebooks/inversion/survey/experiments/s088_gateA2_multiplicity.py",
+      "notebooks/inversion/survey/experiments/s088_phaseB_conditioning.py",
+      "notebooks/inversion/survey/experiments/s088_phaseB_sigma.py",
+      "notebooks/inversion/survey/results/s088/{gateA1,gateA2,phaseB,phaseB_sigma}.json",
+      "notebooks/inversion/survey/results/s088/phaseB_conditioning.png"
+    ],
+    "related": [
+      "s060_multi_anchor_design — designed \"multi-anchor + ω-from-shoot\" but never built it (pre-fix)",
+      "s063d_polhode_identity_filter — \"killed\" finite-diff ω; tested the finite-diff VALUE, not a BVP solve",
+      "s057c_truth_pair_omega / s057d_dt_sweep — finite-diff ω noise floor + Δt sweep (the baseline beaten here)",
+      "s087_omega_dir_threshold — fast-seed truth recovery needs ω-dir ≲ 1.25°",
+      "s085_anchor_accuracy_gate — anchors deliver q to 1.47–3.30°",
+      "project_jacobi_propagation_priority — the closed-form propagator this is built on"
+    ]
+  },
+  {
+    "id": "s089_third_anchor_overdetermination",
+    "goal_node": "goal_third-anchor",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s089_third_anchor_overdetermination.md",
+    "type": "experiment",
+    "title": "s089 — third-anchor over-determination: a disambiguator, not a noise-reducer",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "high (self-checks exact; ladder collapse is a large decisive effect on 3 seeds / 2 regimes; the shared-base-anchor noise MECHANISM is interpretation, not ablated)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s089_third_anchor_overdetermination.py",
+      "notebooks/inversion/survey/lib/shoot.py",
+      "notebooks/inversion/survey/results/s089/{conditioning,ladder}.json",
+      "notebooks/inversion/survey/results/s089/conditioning.png"
+    ],
+    "related": [
+      "experiments/s088_bvp_shoot_conditioning.md",
+      "experiments/s087_omega_dir_threshold.md",
+      "experiments/s085_anchor_accuracy_gate.md"
+    ]
+  },
+  {
+    "id": "s090_shared_base_ablation",
+    "goal_node": "goal_third-anchor",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s090_shared_base_ablation.md",
+    "type": "experiment",
+    "title": "s090 — shared-base ablation: floating q_a (even on the brightness isophote) does NOT lower the fast-seed ω-dir floor",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "high (paired within-run comparison, N=300; self-checks exact)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s090_shared_base_ablation.py",
+      "notebooks/inversion/survey/results/s090/ablation.json",
+      "notebooks/inversion/survey/lib/shoot.py"
+    ],
+    "related": [
+      "experiments/s089_third_anchor_overdetermination.md"
+    ]
+  },
+  {
+    "id": "s091_per_pair_timing",
+    "goal_node": "goal_cross-cloud-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s091_per_pair_timing.md",
+    "type": "experiment",
+    "title": "s091 — per-pair cost of the cross-cloud spin-solve",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "high (direct single-process timings; Pool(24) throughputs assume ideal scaling — treat as upper bounds)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s091_per_pair_timing.py"
+    ],
+    "related": [
+      "experiments/s088_bvp_shoot_conditioning.md",
+      "experiments/s092_cross_cloud_116.md"
+    ]
+  },
+  {
+    "id": "s092_cross_cloud_116",
+    "goal_node": "goal_cross-cloud-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s092_cross_cloud_116.md",
+    "type": "experiment",
+    "title": "s092 — first end-to-end cross of two REAL anchor clouds (seed 116)",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "high (full deterministic cross, 1.87M pairs; one reporting index-bug found and fixed mid-session — headline counts unaffected, truth-pair boolean was the only corrupted field)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s092_cross_cloud_116.py",
+      "notebooks/inversion/survey/results/s092/cross.json"
+    ],
+    "related": [
+      "experiments/s088_bvp_shoot_conditioning.md",
+      "experiments/s089_third_anchor_overdetermination.md",
+      "experiments/s093_fullc_score_survivors.md"
+    ]
+  },
+  {
+    "id": "s093_fullc_score_survivors",
+    "goal_node": "goal_cross-cloud-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s093_fullc_score_survivors.md",
+    "type": "experiment",
+    "title": "s093 — full-LC RMSE does NOT rank the s092 cross-cloud survivors toward truth",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "high (clean negative; truth-LC RMSE floor confirms scoring infra is correct, so the failure is real, not a bug)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s093_fullc_score_survivors.py",
+      "notebooks/inversion/survey/results/s093/score.json"
+    ],
+    "related": [
+      "experiments/s092_cross_cloud_116.md",
+      "experiments/s003_landscape_vs_omega.md"
+    ]
+  },
+  {
+    "id": "s094_window_score",
+    "goal_node": "goal_cross-cloud-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s094_window_score.md",
+    "type": "experiment",
+    "title": "s094 — windowed (between-anchor) vs full-LC scoring of cross-cloud survivors [BUILT, NOT YET RUN]",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "n/a (script built and reviewed; not executed — session ended on the conceptual probe below)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s094_window_score.py"
+    ],
+    "related": [
+      "experiments/s093_fullc_score_survivors.md",
+      "experiments/s092_cross_cloud_116.md"
+    ]
+  },
+  {
+    "id": "s095_calibration_threshold_transfer",
+    "goal_node": "goal_cross-cloud-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s095_calibration_threshold_transfer.md",
+    "type": "experiment",
+    "title": "s095 — cohort-calibrated truth-near RMSE threshold: transfers, but the load-bearing finding is winding-aliasing (near%=0 for half the cohort)",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "medium (RMSE-threshold side re-run post-fix; the winding-aliasing finding is high-confidence and bug-independent)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s095_calibration_threshold_transfer.py",
+      "notebooks/inversion/survey/results/s095/transfer.json"
+    ],
+    "related": [
+      "experiments/s097_times0_gauge_bug_audit.md",
+      "experiments/s096_density_usefulness_116.md",
+      "experiments/s088_bvp_shoot_conditioning.md"
+    ]
+  },
+  {
+    "id": "s096_density_usefulness_116",
+    "goal_node": "goal_cross-cloud-discriminator",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s096_density_usefulness_116.md",
+    "type": "experiment",
+    "title": "s096 — density IS the lever: at δ<1° the full-LC RMSE discriminator + connectability both work (seed 116)",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "high (clean monotone basin; infra floor 0.0077 mag validates the scoring; N=1 seed 116)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s096_density_usefulness_116.py",
+      "notebooks/inversion/survey/results/s096/basin.json"
+    ],
+    "related": [
+      "experiments/s097_times0_gauge_bug_audit.md",
+      "experiments/s092_cross_cloud_116.md",
+      "experiments/s087_omega_dir_threshold.md"
+    ]
+  },
+  {
+    "id": "s097_times0_gauge_bug_audit",
+    "goal_node": "goal_gauge-times0",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s097_times0_gauge_bug_audit.md",
+    "type": "audit",
+    "title": "s097 — times[0]==0 gauge-bug audit: re-validation REVERSES s093 and s094",
+    "created": "2026-05-22",
+    "updated": "2026-05-22",
+    "confidence": "high (fix validated two independent ways: exact-truth reproduction 1.7e-6deg vs 108deg buggy, and s093/s094-W_full agree bit-for-bit)",
+    "sources": [],
+    "related": []
+  },
+  {
+    "id": "s098_local_densify_116",
+    "goal_node": "goal_blind-fast-invert",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s098_local_densify_116.md",
+    "type": "experiment",
+    "title": "s098 — localized densification CLOSES a blind Band-A inversion on seed 116; truth is one of several multi-solutions (full-LC RMSE non-monotonic, all top hi-fi rho<2)",
+    "created": "2026-05-25",
+    "updated": "2026-05-25",
+    "confidence": "high on the closure + multi-sol verdict (hi-fi rho-band, renderer validated rho_truth=0.00); N=1 seed 116 (easiest); |w| prior band reuses truth (s092 stand-in)",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s098_rescore_steer.py",
+      "notebooks/inversion/survey/experiments/s098_local_densify_116.py",
+      "notebooks/inversion/survey/experiments/s098b_hifi_rho.py",
+      "notebooks/inversion/survey/results/s098/rescore.json",
+      "notebooks/inversion/survey/results/s098/densify.json",
+      "notebooks/inversion/survey/results/s098/hifi_rho.json"
+    ],
+    "related": [
+      "experiments/s097_times0_gauge_bug_audit.md",
+      "experiments/s096_density_usefulness_116.md",
+      "experiments/s093_fullc_score_survivors.md",
+      "experiments/s092_cross_cloud_116.md"
+    ]
+  },
+  {
+    "id": "s099_blind_fast_invert_116",
+    "goal_node": "goal_blind-fast-invert",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s099_blind_fast_invert_116.md",
+    "type": "experiment",
+    "title": "s099 — BLIND + FAST inversion of seed 116 (truth-free |w| bracket, 11.7 min)",
+    "created": "2026-05-26",
+    "updated": "2026-05-26",
+    "confidence": "high",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s098_local_densify_116.md",
+      "notebooks/inversion/survey/experiments/s019_ls_bracket_omega_mag.md",
+      "notebooks/inversion/survey/experiments/s092_cross_cloud_116.py"
+    ],
+    "related": []
+  },
+  {
+    "id": "s100_5step_coverage_proto",
+    "goal_node": "goal_blind-fast-invert",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s100_5step_coverage_proto.md",
+    "type": "experiment",
+    "title": "s100 — 5-step coverage-fix proto on seed 119: coverage closes, single-shoot cross still aliases (Band D)",
+    "created": "2026-05-28",
+    "updated": "2026-05-28",
+    "confidence": "high (end-to-end blind run completed; hi-fi ρ-band confirmed; N=1 seed 119)",
+    "sources": [
+      "experiments/s100_5step_proto.py",
+      "experiments/s100_hifi.py",
+      "results/s100/seed119/invert.json",
+      "results/s100/seed119/hifi_rho.json"
+    ],
+    "related": [
+      "experiments/s099_blind_fast_invert_116.md",
+      "experiments/s105_pairs_to_omega_decomposition.md",
+      "experiments/s106_hybrid_loss_polish.md"
+    ]
+  },
+  {
+    "id": "s105_pairs_to_omega_decomposition",
+    "goal_node": "goal_windowed-photometry-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s105_pairs_to_omega_decomposition.md",
+    "type": "experiment",
+    "title": "s105 — pairs→ω decomposition on seed 119: the hard-shoot trap is the blocker; return-map and LS-peaks refuted",
+    "created": "2026-05-28",
+    "updated": "2026-05-28",
+    "confidence": "high (each leg has a result file or null control; N=1 seed 119, one cross-check on 116)",
+    "sources": [
+      "experiments/s105a_dir_basin_width.py",
+      "experiments/s105b_third_anchor_collapse.py",
+      "experiments/s105c_connect_null.py",
+      "experiments/s105d_truthpair_fulllc_discrim.py",
+      "experiments/s105e_truthpair_multistart_fulllc.py",
+      "experiments/s105f_realpair_multistart_fulllc.py",
+      "experiments/s105_verify_backprop.py",
+      "experiments/s105g_windowed_score.py",
+      "experiments/s101_ls_peak_truth_proximity.py",
+      "experiments/s101b_subharm_null.py",
+      "experiments/s103_return_map_scan.py",
+      "experiments/s104_returnmap_cost.py"
+    ],
+    "related": [
+      "experiments/s100_5step_coverage_proto.md",
+      "experiments/s106_hybrid_loss_polish.md"
+    ]
+  },
+  {
+    "id": "s106_hybrid_loss_polish",
+    "goal_node": "goal_windowed-photometry-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s106_hybrid_loss_polish.md",
+    "type": "experiment",
+    "title": "s106 — windowed-photometry LM polish clears Band A on seed 119 (0.687→0.030); the window is the lever, soft-B is inert",
+    "created": "2026-05-28",
+    "updated": "2026-05-28",
+    "confidence": "medium (decisive N=1 on seed 119's oracle-nearest pair; discrimination + generalization UNTESTED)",
+    "sources": [
+      "experiments/s106_hybrid_loss_polish.py",
+      "experiments/s106b_polish_timing.py",
+      "results/s106/hybrid_polish_seed119_abc.json",
+      "results/s106/hybrid_polish_seed119_full.json",
+      "results/s106/hybrid_polish_seed119_c.json",
+      "results/s106/polish_timing.json"
+    ],
+    "related": [
+      "experiments/s105_pairs_to_omega_decomposition.md",
+      "experiments/s100_5step_coverage_proto.md"
+    ]
+  },
+  {
+    "id": "s107_discrimination_test",
+    "goal_node": "goal_windowed-photometry-polish",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s107_discrimination_test.md",
+    "type": "experiment",
+    "title": "s107 — Discrimination test on seed 119: NO PHANTOMS across 1107 cross pairs, but s106's Band A also doesn't survive the production pipeline (oracle pair dropped by cross filter; polish basin ~5° in omega-direction)",
+    "created": "2026-05-28",
+    "updated": "2026-05-28",
+    "confidence": "high on the no-phantoms finding (N=1107 cross pairs, 3 hi-fi confirms); high on the basin-of-convergence finding (control: same oracle pair, two seeds, deterministic); medium on generalization (N=1 seed)",
+    "sources": [],
+    "related": []
+  },
+  {
+    "id": "s108_cross_cloud_multistart_cost_wall",
+    "goal_node": "goal_cross-cloud-multistart-budget",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s108_cross_cloud_multistart_cost_wall.md",
+    "type": "experiment",
+    "title": "s108 — drop-C-pass + multistart-coarse-rank: the discriminator WORKS (blind Band A on 119, 0 phantoms) but the cross-cloud-multistart search is ~100x too slow for the 15-min budget",
+    "created": "2026-05-29",
+    "updated": "2026-05-29",
+    "confidence": "high on the discriminator working (6 Band A, 0 phantoms, blind ranking+polish); high on the cost wall (both levers measured, deterministic); medium on the 15-min impossibility (N=1 seed, projections not a full run)",
+    "sources": [
+      "experiments/s108a_stage0_oracle_probe.py",
+      "experiments/s108b_no_cpass_cross.py",
+      "experiments/s108c_multistart_coarse_rank.py",
+      "experiments/s108d_multistart_density_probe.py",
+      "results/s108/seed119/stage0_oracle.json",
+      "results/s108/seed119/no_cpass_cross_summary.json",
+      "results/s108/seed119/multistart_coarse_summary.json",
+      "results/s108/seed119/multistart_density.json"
+    ],
+    "related": [
+      "experiments/s107_discrimination_test.md",
+      "experiments/s106_hybrid_loss_polish.md",
+      "experiments/s100_5step_coverage_proto.md",
+      "experiments/s098_local_densify_116.md"
+    ]
+  },
+  {
+    "id": "s111_anchor_cap_116_invert_and_decimation_bug",
+    "goal_node": "goal_anchor-cap-slow-tumbler",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s111_anchor_cap_116_invert_and_decimation_bug.md",
+    "type": "experiment",
+    "title": "s111 — anchor-cap cures finite-diff aliasing (116 inverts, 7-attractor multi-sol); slow-tumbler sweep BROKEN by a decimation/sampling bug",
+    "created": "2026-05-29",
+    "updated": "2026-05-29",
+    "confidence": "high (116 result + envelope solid; slow-sweep results KNOWN-COMPROMISED, see \"What went wrong\")",
+    "sources": [
+      "notebooks/inversion/survey/experiments/s100_5step_proto.py",
+      "notebooks/inversion/survey/experiments/s109_omega_traj_envelope.py",
+      "notebooks/inversion/survey/experiments/s110_polish_116.py",
+      "notebooks/inversion/survey/experiments/run_slow_sweep.sh"
+    ],
+    "related": [
+      "experiments/s099_blind_fast_invert_116.md",
+      "experiments/s100_5step_proto.py",
+      "experiments/s106_hybrid_loss_polish.md"
+    ]
+  },
+  {
+    "id": "s112_slow_tumbler_pipeline_report",
+    "goal_node": "goal_anchor-cap-slow-tumbler",
+    "writeup_ref": "notebooks/inversion/survey/experiments/s112_slow_tumbler_pipeline_report.md",
+    "type": null,
+    "title": "s112_slow_tumbler_pipeline_report",
+    "created": "",
+    "updated": "",
+    "confidence": null,
+    "sources": [],
+    "related": []
+  }
+]

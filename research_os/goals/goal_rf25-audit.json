@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_rf25-audit",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_literature",
+  "title": "Robinson–Frueh 2025 residual-threat paper audit (no encroachment)",
+  "state": "open",
+  "spent": {
+    "runs": 2,
+    "wall_s": 0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s073c_literature_novelty_audit",
+    "s073e_robinson_frueh_2025_full_audit"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s073e_robinson_frueh_2025_full_audit",
+    "summary": "RF25 does not pre-empt cat-4 framing; obtain RF74 conference companion",
+    "at": "2026-05-14T00:00:00Z"
+  }
+}

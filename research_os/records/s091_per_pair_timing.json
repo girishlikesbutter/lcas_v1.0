@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s091_per_pair_timing",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-discriminator",
+  "question": "What is the per-pair compute cost of the cross-cloud spin-solve, and where does the cost sit?",
+  "hypothesis": "The connectability screen (one shoot) is cheap enough to run on all A×B pairs; the bottleneck is cloud_size², not the solve.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [
+    119
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "bvp_2anchor_ms": 1.718,
+    "bvp_3anchor_ms": 2.71,
+    "brightness_check_ms": 0.837,
+    "brute_enum_s_per_pair": 3.78,
+    "targeted_enum_s_per_pair": 0.13,
+    "shoot_throughput_per_s_pool24": 14000
+  },
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s091_per_pair_timing.md"
+  ],
+  "parents": [
+    "s088_bvp_shoot_conditioning",
+    "s092_cross_cloud_116"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": true,
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "Measured atomic costs of processing one cross-cloud pair on seed 119: a 2-anchor BVP solve is 1.72 ms (~14k/s Pool(24)), the cloud-free 3rd-anchor brightness check 0.84 ms. Per-pair cost is dominated by winding enumeration (3.8 s brute vs 0.13 s targeted). The connectability screen (one shoot) is cheap enough for all A×B pairs; the bottleneck is cloud_size² (number of pairs), not the solve. Pure timing — never reads truth.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ]
+}

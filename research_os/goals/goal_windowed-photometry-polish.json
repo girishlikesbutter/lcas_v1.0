@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_windowed-photometry-polish",
+  "kind": "goal_node",
+  "node_kind": "question",
+  "parent": "goal_blind-fast-invert",
+  "title": "Break the hard-shoot trap (+ discriminate far pairs)",
+  "state": "open",
+  "spent": {
+    "runs": 4,
+    "wall_s": 0.0
+  },
+  "contract_refs": [
+    "contract_anchor-direct-omega-multistart"
+  ],
+  "child_runs": [
+    "s105_pairs_to_omega_decomposition",
+    "s106_hybrid_loss_polish",
+    "s107_discrimination_test",
+    "s114_anchor_direct_omega_multistart"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-05T00:00:00Z",
+  "last_measured": {
+    "run": "s114_anchor_direct_omega_multistart",
+    "summary": "anchor-direct (drop cross/q_b, multistart ω-grid per cloud rep) RECOVERS TRUTH BLIND & hi-fi-confirmed on fast 119: winner rep 192 q0 2.27°/ω-dir 1.64°/hi-fi-ρ 1.534 Band A; 26 A∪B, 0 phantoms; ω uniquely determined, attitude multi-valued (2 families, NOT body-twins). Hard-shoot trap broken blind. BUT cost unsolved: the cheap two-stage rep-prune drops the truth-nearest rep (1118/2000) and the run is 31.8 min (basin-catching single-stage ~97 min) — over the 15-min budget.",
+    "at": "2026-06-05T00:00:00Z"
+  }
+}

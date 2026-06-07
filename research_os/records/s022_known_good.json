@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s022_known_good",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Do the necessary-condition filters reject any hi-fi-validated multi-solution or in-basin candidate (false negatives)?",
+  "hypothesis": "The filters preserve all known-good (band-A-or-B) candidates without false negatives.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [28, 41, 48, 84],
+  "N": 16,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_multi_solution": 15,
+    "n_in_basin": 1,
+    "multi_solution_align_at_1.0": 15,
+    "in_basin_align": 1.0,
+    "in_basin_geo": 1.0,
+    "wall_s": 1.1
+  },
+  "artefacts": [
+    { "path": "results/s022/known_good.npz", "kind": "checkpoint" },
+    { "path": "results/s022/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s022_known_good.md"],
+  "parents": ["s021_truth_vs_random", "s023_filter_composition"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-04T00:00:00Z",
+  "narrative_md": "All 16 hi-fi-validated known-good candidates (15 multi-solution + 1 in-basin) score alignment = 1.0; the in-basin seed-28 candidate scores 1.0/1.0. No false negatives. The 15 multi-solution candidates have geo = NaN (their seeds have no spec events). Confirms the necessary-condition framing is internally consistent with every known valid solution."
+}

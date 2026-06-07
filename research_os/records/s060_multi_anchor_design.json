@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s060_multi_anchor_design",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "Can a multi-anchor + omega-from-shoot architecture with per-seed bright/dim role routing replace s059k's single-anchor omega-grid?",
+  "status": "inconclusive",
+  "run_type": "probe",
+  "seeds": [],
+  "N": 0,
+  "claim_scope": "N1",
+  "metrics": {
+    "bright_validators_universal": "11/11",
+    "clean_dim_enumerators": "~5/11",
+    "clean_dim_tuple_count": 256
+  },
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s060_multi_anchor_design.md"
+  ],
+  "parents": [
+    "s059j_cloud_data_omega_grid",
+    "s059k_densify_ndirs",
+    "s057f_per_qa_consistency",
+    "s057g_forward_propagation",
+    "s018b_face_identity_tiers"
+  ],
+  "substrate_versions": {
+    "propagator": "1.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": true,
+  "created_at": "2026-05-09T00:00:00Z",
+  "narrative_md": "DESIGN doc (not executed). Proposes replacing s059k's single-anchor omega-grid with multiple sharp anchors as joint constraints: bright-extreme anchors as universal passage validators and dim-extreme anchors as opportunistic clean enumerators (per-seed routing gated on |C_t|<100 and top-3 mass >= 0.7). First pair fixes omega via Newton shoot, remaining anchors validate polhode threading -- eliminating the omega-grid quantization noise. Substrated by s060_sharpness_map/anchor_topology/cohort_anchor_topology; implementation queued."
+}

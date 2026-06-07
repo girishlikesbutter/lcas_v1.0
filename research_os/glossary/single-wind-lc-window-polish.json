@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "id": "single-wind-lc-window-polish",
+  "kind": "glossary_term",
+  "term": "Single-Wind-LC-Window Polish",
+  "definition": "A Polish whose OBJECTIVE is a Single-Wind LC Window (still metric-agnostic). The move that broke the hard-shoot trap on seed 119 (s106): window-as-objective is the lever (full-LC → Band D, single-wind window → Band A).",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "coined_in": "s106_hybrid_loss_polish",
+  "synonyms_blocked": [
+    "windowed-photometry-polish"
+  ],
+  "related_terms": [
+    "polish",
+    "single-wind-lc-window",
+    "surrv2-rmse-lm-polish"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "id": "propagate_to_body_frame",
+  "kind": "substrate_component",
+  "name": "propagate_to_body_frame",
+  "path": "notebooks/inversion/survey/lib/forward.py",
+  "tier": "substrate",
+  "interface": "(q0_wxyz, omega0_rad, observation_times, sun/obs/sat positions, inertia, mode) -> (k1_body, k2_body, quaternions); wraps src.dynamics.attitude_propagator then projects J2000 vectors into body frame. The sole survey-layer (q0,\u03c9)->body-frame entry.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:9aea309b2709e49d",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/forward.py:propagate_to_body_frame",
+  "ports": {
+    "input": [
+      "q0-omega-state",
+      "epoch-observation"
+    ],
+    "output": {
+      "quats@2": "attitude-trajectory"
+    }
+  },
+  "default_params": {
+    "mode": "tumbling"
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:9aea309b2709e49d",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

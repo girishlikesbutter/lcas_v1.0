@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057b_anchor_scan",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "At which (t_a, t_b=t_a+dt) anchor pairs does the closest pool-quaternion-to-truth survive the surrogate filter at BOTH epochs?",
+  "hypothesis": "s057's anchor (t_a=411, t_b=421) had truth-q_b NOT in cloud; a scan will find anchor pairs where a near-truth representative survives at both ends.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "epochs_with_closest_in_cloud": "296/500",
+    "frac_epochs": 0.59,
+    "valid_pairs_range": "163-244",
+    "best_dt2_anchor": "t_a=411,t_b=413",
+    "best_dt2_pairs": 1980
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057b_anchor_scan.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Cached-data lookup correcting s057's misframing: 296/500 epochs (59%) have the closest-pool-to-truth surviving the surrogate filter; across dt in {1..30}, 163-244 valid anchor pairs exist where a near-truth representative survives at both ends. Best small-cloud pair at dt=2: t_a=411,t_b=413 (1980 pairs). Locates truth-q in the cloud -- oracle-leak, N=1."
+}

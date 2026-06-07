@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0.0",
+  "id": "contract_slow-tumbler-generality",
+  "kind": "branch_contract",
+  "goal_node": "goal_anchor-cap-slow-tumbler",
+  "status": "amended",
+  "question": "Once the three s111 pipeline bugs are fixed (decimation widening, run_slow_sweep.sh padding, PAIR_BUDGET cull), does the slow-tumbler inversion config (|ω| clamp [0.05,1.6] deg/s + anchor-cap dt_ab<π/ω_hi + fixed-2° decimation + surrogate-v2 LM polish) generalise beyond seed 116 — producing ≥1 Band A∪B multi-solution per slow seed on 42 and 31?",
+  "hypothesis": "The decimation widening (decimate_adaptive 2°→12.5°) and SAVE_K=15 cull were the only things breaking the slow-sweep; with fixed-2° decimation (decimate_2deg max_reps=0), 1M flat clouds, SAVE_K=500, and a raised/deterministic PAIR_BUDGET, the truth-near survivor pairs already present in the dense cloud (42: 1.45°) survive to polish and each slow seed yields ≥1 Band A∪B (surr-ρ<4) attractor — generality holds.",
+  "predictions": [
+    {
+      "case": "seed 42 — dense truth-near pair was 1.45° (results/s100/seed42_capped_run.log:[3]) but decimate_adaptive widened it to a 6.61° rep and SAVE_K=15 buried the truth-near survivor at coarse full-RMSE rank 327 (log:[(a)]); the coarse top-12 is dominated by the body-twin region (qa/qb≈179.8°, full-RMSE 0.767)",
+      "expected_outcome": "with fixed-2° decimation + SAVE_K=500 the 1.45° truth-near pair survives decimation and the saved set, polishes to ≥1 Band A∪B (surr-ρ<4) attractor, truth-in-set at q0_err ≲ 5°",
+      "uncertain": true
+    },
+    {
+      "case": "seed 31 — coarse best truth-near survivor was dir-err 75.8° at rank 26 (s111 writeup Result table), far worse than 42/10; no near-truth cross survivor was demonstrated even at the dense stage",
+      "expected_outcome": "either a Band A∪B multi-sol set emerges (possibly truth-far — a genuine multi-solution, still confirms) OR 31 produces no surr-ρ<4 attractor → class-boundary failure of the config",
+      "uncertain": true
+    },
+    {
+      "case": "seed 10 — already reached Band A on s112's over-coarsened lower-bound set (truth q0 2.41°, ω-dir 1.18°; s112 record)",
+      "expected_outcome": "fixed config reproduces ≥1 Band A∪B and tightens truth-in-set to q0_err ≤ 2.41°, ω-dir-err ≤ 1.18°",
+      "uncertain": false
+    },
+    {
+      "case": "seed 116 — regression guard; the decimate_adaptive→decimate_2deg swap edits the same S100_ANCHOR_CAP step-4 branch that 116's working invert used",
+      "expected_outcome": "116 still inverts unchanged: ≥4 at-floor (Band-A-equiv) attractors, truth at q0≈0.19°, ω-dir≈0.03°, |ω|≈0.1335 deg/s (matching results/s110/polish_116.json)",
+      "uncertain": false
+    }
+  ],
+  "confirm_criteria": "After the fixed-config sweep (fixed-2° decimate_2deg max_reps=0, 1M flat clouds, SAVE_K=500, raised/deterministic PAIR_BUDGET), EACH of seeds 42 and 31 yields ≥1 surrogate-v2 LM-polished attractor at surr-ρ < 4 (Band A∪B-equiv); AND the seed-116 regression reproduces ≥4 at-floor attractors with truth at q0≈0.19°/ω-dir≈0.03°. Truth-in-set (q0_err, ω-dir-err, |ω|) recorded per seed as diagnostic, not gating (acceptance is multi-solution, not truth-recovery).",
+  "refute_criteria": "≥1 of {seed 42, seed 31} yields 0 polished attractors at surr-ρ < 4 after the fixed-config sweep (no Band A∪B multi-solution found), OR the seed-116 regression degrades (truth no longer in set, or <4 at-floor attractors) — indicating the decimation fix broke the working path. Surrogate-only caveat: phantom attractors (surrogate-good / hi-fi-bad) CANNOT be excluded by this contract — user chose surrogate-only over hi-fi ρ-band confirmation, so a surr-ρ<4 attractor is provisional, not hi-fi-validated.",
+  "budget": {
+    "expected_runs": 4,
+    "expected_wall_s": 2400
+  },
+  "required_artefacts": [
+    "surr-ρ band table over all 4 seeds' polished attractors (columns: rank, surr-ρ, q0_err, ω-dir-err, |ω| deg/s, note) — the s111 seed-116 multi-sol table extended to 42/31/10/116",
+    "per-seed decimation-fix verification: the step-4 log line '[4] decimate 2.0deg | A: …→N cells (nt X.XX°)' showing FIXED 2° cells and nearest-truth nt staying ≈ the dense-stage nt (NOT widened to 12.5°)",
+    "per-seed checkpoints: results/s100/seed{010,031,042,116}/invert.{npz,json} + results/s110 polish JSON per seed",
+    "multi-solution attractor plot per seed (results/s112/slow_tumbler_seed{NNN}.png style)"
+  ],
+  "analytical_probe": {
+    "cheap_path": "Re-score / re-rank the cached s100 invert.npz cross-survivor sets for 42/31/10 (already on disk from the broken 6M run) with corrected SAVE_K and re-polish via s110 from those cached candidates — no s100 dense-fill/cross re-run.",
+    "why_insufficient": "The cached candidate sets are products of the broken config: decimate_adaptive widened the 2° cells up to 12.5° (seed 42 truth-near 1.45°→6.61° rep; seed 10→16.3° clumps — source: results/s100/seed42_capped_run.log:[4]; s111 writeup 'What went wrong' #1), destroying the angular resolution that holds the truth basin. Re-scoring cannot reconstruct a 1.45° rep from a 12.5°-decimated set, and the raw 1M dense cloud is not checkpointed (too large to save), so the dense-fill + fixed-2° decimation MUST be re-run. A cheap re-score is a no-op on the binding defect.",
+    "probe_run": null
+  },
+  "model": "opus",
+  "reasoning": "xhigh",
+  "run_type_policy": { "cheap": "auto", "expensive": "gated" },
+  "probe_budget_s": 180,
+  "amendments": [
+    {
+      "version": "v1",
+      "diff": "METHOD: the v0 single-pass fixed-2° cross is replaced by a COARSE-THEN-FINE cross. PASS 1 localizes connectable (A,B) regions on COARSE_DEG=6° cells with a relaxed C-brightness tol (COARSE_TOL_MAG=0.30 mag); PASS 2 re-decimates the dense members inside surviving coarse cells at 2° and re-crosses with the tight tol (0.10). No blind PAIR_BUDGET cull (which can drop the truth cell). BUDGET: expected_wall_s 2400 → 3600, kill-2× → 7200. PREDICTION ADDED: seed 116 must recover under coarse-then-fine (method-canary, uncertain:true) — if 116 does NOT recover, the new method is refuted independent of the slow seeds, so 116 runs FIRST and gates the slow seeds.",
+      "reason": "The s113 116 canary showed the v0 fixed-2° single-pass cross is unbounded on weak anchors: B(ep52)=40941 cells → 211M pairs (~8.2 hr) / 36.5M after a truth-dropping random PAIR_BUDGET cull (~85 min @ 7140 pairs/s, source results/s100/seed42_capped_run.log). The v0 'bound via PAIR_BUDGET (raised/deterministic)' term does not actually bound the cross and re-introduces the blind truth-drop. Coarse-then-fine bounds the cross structurally and is truth-safe (no blind cull). Fix #1 (fixed-2° preserves resolution: B nt 2.51° not widened) is retained and confirmed working.",
+      "approved_by": "girish",
+      "at": "2026-06-01T00:00:00Z"
+    }
+  ],
+  "frozen_at": "2026-06-01T00:00:00Z",
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

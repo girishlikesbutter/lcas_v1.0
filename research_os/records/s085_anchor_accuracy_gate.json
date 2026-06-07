@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s085_anchor_accuracy_gate",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-accuracy-gate",
+  "question": "Can sharp-|C_t| anchoring deliver q within ~1-3 deg on fast tumblers, and does the joint LM polish bridge the residual gap under truth vs realistic-blind omega seeds?",
+  "hypothesis": "Anchor delivery is the blocker; if anchoring reaches the s084 1-3 deg q budget and the polish converges, the v3 pipeline is gated open.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [119, 108, 100, 116],
+  "N": 4,
+  "claim_scope": "N1",
+  "metrics": {
+    "anchor_q_geo_119_400k_deg": 3.30,
+    "anchor_q_geo_119_800k_deg": 1.56,
+    "anchor_q_geo_100_deg": 1.65,
+    "L0_bandAB_119": "3/3",
+    "L1_bandAB_119": "1/3",
+    "L1_rho_surr_median_119": 25.2,
+    "L1_q0_seed_err_median_119_deg": 17.1,
+    "wall_s": 2066
+  },
+  "artefacts": [
+    { "path": "results/s085/summary.json", "kind": "data" },
+    { "path": "results/s085/seed119_anchor_gate.png", "kind": "plot" },
+    { "path": "results/s085/seed108_anchor_gate.png", "kind": "plot" },
+    { "path": "results/s085/seed100_anchor_gate.png", "kind": "plot" },
+    { "path": "results/s085/seed116_anchor_gate.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s085_anchor_accuracy_gate.md"],
+  "parents": ["s084_omega_refine_viability", "s086_omega_refine_rescue"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-21T00:00:00Z",
+  "narrative_md": "Anchor delivery is NOT the blocker: sharp-|C_t| coarse-find then dense-resample delivers fast-seed q to 1.65-3.30 deg @400k (119 tightens to 1.56 @800k), within the s084 1-3 deg budget (Layer A blind, truth as comparison target only). With truth omega (L0) the joint polish is rock-solid (3/3 Band A every perturbation); with a realistic blind omega (L1: dir 1.5 deg, |omega| 0.5%) fast seed 119 fails (1/3, rho~25), the small omega error amplifying into 12-20 deg q0 error through 738 deg back-propagation. The bottleneck moved upstream to the blind omega estimate. Layer B perturbs truth-q and seeds omega relative to truth -> oracle_clean false."
+}

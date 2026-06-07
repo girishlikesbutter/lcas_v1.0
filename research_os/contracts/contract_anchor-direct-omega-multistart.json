@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "id": "contract_anchor-direct-omega-multistart",
+  "kind": "branch_contract",
+  "goal_node": "goal_windowed-photometry-polish",
+  "status": "amended",
+  "question": "Does anchor-direct ω-multistart — drop the cross/q_b entirely and multistart ω-dir × |ω| directly at each cloud q_a rep, rank by coarse-K full-LC surrogate-v2 RMSE, polish the top-K over the A→C window — reach a surrogate-v2 Band A∪B attractor BLIND, within the 15-min/seed budget, on fast-aliased seeds 119 and 19, turning s106's real-but-inaccessible Band A into an affordable blind production step?",
+  "hypothesis": "The cross/q_b only ever seeded ω (and badly: single-shoot is 104° off truth, s100/s107) while the soft-B attitude term is inert (s106). So removing the cross and multistarting ω-dir × |ω| directly at each of the ~2000 cloud q_a reps eliminates the 3.17M-pair q_a×q_b explosion that put s108 ~100× over budget — a ~1585× reduction (pairs→reps), projecting to ~6.8 min/seed at n_dir=1000 (results/s114/cost_probe.json). A dense-enough ω-dir grid (n_dir≳1000, vs s108's basin-missing n_dir=16 with near_recov 9/75) catches the ~5° polish basin, and coarse-K full-LC surrogate-v2 RMSE — a clean phantom-free discriminator (s108: oracle coarse_rank 3/1675) — surfaces the truth-near q_a at surrogate Band A∪B on both fast seeds.",
+  "predictions": [
+    {
+      "case": "seed 119 — cached 12M-densified cloud has a truth-near q_a rep at 1.02° off (s108 no_cpass_cross_summary nearest_qa_off=1.0166687); s106 reached surr-ρ 0.0300 Band A from a within-5° ω-dir seed at that rep, but the production single-shoot ω is 104° off (s100) so the basin was never reached blind",
+      "expected_outcome": "anchor-direct n_dir≳1000 grid places ≥1 start within ~5° of truth-ω-dir at the 1.02° q_a rep → windowed polish converges to surr-ρ<2 Band A reproducing ~0.0300; AND that truth-near q_a's best-winding root ranks into the top-K (≤150) by coarse full-LC surrogate RMSE among all 2000 reps",
+      "uncertain": true
+    },
+    {
+      "case": "seed 19 — |ω| 1.4758 deg/s (nearest neighbour to 119's 1.4819; data/trajectories/traj_seed019.npz omega_mag_dps), NO cached cloud, requires a fresh 12M coverage densify; turn-count / aliasing regime unknown until anchors are selected",
+      "expected_outcome": "fresh densify yields a truth-near q_a rep (≲~1.5°, like 119/116); anchor-direct yields ≥1 surrogate-v2 Band A∪B (surr-ρ<4) attractor — confirming the method on a second fast-aliased seed. OPEN: 19 may turn out less aliasing-prone (fewer A→B turns) than 119, in which case it inverts more easily (still confirms) OR its cloud lacks a truth-near rep → no Band A (class-boundary refute)",
+      "uncertain": true
+    },
+    {
+      "case": "phantom check — the q_b connectability pre-filter is REMOVED in anchor-direct; s107 showed the polish itself is phantom-free over cross survivors, but the full-cloud rep distribution is wider and unfiltered",
+      "expected_outcome": "≤5% of the top-K polished reps reach surrogate Band-A while >30° off truth-ω-dir (no phantom manufacture) — i.e. the coarse-K full-LC RMSE rank + windowed polish discriminate without the connectability filter",
+      "uncertain": true
+    },
+    {
+      "case": "cost — anchor-direct coarse multistart (n_dir=1000, n_mag=10, 2000 reps = 20M shoots @ 0.4777 ms/shoot) + top-150 windowed polish on Pool(24)",
+      "expected_outcome": "coarse search + polish completes ≤ ~7 min/seed on Pool(24) (results/s114/cost_probe.json: 6.79 min); seed 19 adds ~16.5 min for the 12M densify (s100 wall 989s). Mostly settled by the s114 projection — retained as a confirm-support, not a live unknown",
+      "uncertain": false
+    }
+  ],
+  "confirm_criteria": "For EACH of seeds 119 and 19, the anchor-direct pipeline (n_dir≥1000 ω-dir grid × n_mag≥10 |ω| in [0.1,1.5] deg/s at each cloud q_a rep → coarse-K full-LC surrogate-v2 RMSE rank → top-K≤150 windowed-photometry LM polish over the A→C window) yields ≥1 surrogate-v2 attractor at surr-ρ<4 (Band A∪B), AND the coarse multistart + polish completes within the 15-min/seed budget on Pool(24). Seed 119 must reproduce s106's surr-ρ≈0.0300 Band A via this fully blind path (the truth-near q_a's root reaching the top-K and polishing to Band A). Truth-in-set (q0_err, ω-dir-err, |ω| deg/s) recorded per seed as diagnostic, NOT gating (acceptance = multi-solution, not truth-recovery).",
+  "refute_criteria": "≥1 of {seed 119, seed 19} yields 0 surrogate Band A∪B attractor after the anchor-direct sweep — i.e. the dense n_dir≥1000 multistart fails to place a start inside the ~5° basin for the truth-near q_a, OR the truth-near q_a's best-winding root never enters the top-K by coarse full-LC RMSE; OR the per-seed search exceeds the 15-min budget on Pool(24) (the s114 cost projection was wrong); OR phantoms appear (>5% of top-K reach surrogate Band-A while >30° off truth-ω-dir — the q_b connectability filter was load-bearing for discrimination after all). SURROGATE-ONLY CAVEAT (user chose surrogate-v2 acceptance): per s107, a surr-Band-A can be hi-fi Band-D — a hi-fi confirm on the blind top-K is recorded as a DIAGNOSTIC and any surr-Band-A that renders hi-fi-Band-D (ρ≥8) is flagged a surrogate-phantom in the artefact. This caveats but does not retroactively refute a surr-ρ<4 confirm.",
+  "budget": {
+    "expected_runs": 2,
+    "expected_wall_s": 2400
+  },
+  "required_artefacts": [
+    "surrogate-v2 ρ-band table over both seeds' top-K polished attractors (cols: seed, rank, coarse_full_rmse, surr-ρ, surr-band, q0_err, ω-dir-err deg, |ω| deg/s, hifi-ρ [diagnostic], hifi-band [diagnostic], phantom_flag)",
+    "per-seed coarse-multistart density check: n_dir / n_mag used, near_recov (count of within-5° starts that found the truth winding) vs the s108 n_dir=16 baseline of 9/75, and the truth-near q_a's coarse-RMSE rank among all ~2000 reps",
+    "cost actuals vs the s114 projection (results/s114/cost_probe.json): measured wall_s for coarse-multistart, top-K polish, and hi-fi diagnostic per seed",
+    "per-seed checkpoints: results/s114/seed{019,119}/{multistart.npz, polish.npz, summary.json, hifi.json}",
+    "per-seed multi-solution attractor plot (ω-dir-err vs surr-ρ, truth marked) + the blind winner's predicted-vs-truth LC overlay (lc-compare style)"
+  ],
+  "analytical_probe": {
+    "cheap_path": "Project anchor-direct cost analytically from the cached s108 per-shoot timing (0.4777 ms/shoot = 46.70s / 575 pairs / 170 shoots, results/s108/seed119/multistart_density.json) × n_repA(2000, s108 no_cpass_cross_summary) × n_dir × n_mag, to confirm the q_a×q_b→q_a reduction (3.17M pairs → 2000 reps ≈ 1585×) brings the blind multistart within the 15-min/seed budget and to set n_dir. Ran inline during align: results/s114/cost_probe.json.",
+    "why_insufficient": "The arithmetic confirms cost feasibility (~6.79 min/seed at n_dir=1000, n_mag=10) and sets the grid, but is a no-op on the three binding uncertainties this contract exists to resolve: (1) whether n_dir≳1000 actually catches the ~5° ω-dir basin for the truth-near q_a (s108 near_recov was only 9/75 at n_dir=16 — too coarse), (2) whether the truth-near q_a ranks into the top-K by coarse full-LC RMSE among all 2000 reps (a different distribution than s108's pair-subsample where the oracle ranked 3/1675), and (3) whether phantoms appear once the q_b connectability pre-filter is removed. All three require the actual anchor-direct batch + surrogate-v2 scoring on seeds 119 and 19; no re-score of cached data can produce them (no cached anchor-direct multistart exists, and seed 19 has no cloud at all).",
+    "probe_run": null
+  },
+  "model": "opus",
+  "reasoning": "xhigh",
+  "run_type_policy": { "cheap": "auto", "expensive": "gated" },
+  "probe_budget_s": 180,
+  "amendments": [
+    {
+      "version": "v1",
+      "diff": "METHOD: the v0 single-stage dense grid at EVERY rep is replaced by a TWO-STAGE rep-prune. STAGE A: coarse-dir filter ALL ~2000 reps at n_dir=64 × n_mag=5 (~640k coarse evals, ~3 min) → rank reps by best-coarse full-LC RMSE. STAGE B: dense-dir grid (n_dir=1000 × n_mag=10) on ONLY the top-M=200 Stage-A reps → rank → polish top-K=150 over the A→C window. COST BASIS CORRECTED: the v0 analytical_probe (results/s114/cost_probe.json) assumed 0.478 ms/coarse_rmse — it conflated s108's shoot-ATTEMPTS (170/pair, most short-circuiting on the connectability filter BEFORE any coarse eval) with actual coarse evals; the s114 seed-119 smoke calibration measured ~7 ms/coarse_rmse (results/s114/seed119/summary.json coarse_ms_per_eval, corroborated by the Pool(8) throughput 120k evals/126s). That makes v0 single-stage n_dir=1000 ~97 min/seed (6.5× over budget), and single-stage cannot both sample the ~5° basin (locks n_dir≳1140) AND fit 15 min/seed. Two-stage projects ~13 min/seed, restoring the budget. PREDICTION ADDED (uncertain): the Stage-A coarse-dir filter (n_dir=64 → nearest grid dir ~12.7° off truth) must rank the truth-near q_a rep into the top-M=200; if it does not, anchor-direct is refuted at the rep-prune step regardless of Stage B (the smoke n_dir=20 ranked the truth rep 691/2000 — too coarse, so n_dir=64 + M=200 is the bet). BUDGET unchanged (15-min/seed; expected_wall_s 2400 for both seeds incl. seed-19 densify).",
+      "reason": "The v0 cost projection was refuted by the seed-119 smoke calibration: ~7 ms/coarse_rmse vs the 0.478 ms the probe assumed (the probe mis-derived per-eval cost from s108 shoot-attempts, not coarse evals). Single-stage at the basin-catching resolution (n_dir≳1140) is ~97 min/seed, 6.5× over the 15-min budget. Two-stage rep-prune keeps the anchor-direct thesis (still ~44× cheaper than s108's 71.5 hr) within budget; the new binding risk — whether the truth-near rep survives the coarse Stage-A top-M cut — is recorded as an explicit uncertain prediction, not papered over.",
+      "approved_by": "girish",
+      "at": "2026-06-05T00:00:00Z"
+    }
+  ],
+  "frozen_at": "2026-06-05T00:00:00Z",
+  "created_at": "2026-06-05T00:00:00Z",
+  "updated_at": "2026-06-05T12:00:00Z"
+}

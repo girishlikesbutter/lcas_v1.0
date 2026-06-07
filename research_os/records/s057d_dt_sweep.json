@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057d_dt_sweep",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "What Delta-t maximises single-anchor concentration, and does the modal candidate cluster ever sit near truth?",
+  "hypothesis": "s057's analytic Delta-t=10 choice was suboptimal; an empirical sweep will find a better Delta-t and possibly a modal cluster at truth.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "best_dt": 3,
+    "best_dt_concentration": 3.87,
+    "dt7_concentration": 3.42,
+    "dt10_concentration": 1.79,
+    "best_truth_adjacent_w_err_dt2": 22,
+    "best_truth_adjacent_w_err_dt20": 4,
+    "modal_cluster_dist_to_truth_deg": "40-86"
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057d_dt_sweep.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Empirical Delta-t sweep at fixed anchor t_a=411 on seed 89: concentration peaks at dt=3 (3.87x) and dt=7 (3.42x), NOT at s057's dt=10 (1.79x). Best truth-adjacent omega error improves monotonically with dt (22deg at dt=2 -> 4deg at dt=20). Decisive: the modal cluster never sits near truth (always 40-86deg away) -- single-anchor architecture has no peak-at-truth. Measures vs truth-omega -- oracle-leak, N=1."
+}

@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/branch_contract.schema.json",
+  "title": "Branch contract",
+  "description": "A frozen, pre-registered agreement for a branch of work (PLAN §2/§4, Q4). Authored by grilling (the `align` skill), frozen before expensive compute, and changed ONLY via versioned amendments — no silent goalpost moves. `predictions` must each name an UNCERTAIN seed/case (the experiment-discipline rule: if you can't name a seed with an uncertain outcome, you don't need the experiment). The deviation rule (stop-and-escalate before any off-contract action, except probes ≤ probe_budget_s) is policy enforced by the executor; this schema records the budget it draws on.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "goal_node",
+    "status",
+    "question",
+    "hypothesis",
+    "predictions",
+    "confirm_criteria",
+    "refute_criteria",
+    "budget",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^contract_[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "contract_<kebab-slug>. Referenced by goal_node.contract_refs and run_record.contract_ref.",
+      "examples": ["contract_windowed-polish-discrimination"]
+    },
+    "kind": { "type": "string", "const": "branch_contract" },
+    "goal_node": { "type": "string", "description": "Id of the goal node this contract governs." },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "frozen", "amended", "closed"],
+      "description": "draft = being grilled, mutable. frozen = blessed; original terms locked. amended = frozen + >=1 approved amendment. closed = branch finished."
+    },
+    "question": { "type": "string", "description": "The branch question." },
+    "hypothesis": { "type": "string", "description": "The standing hypothesis." },
+    "predictions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Named uncertain predictions (Q4). At least one is required — a contract with no uncertain prediction has no reason to run.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case", "expected_outcome"],
+        "properties": {
+          "case": {
+            "type": "string",
+            "description": "The specific seed/case whose outcome is uncertain (e.g. 'seed 119, oracle-far pair >90° off truth')."
+          },
+          "expected_outcome": {
+            "type": "string",
+            "description": "What you predict will happen (e.g. 'stays Band D, ρ>4')."
+          },
+          "uncertain": {
+            "type": "boolean",
+            "default": true,
+            "description": "Must be true for at least one prediction. A prediction whose outcome you already know does not justify the run."
+          }
+        }
+      }
+    },
+    "confirm_criteria": { "type": "string", "description": "Machine/agent-checkable condition that CONFIRMS the hypothesis." },
+    "refute_criteria": { "type": "string", "description": "Machine/agent-checkable condition that REFUTES it." },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_runs", "expected_wall_s"],
+      "properties": {
+        "expected_runs": { "type": "integer", "minimum": 0 },
+        "expected_wall_s": { "type": "number", "minimum": 0 }
+      }
+    },
+    "required_artefacts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Artefacts the run MUST produce to satisfy the contract (e.g. 'rho-band table', 'window-objective overlay plot'). The close gate checks these exist."
+    },
+    "analytical_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The cheap-first gate (PLAN §8 analytical-probe; CLAUDE.md 'analytical before computational'). The `align` skill HARD-BLOCKS the freeze of any contract that authorizes expensive compute (run_type_policy.expensive=gated and budget above probe_budget_s) until this is filled — records the cheap analytical alternative considered and why compute is nonetheless necessary. Optional for purely cheap/probe contracts.",
+      "required": ["cheap_path", "why_insufficient"],
+      "properties": {
+        "cheap_path": {
+          "type": "string",
+          "description": "The cheap analytical alternative considered (e.g. 're-score existing seed_*/result.json', 'population stats on cached step1 checkpoints', 'ranking-only change — no pipeline re-run')."
+        },
+        "why_insufficient": {
+          "type": "string",
+          "description": "Why that cheap path cannot answer the question — the justification for the compute spend."
+        },
+        "probe_run": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Optional run_record id of the <= probe_budget_s probe (run_type: probe) that demonstrated the cheap path insufficient."
+        }
+      }
+    },
+    "model": {
+      "type": "string",
+      "default": "opus",
+      "description": "Model the run executes under. Policy: everything is Opus (PLAN §8)."
+    },
+    "reasoning": {
+      "type": "string",
+      "enum": ["high", "xhigh", "max"],
+      "default": "high",
+      "description": "Minimum thinking level. Policy: minimum 'high'; harder skills xhigh/max (PLAN §8). Contract overrides skill default."
+    },
+    "run_type_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "default": { "cheap": "auto", "expensive": "gated" },
+      "description": "Which run types auto-run vs require a human gate (Q4).",
+      "properties": {
+        "cheap": { "type": "string", "enum": ["auto", "gated"], "default": "auto" },
+        "expensive": { "type": "string", "enum": ["auto", "gated"], "default": "gated" }
+      }
+    },
+    "probe_budget_s": {
+      "type": "number",
+      "minimum": 0,
+      "default": 180,
+      "description": "The off-contract carve-out: probes up to this wall (default ~3 min) may run to gather evidence BEFORE escalating; anything longer stop-and-escalates first (Q4)."
+    },
+    "amendments": {
+      "type": "array",
+      "default": [],
+      "description": "Versioned changes after freeze. Append-only; never edit a frozen term in place.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "diff", "reason", "approved_by"],
+        "properties": {
+          "version": { "type": "string", "description": "e.g. 'v1', 'v2' (the frozen original is 'v0')." },
+          "diff": { "type": "string", "description": "What changed (human-readable diff of terms)." },
+          "reason": { "type": "string" },
+          "approved_by": { "type": "string", "description": "Who approved (e.g. 'girish')." },
+          "at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "frozen_at": { "type": "string", "format": "date-time", "description": "When status went draft->frozen." },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

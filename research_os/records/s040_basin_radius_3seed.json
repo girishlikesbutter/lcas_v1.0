@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s040_basin_radius_3seed",
+  "kind": "run_record",
+  "goal_node": "goal_basin-width",
+  "question": "What is the per-axis joint-LM basin radius around truth and body-twin on seeds 23/28/89, and which axis is binding?",
+  "hypothesis": "The LM basin is wide in q0 and narrow in omega; the binding axis is seed-specific.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [23, 28, 89],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_lm_polishes": 210,
+    "q0_basin_deg": ">=30",
+    "omega_mag_basin_seed28_pct": 2.0,
+    "omega_dir_basin_deg": 7.0,
+    "seed89_truth_q0perp_basin_deg": 5.0,
+    "seed89_twin_q0perp_basin_deg": 20.0,
+    "wall_s": 564
+  },
+  "artefacts": [
+    { "path": "results/s040_basin_radius_3seed/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s040_basin_radius_3seed.md"],
+  "parents": ["s038_filter_diagnostics_seed023", "s037_sobol_lm_pilot", "s034_lm_polish_seed89"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "Joint 6-DOF LM basin radii from controlled perturbations off truth/twin on seeds 23/28/89. The LM basin is wide in q0 (>=30deg saturated on most axes) but narrow in omega; binding axis is seed-specific (omega-mag +-7% seed 23, +2%/-3% seed 28, omega-dir + q0-perp seed 89). Seed 89 is uniquely asymmetric (truth q0-perp 5deg vs twin 20deg) due to a competing rho~11 attractor. Cohort implication: the omega-prior (within ~2% mag) is the binding constraint, not q0 IC density — the cell-filter matters most."
+}

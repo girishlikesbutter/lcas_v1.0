@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hi-Fi PAB Manifold Viewer</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: #000; color: #ccc; font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  #header {
+    height: 32px; padding: 0 16px; background: #0a0a0a; border-bottom: 1px solid #222;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  #header h1 { font-size: 13px; color: #ddd; font-weight: 500; }
+  #info-text { font-size: 11px; color: #888; }
+  #main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #plot3d { flex: 7; min-height: 0; }
+  #bottom-plots { flex: 4; min-height: 0; display: flex; flex-direction: column; }
+  #lc-plot { flex: 1; min-height: 0; border-top: 1px solid #222; }
+  #ipl-plot { flex: 1; min-height: 0; border-top: 1px solid #181818; }
+  #ang-plot { flex: 1; min-height: 0; border-top: 1px solid #181818; }
+  #controls {
+    background: #0a0a0a; border-top: 1px solid #222;
+    display: flex; align-items: center; padding: 4px 12px; gap: 8px;
+    flex-wrap: wrap; flex-shrink: 0;
+  }
+  .ctrl-group { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .ctrl-label { font-size: 11px; color: #999; }
+  .ctrl-val { font-size: 11px; color: #5dade2; min-width: 28px; text-align: right; }
+  .ctrl-group input[type=range] { accent-color: #5dade2; cursor: pointer; }
+  .ctrl-group select {
+    background: #1a1a1a; color: #ccc; border: 1px solid #333; border-radius: 3px;
+    padding: 2px 6px; font-size: 11px; cursor: pointer;
+  }
+  .ctrl-toggle { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #999; cursor: pointer; }
+  .ctrl-toggle input { accent-color: #5dade2; cursor: pointer; }
+  .sep { width: 1px; height: 20px; background: #333; flex-shrink: 0; }
+  .btn {
+    background: #1a1a1a; color: #ccc; border: 1px solid #444; border-radius: 3px;
+    padding: 2px 10px; font-size: 11px; cursor: pointer;
+  }
+  .btn:hover { background: #2a2a2a; }
+  .btn.active { background: #1a3a5a; border-color: #5dade2; color: #5dade2; }
+  .kbd { font-size: 10px; color: #444; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1 id="title">Hi-Fi PAB Manifold Viewer</h1>
+  <span id="info-text"></span>
+</div>
+<div id="main">
+  <div id="plot3d"></div>
+  <div id="bottom-plots">
+    <div id="lc-plot"></div>
+    <div id="ipl-plot"></div>
+    <div id="ang-plot"></div>
+  </div>
+</div>
+<div id="controls">
+  <button class="btn" id="play-btn" onclick="togglePlay()">&#9654; Play</button>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Epoch:</span>
+    <button class="btn" onclick="stepEpoch(-1)">&minus;</button>
+    <input type="range" id="epoch-slider" min="0" max="499" value="0" step="1" style="width:220px">
+    <button class="btn" onclick="stepEpoch(1)">+</button>
+    <span class="ctrl-val" id="epoch-val">0</span>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Speed:</span>
+    <select id="speed-select">
+      <option value="200">Slow</option>
+      <option value="80" selected>Normal</option>
+      <option value="30">Fast</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <label class="ctrl-toggle">
+    <input type="checkbox" id="surface-check" checked onchange="toggleSurface()"> Manifold
+  </label>
+  <label class="ctrl-toggle">
+    <input type="checkbox" id="shell-check" checked onchange="toggleShell()"> Shell
+  </label>
+  <label class="ctrl-toggle">
+    <input type="checkbox" id="normals-check" checked onchange="toggleNormals()"> Normals
+  </label>
+  <label class="ctrl-toggle">
+    <input type="checkbox" id="trail-check" checked onchange="updateEpoch()"> Trail
+  </label>
+  <label class="ctrl-toggle">
+    <input type="checkbox" id="lofi-check" onchange="updateLCPlot()"> Lo-fi LC
+  </label>
+  <div class="sep"></div>
+  <span class="kbd">Space: play &middot; &larr;&rarr;: step &middot; M: manifold &middot; S: shell &middot; N: normals &middot; T: trail</span>
+</div>
+
+<script>
+const D = __SURFACE_DATA__;
+const T = D.trajectory;
+const H = D.hifi;
+const PI = Math.PI, DEG = PI / 180;
+
+// ── Vector math ──
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function cross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function vlen(a){return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
+function rotateAroundAxis(v,axis,angle){
+  const c=Math.cos(angle),s=Math.sin(angle),d=dot(axis,v),cr=cross(axis,v);
+  return[v[0]*c+cr[0]*s+axis[0]*d*(1-c),
+         v[1]*c+cr[1]*s+axis[1]*d*(1-c),
+         v[2]*c+cr[2]*s+axis[2]*d*(1-c)];
+}
+
+// ── Articulation — fixed for IS-901 inversion convention (panel=0°, dish=15°) ──
+const PANEL_DEG_FIXED = 0, DISH_DEG_FIXED = 15;
+function articulationAngleFor(compName) {
+  if (compName.startsWith('SP')) return PANEL_DEG_FIXED * DEG;
+  if (compName.startsWith('AD')) return DISH_DEG_FIXED * DEG;
+  return 0;
+}
+
+// Build facet groups (normal+area) with articulation applied — static because
+// our articulation is fixed (matches the hifi surrogate's input convention).
+function buildArticulatedGroups() {
+  const groups = [];
+  for (const comp of D.components) {
+    const ang = articulationAngleFor(comp.name);
+    const rot = comp.articulation && Math.abs(ang) > 1e-6;
+    const axis = comp.articulation ? comp.articulation.axis : null;
+    for (const g of comp.groups) {
+      let n = g.normal;
+      if (rot) n = rotateAroundAxis(n, axis, ang);
+      groups.push({ normal: n, area: g.area, comp: comp.name });
+    }
+  }
+  return groups;
+}
+
+// Deduplicate facet normals (merge groups with same-direction normals)
+function dedupeNormals(groups) {
+  const keys = [], normals = [], areas = [], comps = [];
+  for (const g of groups) {
+    const key = g.normal.map(v => v.toFixed(3)).join(',');
+    const idx = keys.indexOf(key);
+    if (idx === -1) {
+      keys.push(key); normals.push(g.normal); areas.push(g.area);
+      comps.push(new Set([g.comp]));
+    } else {
+      areas[idx] += g.area; comps[idx].add(g.comp);
+    }
+  }
+  return normals.map((n,i)=>({ normal: n, area: areas[i], comps: [...comps[i]] }));
+}
+
+// ── Normal arrow styling ──
+const SHAFT = 1.15, CONE_SZ = 0.1;
+const GROUP_PALETTE = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#469990'];
+function isPositive(n){ for(let i=0;i<3;i++){ if(Math.abs(n[i])>0.001) return n[i]>0; } return true; }
+function canonKey(n){
+  const p = isPositive(n);
+  const s = p ? n : n.map(v => -v);
+  return s.map(v => v.toFixed(3)).join(',');
+}
+
+// ── Base64 decoding for binary-packed data ──
+function b64ToBytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function b64ToUint16(b64) {
+  const bytes = b64ToBytes(b64);
+  return new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+}
+function b64ToInt16(b64) {
+  const bytes = b64ToBytes(b64);
+  return new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+}
+function b64ToUint32(b64) {
+  const bytes = b64ToBytes(b64);
+  return new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+}
+
+// ── Decode static icosphere + per-epoch log-flux ──
+// log-flux is quantized per-epoch (each epoch normalized to its own local min/max).
+// So LOG_FLUX_Q[ep*N_V + i] is a uint16 in [0, 65535] representing t ∈ [0, 1] where
+// 0 = this epoch's dimmest direction, 1 = this epoch's brightest. Same convention
+// as the old lofi viewer, which also used per-manifold range. Consequence: the
+// manifold always fills [R_MIN, R_MAX] at every frame, consistent "full potato".
+const N_V              = H.n_verts;
+const N_F              = H.n_faces;
+const N_OBS            = H.n_obs;
+const R_MIN            = H.R_MIN;
+const R_MAX            = H.R_MAX;
+
+// Static verts: int16 quantized from [-1,1] via ×32767
+const _vertsRaw = b64ToInt16(H.verts_b64);
+const VERTS_X = new Float64Array(N_V);
+const VERTS_Y = new Float64Array(N_V);
+const VERTS_Z = new Float64Array(N_V);
+for (let i = 0; i < N_V; i++) {
+  VERTS_X[i] = _vertsRaw[i*3    ] / 32767.0;
+  VERTS_Y[i] = _vertsRaw[i*3 + 1] / 32767.0;
+  VERTS_Z[i] = _vertsRaw[i*3 + 2] / 32767.0;
+}
+// Renormalize (quantization drifts off the unit sphere slightly)
+for (let i = 0; i < N_V; i++) {
+  const L = Math.sqrt(VERTS_X[i]**2 + VERTS_Y[i]**2 + VERTS_Z[i]**2);
+  if (L > 1e-10) { VERTS_X[i]/=L; VERTS_Y[i]/=L; VERTS_Z[i]/=L; }
+}
+
+const _facesFlat = b64ToUint32(H.faces_b64);
+const FACES_I = new Uint32Array(N_F);
+const FACES_J = new Uint32Array(N_F);
+const FACES_K = new Uint32Array(N_F);
+for (let f = 0; f < N_F; f++) {
+  FACES_I[f] = _facesFlat[f*3    ];
+  FACES_J[f] = _facesFlat[f*3 + 1];
+  FACES_K[f] = _facesFlat[f*3 + 2];
+}
+
+// Per-epoch log-flux: uint16 quantized over [LOG_MIN, LOG_MAX]
+const LOG_FLUX_Q = b64ToUint16(H.log_flux_b64);  // length = N_OBS * N_V
+
+// Per-epoch backlit flag (uint8 per vertex): 1 = backlit (unphysical observer
+// geometry, surrogate is extrapolating), 0 = physically lit. Same index space
+// as LOG_FLUX_Q.
+const BACKLIT = b64ToBytes(H.backlit_b64);
+
+// Per-epoch dynamic arrays (small)
+const loopsPerEpoch      = H.loops_per_epoch;
+const activeLoopPer      = H.active_loop_per_epoch;
+const pabSurfPer         = H.pab_surf_per_epoch;
+const k1SurfPer          = H.k1_surf_per_epoch;
+
+// Compute-on-demand surface xyz + face intensity for a given epoch
+const _surfX = new Float64Array(N_V);
+const _surfY = new Float64Array(N_V);
+const _surfZ = new Float64Array(N_V);
+const _faceI = new Float64Array(N_F);
+function computeSurfaceForEpoch(ep) {
+  // Quantization: LOG_FLUX_Q[base + i] ∈ [0, 65535] maps linearly to
+  // t ∈ [0, 1], and r = R_MIN + t * (R_MAX − R_MIN). One radius on the plot =
+  // one brightness value, consistently across every epoch (global log range).
+  // Backlit vertices keep their surrogate-predicted radius (shown as "unknown"
+  // in real inversion); we mark them distinctly via face color below.
+  const base = ep * N_V;
+  const rRange = R_MAX - R_MIN;
+  for (let i = 0; i < N_V; i++) {
+    const t = LOG_FLUX_Q[base + i] / 65535.0;
+    const r = R_MIN + t * rRange;
+    _surfX[i] = VERTS_X[i] * r;
+    _surfY[i] = VERTS_Y[i] * r;
+    _surfZ[i] = VERTS_Z[i] * r;
+  }
+  // Face intensity encodes BOTH brightness and lit/shadowed state via a
+  // split colorscale:
+  //   lit face   → intensity = 0.5 + 0.5 * t_mean  (mapped to [0.5, 1]: greyscale)
+  //   backlit face → intensity = 0.5 * t_mean      (mapped to [0, 0.5]: shadow red)
+  // A face is "backlit" if any of its 3 corners is backlit.
+  for (let f = 0; f < N_F; f++) {
+    const vi = FACES_I[f], vj = FACES_J[f], vk = FACES_K[f];
+    const ti = LOG_FLUX_Q[base + vi] / 65535.0;
+    const tj = LOG_FLUX_Q[base + vj] / 65535.0;
+    const tk = LOG_FLUX_Q[base + vk] / 65535.0;
+    const tMean = (ti + tj + tk) / 3;
+    const backlit = (BACKLIT[base + vi] | BACKLIT[base + vj] | BACKLIT[base + vk]) !== 0;
+    _faceI[f] = backlit ? 0.5 * tMean : 0.5 + 0.5 * tMean;
+  }
+  return { x: _surfX, y: _surfY, z: _surfZ, fi: _faceI };
+}
+
+// IPL diagnostics
+const iplLengths = new Float64Array(H.ipl_lengths);
+const iplLoopCounts = new Int32Array(H.ipl_loop_counts);
+const iplAngDist = new Float64Array((H.ipl_ang_dist || []).map(v => v === null ? NaN : v));
+const iplCentroids = H.ipl_centroids;
+const iplActiveCentroidDir = H.ipl_active_centroid_dir;
+const iplMinima = H.ipl_minima || [];
+
+// ── Convert a loop-list (epoch) to flat x/y/z with NaN separators ──
+function loopToXYZ(loop) {
+  const x=[], y=[], z=[];
+  for (const p of loop) { x.push(p[0]); y.push(p[1]); z.push(p[2]); }
+  return { x, y, z };
+}
+function loopsToXYZ(loops) {
+  const x=[], y=[], z=[];
+  for (const loop of loops) {
+    for (const p of loop) { x.push(p[0]); y.push(p[1]); z.push(p[2]); }
+    x.push(NaN); y.push(NaN); z.push(NaN);
+  }
+  return { x, y, z };
+}
+
+// Radial position of the brightness shell at a given epoch. Loops are already
+// extracted at exactly this radius, so just read it off any loop vertex.
+function shellRadius(epoch) {
+  const loops = loopsPerEpoch[epoch];
+  for (const loop of loops) {
+    if (loop && loop.length > 0) {
+      const p = loop[0];
+      return Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+    }
+  }
+  // Fallback: use the PAB surface radius (it sits at the shell by construction)
+  const p = pabSurfPer[epoch];
+  return Math.sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+}
+
+// ── State ──
+let currentEpoch = 0, playing = false, playTimer = null;
+const TRAIL_LENGTH = 30;
+const TRAIL_SEGMENTS = 8;
+const COL_DOT = '#ffffff';
+const COL_ACTIVE = '#00e5ff';
+const COL_INACTIVE = '#ff8800';
+const COL_SUN = '#ffd166';
+
+const TRACE = {
+  surface: -1,
+  shellXY: -1, shellXZ: -1, shellYZ: -1,
+  loopActive: -1, loopInactive: -1,
+  loopActiveGlow: -1, loopInactiveGlow: -1,
+  pabDot: -1, k1Dot: -1,
+  pabTrailStart: -1, pabTrailEnd: -1,
+  centroidActive: -1, centroidInactive: -1,
+  angleArc: -1,
+  normalStart: -1, normalCount: 0,
+};
+
+// ── Shell represented as three great-circle rings (XY, XZ, YZ) ──
+// scatter3d lines reliably restyle, unlike mesh3d which Plotly caches.
+// Scale the unit rings by shellRadius(ep) each frame → shell visibly breathes.
+const RING_N = 96;
+const RING_XY = [];  // unit circle in XY plane
+const RING_XZ = [];
+const RING_YZ = [];
+for (let i = 0; i <= RING_N; i++) {
+  const a = 2 * PI * i / RING_N;
+  const c = Math.cos(a), s = Math.sin(a);
+  RING_XY.push([c, s, 0]);
+  RING_XZ.push([c, 0, s]);
+  RING_YZ.push([0, c, s]);
+}
+
+// ── Build all 3D traces ──
+function buildAllTraces() {
+  const traces = [];
+
+  // Trace 0: deforming manifold surface
+  const surf0 = computeSurfaceForEpoch(0);
+  traces.push({
+    type: 'mesh3d',
+    x: Array.from(surf0.x), y: Array.from(surf0.y), z: Array.from(surf0.z),
+    i: Array.from(FACES_I), j: Array.from(FACES_J), k: Array.from(FACES_K),
+    intensity: Array.from(surf0.fi), intensitymode: 'cell',
+    // Split colorscale: [0, 0.5] = backlit / shadow (muted warm tones, so the
+    // user can see the surrogate is extrapolating there). [0.5, 1] = lit
+    // (normal greyscale encoding brightness).
+    colorscale: [
+      [0.00, '#1a0000'],  // deepest shadowed
+      [0.49, '#993322'],  // brightest-looking shadowed (still muted red)
+      [0.51, '#111111'],  // dimmest lit
+      [1.00, '#ffffff'],  // brightest lit
+    ],
+    cmin: 0, cmax: 1,
+    showscale: false,
+    flatshading: true,
+    lighting: { ambient: 0.7, diffuse: 0.4, specular: 0.1, fresnel: 0 },
+    lightposition: { x: 0, y: 0, z: 10000 },
+    opacity: 1.0,
+    hovertemplate: 'log₁₀(flux): %{intensity:.2f}<extra></extra>',
+    name: 'manifold', showlegend: false,
+  });
+  TRACE.surface = 0;
+
+  // Shell = 3 great-circle rings (XY/XZ/YZ). Each is a scatter3d line at radius
+  // shellRadius(ep). These genuinely update per epoch via Plotly.restyle.
+  const r0 = shellRadius(0);
+  const SHELL_COLOR = '#5dade2';
+  traces.push({
+    type: 'scatter3d', mode: 'lines',
+    x: RING_XY.map(v => v[0] * r0),
+    y: RING_XY.map(v => v[1] * r0),
+    z: RING_XY.map(v => v[2] * r0),
+    line: { color: SHELL_COLOR, width: 4 }, opacity: 0.75,
+    name: 'shell XY', showlegend: false, hoverinfo: 'none',
+  });
+  TRACE.shellXY = traces.length - 1;
+  traces.push({
+    type: 'scatter3d', mode: 'lines',
+    x: RING_XZ.map(v => v[0] * r0),
+    y: RING_XZ.map(v => v[1] * r0),
+    z: RING_XZ.map(v => v[2] * r0),
+    line: { color: SHELL_COLOR, width: 4 }, opacity: 0.75,
+    name: 'shell XZ', showlegend: false, hoverinfo: 'none',
+  });
+  TRACE.shellXZ = traces.length - 1;
+  traces.push({
+    type: 'scatter3d', mode: 'lines',
+    x: RING_YZ.map(v => v[0] * r0),
+    y: RING_YZ.map(v => v[1] * r0),
+    z: RING_YZ.map(v => v[2] * r0),
+    line: { color: SHELL_COLOR, width: 4 }, opacity: 0.75,
+    name: 'shell YZ', showlegend: false, hoverinfo: 'none',
+  });
+  TRACE.shellYZ = traces.length - 1;
+
+  // Glow layer (thick, low-opacity) behind the active/inactive loops so the
+  // intersection curves between shell and manifold pop visually.
+  traces.push({
+    type: 'scatter3d', mode: 'lines',
+    x: [], y: [], z: [],
+    line: { color: COL_ACTIVE, width: 18 }, opacity: 0.35,
+    name: 'Active loop glow', showlegend: false, hoverinfo: 'none',
+  });
+  TRACE.loopActiveGlow = traces.length - 1;
+
+  traces.push({
+    type: 'scatter3d', mode: 'lines',
+    x: [], y: [], z: [],
+    line: { color: COL_INACTIVE, width: 12 }, opacity: 0.30,
+    name: 'Other loops glow', showlegend: false, hoverinfo: 'none',
+  });
+  TRACE.loopInactiveGlow = traces.length - 1;
+
+  // Sharp core layer on top of the glow
+  traces.push({
+    type: 'scatter3d', mode: 'lines',
+    x: [], y: [], z: [],
+    line: { color: COL_ACTIVE, width: 10 },
+    name: 'Active loop', showlegend: false, hoverinfo: 'none',
+  });
+  TRACE.loopActive = traces.length - 1;
+
+  traces.push({
+    type: 'scatter3d', mode: 'lines',
+    x: [], y: [], z: [],
+    line: { color: COL_INACTIVE, width: 6 },
+    name: 'Other loops', showlegend: false, hoverinfo: 'none',
+  });
+  TRACE.loopInactive = traces.length - 1;
+
+  // Trace 3: PAB dot
+  traces.push({
+    type: 'scatter3d', mode: 'markers',
+    x: [0], y: [0], z: [0],
+    marker: { size: 8, color: COL_DOT, symbol: 'circle',
+              line: { color: COL_ACTIVE, width: 2 } },
+    name: 'PAB', showlegend: false,
+    hovertemplate: 'PAB (ep %{text})<extra></extra>', text: ['0'],
+  });
+  TRACE.pabDot = 3;
+
+  // Trace 4: k1_body (sun) marker
+  traces.push({
+    type: 'scatter3d', mode: 'markers',
+    x: [0], y: [0], z: [0],
+    marker: { size: 9, color: COL_SUN, symbol: 'diamond',
+              line: { color: '#ffffff', width: 1 } },
+    name: 'k1 (sun)', showlegend: false,
+    hovertemplate: 'k1_body (ep %{text})<extra></extra>', text: ['0'],
+  });
+  TRACE.k1Dot = 4;
+
+  // Traces 6..6+TRAIL_SEGMENTS-1: PAB trail
+  TRACE.pabTrailStart = traces.length;
+  for (let s = 0; s < TRAIL_SEGMENTS; s++) {
+    const opacity = 0.15 + 0.85 * (s / (TRAIL_SEGMENTS - 1));
+    traces.push({
+      type: 'scatter3d', mode: 'lines',
+      x: [], y: [], z: [],
+      line: { color: COL_ACTIVE, width: 4 }, opacity,
+      name: 'Trail', showlegend: false, hoverinfo: 'none',
+    });
+  }
+  TRACE.pabTrailEnd = TRACE.pabTrailStart + TRAIL_SEGMENTS;
+
+  // Active centroid
+  TRACE.centroidActive = traces.length;
+  traces.push({
+    type: 'scatter3d', mode: 'markers',
+    x: [], y: [], z: [],
+    marker: { size: 5, color: COL_ACTIVE, symbol: 'diamond' },
+    name: 'Active centroid', showlegend: false, hoverinfo: 'none',
+  });
+  // Inactive centroids
+  TRACE.centroidInactive = traces.length;
+  traces.push({
+    type: 'scatter3d', mode: 'markers',
+    x: [], y: [], z: [],
+    marker: { size: 4, color: COL_INACTIVE, symbol: 'diamond' },
+    name: 'Other centroids', showlegend: false, hoverinfo: 'none',
+  });
+
+  // Angle arc (PAB ↔ active centroid)
+  TRACE.angleArc = traces.length;
+  traces.push({
+    type: 'scatter3d', mode: 'lines+text',
+    x: [], y: [], z: [],
+    line: { color: COL_DOT, width: 3, dash: 'dash' },
+    text: [], textposition: 'middle center',
+    textfont: { size: 12, color: COL_DOT },
+    name: 'Angle', showlegend: false, hoverinfo: 'none',
+  });
+
+  // Facet normal arrows — pairs of (+n, -n) share a color; solid for +, dashed for −.
+  // Big facets (area > threshold) rendered thicker. Static across epochs.
+  TRACE.normalStart = traces.length;
+  const AREA_THRESH = 2.0;
+  const gn = dedupeNormals(buildArticulatedGroups());
+  const pairMap = {};
+  let nextColor = 0;
+  const pairInfo = new Array(gn.length);
+  for (let i = 0; i < gn.length; i++) {
+    const ck = canonKey(gn[i].normal);
+    if (!pairMap[ck]) pairMap[ck] = { colorIdx: nextColor++ };
+    pairInfo[i] = { colorIdx: pairMap[ck].colorIdx, pos: isPositive(gn[i].normal) };
+  }
+  for (let i = 0; i < gn.length; i++) {
+    const g = gn[i], n = g.normal, pi = pairInfo[i];
+    const col = GROUP_PALETTE[pi.colorIdx % GROUP_PALETTE.length];
+    const primary = g.area > AREA_THRESH;
+    const w = primary ? 3 : 1.5;
+    const dash = pi.pos ? 'solid' : 'dash';
+    traces.push({
+      type: 'scatter3d', mode: 'lines',
+      x: [0, n[0] * SHAFT], y: [0, n[1] * SHAFT], z: [0, n[2] * SHAFT],
+      line: { color: col, width: w, dash: dash },
+      showlegend: false, hoverinfo: 'none',
+    });
+    traces.push({
+      type: 'cone', anchor: 'tail',
+      x: [n[0] * SHAFT], y: [n[1] * SHAFT], z: [n[2] * SHAFT],
+      u: [n[0]], v: [n[1]], w: [n[2]],
+      sizemode: 'absolute', sizeref: primary ? CONE_SZ : CONE_SZ * 0.6,
+      colorscale: [[0, col], [1, col]],
+      showscale: false, showlegend: false, hoverinfo: 'none',
+    });
+  }
+  TRACE.normalCount = traces.length - TRACE.normalStart;
+
+  return traces;
+}
+
+// ── Compute loop split for an epoch (returns active + inactive flat xyz) ──
+function loopsForEpoch(ep) {
+  const loops = loopsPerEpoch[ep];
+  const activeIdx = activeLoopPer[ep];
+  const activeLoop = (activeIdx >= 0 && activeIdx < loops.length)
+      ? loopToXYZ(loops[activeIdx])
+      : { x: [], y: [], z: [] };
+  const inactiveLoops = loops.filter((_, i) => i !== activeIdx);
+  const inactive = loopsToXYZ(inactiveLoops);
+  return { activeLoop, inactive };
+}
+
+// ── Update epoch (loops, PAB, k1, trail, centroids, shell, surface) ──
+function updateEpoch() {
+  const ep = currentEpoch;
+  const { activeLoop, inactive } = loopsForEpoch(ep);
+  const pabPos = pabSurfPer[ep];
+  const k1Pos = k1SurfPer[ep];
+
+  // Trail
+  const showTrail = document.getElementById('trail-check').checked;
+  const trailData = [];
+  for (let s = 0; s < TRAIL_SEGMENTS; s++) trailData.push({x:[],y:[],z:[]});
+  if (showTrail && ep > 0) {
+    const start = Math.max(0, ep - TRAIL_LENGTH);
+    const trailLen = ep - start;
+    for (let i = start; i <= ep; i++) {
+      const p = pabSurfPer[i];
+      const frac = trailLen > 0 ? (i - start) / trailLen : 1;
+      const seg = Math.min(Math.floor(frac * TRAIL_SEGMENTS), TRAIL_SEGMENTS - 1);
+      trailData[seg].x.push(p[0]); trailData[seg].y.push(p[1]); trailData[seg].z.push(p[2]);
+    }
+  }
+
+  // Centroids
+  const rShell = shellRadius(ep);
+  const acX=[], acY=[], acZ=[];
+  const icX=[], icY=[], icZ=[];
+  let arcX=[], arcY=[], arcZ=[], arcText=[];
+
+  let atMinimum = null;
+  for (const m of iplMinima) {
+    if (Math.abs(ep - m.ep) <= 1) { atMinimum = m; break; }
+  }
+
+  if (iplCentroids && iplCentroids[ep]) {
+    for (const c of iplCentroids[ep]) {
+      // Place centroid at shell radius (its direction is on the unit sphere)
+      const cSurf = [c.dir[0] * rShell, c.dir[1] * rShell, c.dir[2] * rShell];
+      if (c.isActive) {
+        acX.push(cSurf[0]); acY.push(cSurf[1]); acZ.push(cSurf[2]);
+        if (atMinimum) {
+          arcX = [pabPos[0], cSurf[0]];
+          arcY = [pabPos[1], cSurf[1]];
+          arcZ = [pabPos[2], cSurf[2]];
+          const ad = !isNaN(iplAngDist[ep]) ? iplAngDist[ep].toFixed(1) + '°' : '';
+          arcText = ['', ad];
+        }
+      } else {
+        icX.push(cSurf[0]); icY.push(cSurf[1]); icZ.push(cSurf[2]);
+      }
+    }
+  }
+
+  // Surface update (mesh3d) — update vertex positions + face intensity separately
+  // so Plotly doesn't choke on mixing mesh3d-only keys across scatter3d traces.
+  if (document.getElementById('surface-check').checked) {
+    const surf = computeSurfaceForEpoch(ep);
+    Plotly.restyle('plot3d', {
+      x: [Array.from(surf.x)],
+      y: [Array.from(surf.y)],
+      z: [Array.from(surf.z)],
+      intensity: [Array.from(surf.fi)],
+    }, [TRACE.surface]);
+  }
+
+  // Shell great-circle rings — radii scale with shellRadius(ep) each epoch
+  if (document.getElementById('shell-check').checked) {
+    const r = shellRadius(ep);
+    Plotly.restyle('plot3d', {
+      x: [RING_XY.map(v => v[0] * r),
+          RING_XZ.map(v => v[0] * r),
+          RING_YZ.map(v => v[0] * r)],
+      y: [RING_XY.map(v => v[1] * r),
+          RING_XZ.map(v => v[1] * r),
+          RING_YZ.map(v => v[1] * r)],
+      z: [RING_XY.map(v => v[2] * r),
+          RING_XZ.map(v => v[2] * r),
+          RING_YZ.map(v => v[2] * r)],
+    }, [TRACE.shellXY, TRACE.shellXZ, TRACE.shellYZ]);
+  }
+
+  // Loops (glow + core), markers, trails, centroids (all scatter3d) — batched restyle
+  const indices = [TRACE.loopActiveGlow, TRACE.loopInactiveGlow,
+                   TRACE.loopActive, TRACE.loopInactive,
+                   TRACE.pabDot, TRACE.k1Dot,
+                   TRACE.centroidActive, TRACE.centroidInactive, TRACE.angleArc];
+  const xs = [activeLoop.x, inactive.x, activeLoop.x, inactive.x,
+              [pabPos[0]], [k1Pos[0]], acX, icX, arcX];
+  const ys = [activeLoop.y, inactive.y, activeLoop.y, inactive.y,
+              [pabPos[1]], [k1Pos[1]], acY, icY, arcY];
+  const zs = [activeLoop.z, inactive.z, activeLoop.z, inactive.z,
+              [pabPos[2]], [k1Pos[2]], acZ, icZ, arcZ];
+  const txt = [undefined, undefined, undefined, undefined,
+               [`${ep}`], [`${ep}`], undefined, undefined, arcText];
+
+  for (let s = 0; s < TRAIL_SEGMENTS; s++) {
+    indices.push(TRACE.pabTrailStart + s);
+    xs.push(trailData[s].x);
+    ys.push(trailData[s].y);
+    zs.push(trailData[s].z);
+    txt.push(undefined);
+  }
+
+  Plotly.restyle('plot3d', { x: xs, y: ys, z: zs, text: txt }, indices);
+
+  // Cursor updates on bottom plots
+  Plotly.restyle('lc-plot', { x: [[ep, ep]] }, [lcCursorIdx]);
+  Plotly.restyle('ipl-plot', { x: [[ep, ep]] }, [iplCursorIdx]);
+  Plotly.restyle('ang-plot', { x: [[ep, ep]] }, [angCursorIdx]);
+
+  updateInfoText();
+}
+
+function updateInfoText() {
+  const ep = currentEpoch;
+  const mag = T.mag_hifi[ep];
+  const phase = T.phase_angle_deg[ep];
+  const nLoops = iplLoopCounts[ep];
+  const totalLen = iplLengths[ep];
+  document.getElementById('info-text').textContent =
+    `Epoch ${ep} | mag ${mag.toFixed(2)} | phase ${phase.toFixed(1)}° | ` +
+    `loops ${nLoops} | Σlength ${totalLen.toFixed(2)} | ` +
+    `|ω|=${T.omega_mag_dps.toFixed(3)} °/s | Seed ${T.seed}`;
+  document.getElementById('epoch-val').textContent = ep;
+  document.getElementById('epoch-slider').value = ep;
+}
+
+// ── Light curve plot ──
+let lcCursorIdx = 0;
+function buildLCPlot() {
+  const epochs = Array.from({ length: T.n_obs }, (_, i) => i);
+  const showLofi = document.getElementById('lofi-check').checked;
+
+  const traces = [];
+  traces.push({
+    x: epochs, y: T.mag_hifi,
+    type: 'scatter', mode: 'lines',
+    line: { color: '#5dade2', width: 1 },
+    name: 'Hi-fi',
+  });
+  if (showLofi) {
+    traces.push({
+      x: epochs, y: T.mag_lofi,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#888', width: 1, dash: 'dot' },
+      name: 'Lo-fi',
+    });
+  }
+  traces.push({
+    x: T.peak_epochs, y: T.peak_epochs.map(e => T.mag_hifi[e]),
+    type: 'scatter', mode: 'markers',
+    marker: { size: 4, color: '#ff8800', symbol: 'triangle-down' },
+    name: 'Peaks',
+  });
+  traces.push({
+    x: [currentEpoch, currentEpoch], y: [2, 16],
+    type: 'scatter', mode: 'lines',
+    line: { color: '#00e5ff', width: 2 },
+    name: 'Cursor', showlegend: false,
+  });
+  lcCursorIdx = traces.length - 1;
+
+  const layout = {
+    paper_bgcolor: '#000', plot_bgcolor: '#0a0a0a',
+    font: { color: '#aaa', size: 10 },
+    xaxis: { color: '#666', gridcolor: '#1a1a1a', range: [0, T.n_obs-1] },
+    yaxis: { title: 'Mag', color: '#666', gridcolor: '#1a1a1a', autorange: 'reversed' },
+    margin: { l: 50, r: 10, t: 5, b: 20 },
+    showlegend: false, hovermode: 'x unified',
+  };
+  Plotly.newPlot('lc-plot', traces, layout, { responsive: true, displayModeBar: false });
+  document.getElementById('lc-plot').on('plotly_click', function(data) {
+    if (data.points && data.points.length > 0) {
+      const ep = Math.round(data.points[0].x);
+      if (ep >= 0 && ep < T.n_obs) jumpTo(ep);
+    }
+  });
+}
+function updateLCPlot() { buildLCPlot(); }
+
+// ── IPL length plot ──
+let iplCursorIdx = 0;
+function buildIPLPlot() {
+  const epochs = Array.from({ length: T.n_obs }, (_, i) => i);
+  const counts = Array.from(iplLoopCounts);
+  const traces = [];
+  traces.push({
+    x: epochs, y: Array.from(iplLengths),
+    type: 'scatter', mode: 'lines',
+    line: { color: '#333', width: 1 },
+    name: 'IPL length', hoverinfo: 'skip',
+  });
+  const COL_BUCKET = ['#00e5ff','#ff8800','#ff2222'];
+  const bucketColors = counts.map(c => c <= 2 ? COL_BUCKET[0]
+                                   : c <= 4 ? COL_BUCKET[1]
+                                   : COL_BUCKET[2]);
+  traces.push({
+    x: epochs, y: Array.from(iplLengths),
+    type: 'scatter', mode: 'markers',
+    marker: { size: 3, color: bucketColors },
+    hovertemplate: 'ep %{x}: len=%{y:.2f}, loops=%{text}<extra></extra>',
+    text: counts.map(String),
+  });
+  if (iplMinima.length > 0) {
+    traces.push({
+      x: iplMinima.map(m => m.ep),
+      y: iplMinima.map(m => iplLengths[m.ep]),
+      type: 'scatter', mode: 'markers',
+      marker: { size: 7, color: COL_ACTIVE, symbol: 'triangle-down',
+                line: { color: '#fff', width: 1 } },
+      name: 'Minima',
+    });
+  }
+  traces.push({
+    x: [currentEpoch, currentEpoch], y: [0, Math.max(...iplLengths) * 1.05],
+    type: 'scatter', mode: 'lines',
+    line: { color: COL_ACTIVE, width: 2 },
+    showlegend: false,
+  });
+  iplCursorIdx = traces.length - 1;
+
+  const layout = {
+    paper_bgcolor: '#000', plot_bgcolor: '#0a0a0a',
+    font: { color: '#aaa', size: 10 },
+    xaxis: { color: '#666', gridcolor: '#1a1a1a', range: [0, T.n_obs-1] },
+    yaxis: { title: 'IPL Σlen', color: '#666', gridcolor: '#1a1a1a' },
+    margin: { l: 50, r: 10, t: 5, b: 15 },
+    showlegend: false, hovermode: 'x unified',
+  };
+  Plotly.newPlot('ipl-plot', traces, layout, { responsive: true, displayModeBar: false });
+  document.getElementById('ipl-plot').on('plotly_click', function(data) {
+    if (data.points && data.points.length > 0) {
+      const ep = Math.round(data.points[0].x);
+      if (ep >= 0 && ep < T.n_obs) jumpTo(ep);
+    }
+  });
+}
+
+// ── Angular distance plot ──
+let angCursorIdx = 0;
+function buildAngPlot() {
+  const epochs = Array.from({ length: T.n_obs }, (_, i) => i);
+  const traces = [];
+  traces.push({
+    x: epochs, y: Array.from(iplAngDist),
+    type: 'scatter', mode: 'lines',
+    line: { color: COL_ACTIVE, width: 1 },
+    name: 'PAB↔centroid °',
+  });
+  if (iplMinima.length > 0) {
+    traces.push({
+      x: iplMinima.map(m => m.ep),
+      y: iplMinima.map(m => m.angDist),
+      type: 'scatter', mode: 'markers',
+      marker: { size: 6, color: COL_ACTIVE, symbol: 'triangle-down' },
+    });
+  }
+  const finite = Array.from(iplAngDist).filter(v => !isNaN(v));
+  const yMax = finite.length > 0 ? Math.max(...finite) * 1.05 : 90;
+  traces.push({
+    x: [currentEpoch, currentEpoch], y: [0, yMax],
+    type: 'scatter', mode: 'lines',
+    line: { color: COL_ACTIVE, width: 2 },
+    showlegend: false,
+  });
+  angCursorIdx = traces.length - 1;
+
+  const layout = {
+    paper_bgcolor: '#000', plot_bgcolor: '#0a0a0a',
+    font: { color: '#aaa', size: 10 },
+    xaxis: { title: 'Epoch', color: '#666', gridcolor: '#1a1a1a', range: [0, T.n_obs-1] },
+    yaxis: { title: 'PAB↔Centroid (°)', color: '#666', gridcolor: '#1a1a1a' },
+    margin: { l: 50, r: 10, t: 5, b: 30 },
+    showlegend: false, hovermode: 'x unified',
+  };
+  Plotly.newPlot('ang-plot', traces, layout, { responsive: true, displayModeBar: false });
+  document.getElementById('ang-plot').on('plotly_click', function(data) {
+    if (data.points && data.points.length > 0) {
+      const ep = Math.round(data.points[0].x);
+      if (ep >= 0 && ep < T.n_obs) jumpTo(ep);
+    }
+  });
+}
+
+// ── 3D layout ──
+function build3DLayout() {
+  const sd = { showbackground: true, backgroundcolor: '#050505', gridcolor: '#181818',
+               zerolinecolor: '#252525', showticklabels: false, title: '' };
+  return {
+    scene: {
+      xaxis: Object.assign({}, sd, { range: [-1.4, 1.4] }),
+      yaxis: Object.assign({}, sd, { range: [-1.4, 1.4] }),
+      zaxis: Object.assign({}, sd, { range: [-1.4, 1.4] }),
+      aspectmode: 'cube',
+      camera: { eye: { x: 1.6, y: 1.6, z: 1.0 } },
+    },
+    paper_bgcolor: '#000', plot_bgcolor: '#000',
+    font: { color: '#aaa', size: 10 }, showlegend: false,
+    margin: { l: 0, r: 0, t: 5, b: 5 },
+  };
+}
+
+function rebuildPlot() {
+  const traces = buildAllTraces();
+  const layout = build3DLayout();
+  Plotly.purge('plot3d');
+  Plotly.newPlot('plot3d', traces, layout, { responsive: true, displayModeBar: false })
+    .then(() => {
+      updateEpoch();
+    });
+}
+
+// ── Controls ──
+function jumpTo(ep) {
+  currentEpoch = Math.max(0, Math.min(T.n_obs - 1, ep));
+  document.getElementById('epoch-slider').value = currentEpoch;
+  updateEpoch();
+}
+function stepEpoch(delta) { jumpTo(currentEpoch + delta); }
+
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('play-btn');
+  if (playing) {
+    btn.textContent = '⏸ Pause'; btn.classList.add('active');
+    const speed = +document.getElementById('speed-select').value;
+    playTimer = setInterval(() => {
+      currentEpoch = (currentEpoch + 1) % T.n_obs;
+      document.getElementById('epoch-slider').value = currentEpoch;
+      updateEpoch();
+    }, speed);
+  } else {
+    btn.textContent = '▶ Play'; btn.classList.remove('active');
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  }
+}
+
+function toggleSurface() {
+  const show = document.getElementById('surface-check').checked;
+  Plotly.restyle('plot3d', { visible: show }, [TRACE.surface]);
+  if (show) updateEpoch();
+}
+function toggleShell() {
+  const show = document.getElementById('shell-check').checked;
+  Plotly.restyle('plot3d', { visible: show },
+                 [TRACE.shellXY, TRACE.shellXZ, TRACE.shellYZ]);
+  if (show) updateEpoch();
+}
+function applyNormalsVisibility() {
+  const show = document.getElementById('normals-check').checked;
+  const idx = [];
+  for (let i = 0; i < TRACE.normalCount; i++) idx.push(TRACE.normalStart + i);
+  if (idx.length > 0) Plotly.restyle('plot3d', { visible: show }, idx);
+}
+function toggleNormals() { applyNormalsVisibility(); }
+
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (e.code === 'ArrowRight') stepEpoch(1);
+  else if (e.code === 'ArrowLeft')  stepEpoch(-1);
+  else if (e.code === 'KeyM') {
+    const cb = document.getElementById('surface-check'); cb.checked = !cb.checked; toggleSurface();
+  }
+  else if (e.code === 'KeyS') {
+    const cb = document.getElementById('shell-check'); cb.checked = !cb.checked; toggleShell();
+  }
+  else if (e.code === 'KeyN') {
+    const cb = document.getElementById('normals-check'); cb.checked = !cb.checked; toggleNormals();
+  }
+  else if (e.code === 'KeyT') {
+    const cb = document.getElementById('trail-check'); cb.checked = !cb.checked; updateEpoch();
+  }
+});
+
+document.getElementById('epoch-slider').oninput = function() {
+  currentEpoch = +this.value;
+  updateEpoch();
+};
+document.getElementById('epoch-slider').max = T.n_obs - 1;
+
+// ── Init ──
+document.getElementById('title').textContent = D.title;
+buildLCPlot();
+buildIPLPlot();
+buildAngPlot();
+rebuildPlot();
+</script>
+</body>
+</html>

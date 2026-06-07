@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s072_path2_closed_form_q",
+  "kind": "run_record",
+  "goal_node": "goal_jacobi-propagator",
+  "question": "Does the Path 2 closed-form q(t) (3-1-3 precession+nutation Euler decomposition) reproduce DOP853 to the 1e-9 design threshold under the post-fix textbook convention across diagonal, perturbed and asymmetric inertia?",
+  "hypothesis": "The pre-fix s062b sign puzzle was a propagator bug, not a derivation issue; under post-fix convention the textbook Goldstein 3-1-3 form works without modification and passes the three-gate validation.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89, 28, 14],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "q_vs_dop853_worst": 2.81e-10,
+    "q_vs_dop853_threshold": 1e-09,
+    "conservation_worst": 4.62e-14,
+    "conservation_threshold": 1e-12
+  },
+  "artefacts": [
+    { "path": "results/s072/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s072_path2_closed_form_q.md"],
+  "parents": ["s067_postfix_propagator_validation"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-13T00:00:00Z",
+  "narrative_md": "Re-implemented Path 2 closed-form q(t) under the post-fix textbook convention and passed all three gates across (a) m048-diagonal seeds 89/28/14, (b) perturbed inertia (1%/10% off-diagonal), (c) synthetic asymmetric satellite regimes A/B. Worst q-vs-DOP853 = 2.81e-10, 3 orders inside the 1e-9 threshold; self-conservation at machine precision. The architectural payoff: full torque-free Euler dynamics now evaluable at closed-form cost, removing the constant-omega simplifying assumption. Validates vs cached truth states -> oracle_clean false."
+}

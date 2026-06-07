@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s064_jacobi_polish",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Does reparameterizing LM polish's omega onto the polhode basis improve Band A yield and in-basin convergence speed vs the s059k baseline?",
+  "hypothesis": "Polhode-basis omega reparameterization lifts Band A yield and speeds in-basin convergence (per the s063b curvature ratio).",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "bandA_clusters": "5/50",
+    "baseline_bandA_clusters": "4/50",
+    "new_cluster_id": 125,
+    "new_cluster_q0_err": 0.86,
+    "new_cluster_w_dir_err": 0.11,
+    "new_cluster_w_mag_err_pct": -0.02,
+    "new_cluster_rho": 0.176,
+    "rho_band": "A",
+    "in_basin_speedup": "21-27x",
+    "wall_s": 1800
+  },
+  "artefacts": [
+    { "path": "results/s064_jacobi_polish/gate3_seed089_summary.json", "kind": "data" },
+    { "path": "results/s064_jacobi_polish/gate1_truth_invariance.json", "kind": "data" },
+    { "path": "results/s064_jacobi_polish/gate2_smoke_parity.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s064_jacobi_polish.md"],
+  "parents": ["s059k_densify_ndirs", "s063b_polhode_curvature"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "Reparameterizing LM polish's omega onto the polhode basis (Gram-Schmidt from grad 2T and grad L^2, per s063b) lifts seed-89 Band A yield from 4/50 to 5/50 unique clusters. The new cluster id=125 lands the truth basin (q0_err 0.86 deg, rho 0.176) from a representative s059k's standard polish missed. In-basin smoke convergence is 21-27x faster (3-4 s vs 85 s). The polhode basis improves IN-basin convergence but does not widen the basin -- multi-mag-start and grid densification remain necessary. Gate3 yield is genuine (truth not in top-50); but Gate1/Gate2 read truth/perturbed-truth (oracle-leak)."
+}

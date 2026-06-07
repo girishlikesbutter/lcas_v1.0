@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "pipeline_so3-pool-dedup",
+  "kind": "pipeline",
+  "title": "SO(3) pool → body-twin canonicalisation",
+  "hypothesis": "Sampling a uniform SO(3) pool and canonicalising each (q0, ω) pair to the body-twin hemisphere halves the cloud search space at no information cost — the reusable front of every cloud architecture.",
+  "state": "open",
+  "serves": ["goal_cloud-architectures"],
+  "composes": ["sample_so3_pool", "twin_dedup"],
+  "steps": [
+    {
+      "id": "sample",
+      "op": "compose",
+      "tool": "sample_so3_pool",
+      "params": {},
+      "inputs": {}
+    },
+    {
+      "id": "dedup",
+      "op": "compose",
+      "tool": "twin_dedup",
+      "inputs": {
+        "q0_arr": "$steps.sample.q_pool_wxyz",
+        "omega_arr": "$steps.sample.rotvec_pool"
+      }
+    }
+  ],
+  "created_at": "2026-06-07T19:25:00Z"
+}

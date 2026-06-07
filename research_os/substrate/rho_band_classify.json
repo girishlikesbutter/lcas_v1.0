@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "id": "rho_band_classify",
+  "kind": "substrate_component",
+  "name": "rho_from_hifi",
+  "path": "notebooks/inversion/survey/lib/hifi_render.py",
+  "tier": "substrate",
+  "interface": "(pred, truth) -> \u03c1 = \u221aMSE/0.05; with rho_band() -> A/B/C/D. The canonical survey fitness scalar/band on hi-fi LCs.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:0bfc827bb2c8a3f9",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:rho_from_hifi",
+  "ports": {
+    "input": [
+      "light-curve"
+    ],
+    "output": {
+      "return": "rho-band"
+    }
+  },
+  "default_params": {
+    "space": "hifi",
+    "_collapsed": "surrogate_eval.rho (space='surrogate') + hifi_render.rho_from_hifi (space='hifi') + rho_band classifier \u2014 one rho Tool, trust-level by `space` param (decision 2026-06-07)"
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:0bfc827bb2c8a3f9",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

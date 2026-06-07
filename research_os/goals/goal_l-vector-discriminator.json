@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_l-vector-discriminator",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_cross-cloud-bridging",
+  "title": "L_J2000 cross-anchor matching as a Filter",
+  "state": "closed",
+  "spent": {
+    "runs": 4,
+    "wall_s": 523.8
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s073_cluster457_l_vector_check",
+    "s073f_cluster457_local_geometry",
+    "s077_l_vector_basin_sweep",
+    "s079_regime_stratified_l_basins"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-04T00:00:00Z",
+  "last_measured": {
+    "run": "s079_regime_stratified_l_basins",
+    "summary": "L-vector basins regime-stratified; N>1 cat-4 framing still open",
+    "at": "2026-05-14T00:00:00Z"
+  }
+}

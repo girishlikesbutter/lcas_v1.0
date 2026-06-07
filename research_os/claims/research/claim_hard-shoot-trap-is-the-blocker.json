@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_hard-shoot-trap-is-the-blocker",
+  "kind": "claim_card",
+  "deck": "research",
+  "statement": "The binding blocker on seed 119 is the HARD-SHOOT TRAP, not anchor-baseline aliasing: s100 showed 12M coverage closes anchor starvation yet end-to-end still tops out Band D, and s105 showed hard-connecting ~1deg-off endpoints over 3.1 turns bakes a 4.25deg omega error -> Band D, while LM multistart on the EXACT pair is Band A.",
+  "supporting_runs": [
+    "s100_5step_coverage_proto",
+    "s105_pairs_to_omega_decomposition"
+  ],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "medium",
+    "gates_passed": [],
+    "oracle_clean": false
+  },
+  "scope": {
+    "N": 1,
+    "kind": "N1"
+  },
+  "depends_on": [
+    "propagator@2.0.0",
+    "surrogate@v2",
+    "scorer@1.0.0"
+  ],
+  "status": "live",
+  "superseded_by": null,
+  "supersedes": "claim_anchor-aliasing-is-the-blocker",
+  "links_to_writeups": [
+    "notebooks/inversion/survey/experiments/s100_5step_coverage_proto.md",
+    "notebooks/inversion/survey/experiments/s105_pairs_to_omega_decomposition.md"
+  ],
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s043_twin_hifi_verify",
+  "kind": "run_record",
+  "goal_node": "goal_body-twin",
+  "question": "Is the body-twin (q_180x . q0, R_180x . omega) an exact LC symmetry of the hi-fi forward model, or does the 0.84% I_xx/I_yy asymmetry produce measurable LC drift?",
+  "hypothesis": "The body-twin map is an exact LC symmetry; truth and twin hi-fi LCs agree far below the photometric noise floor.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    23,
+    28,
+    89
+  ],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "max_abs_truth_minus_twin_mag": 2.29e-08,
+    "rms_truth_minus_twin_mag": 4.5e-09,
+    "rho_diff": "< 1e-3",
+    "noise_floor_mag": 0.05,
+    "Ixx_Iyy_asymmetry_pct": 0.84,
+    "wall_s": 270
+  },
+  "artefacts": [
+    {
+      "path": "results/s043_twin_hifi_verify/seed023_diff.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s043_twin_hifi_verify/seed028_diff.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s043_twin_hifi_verify/seed089_diff.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s043_twin_hifi_verify/summary.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s043_twin_hifi_verify.md"
+  ],
+  "parents": [
+    "s040_basin_radius_3seed",
+    "s042_basin_radius_cohort"
+  ],
+  "substrate_versions": {
+    "propagator": "1.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "Hi-fi rendered truth vs body-twin on seeds 23/28/89: LCs agree to within 2.29e-8 mag worst case (6 orders below the 0.05 mag noise floor), so the body-twin is an operationally exact, bit-exact LC symmetry despite the 0.84% I_xx/I_yy asymmetry. Search-space dedup via canonical hemisphere is lossless, enabling ~2x speedup across Sobol/omega-grid/cell-filter/hi-fi stages. Renders at truth + twin (reads truth as input)."
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_cost-landscape",
+  "kind": "goal_node",
+  "node_kind": "chapter",
+  "parent": "goal_attitude-inversion",
+  "title": "Surrogate cost surface vs (q0, ω): shape, ρ-bands, joint polish",
+  "state": "open",
+  "spent": {
+    "runs": 0,
+    "wall_s": 0
+  },
+  "contract_refs": [],
+  "child_runs": [],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

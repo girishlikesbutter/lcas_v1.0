@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s033_density_sensitivity",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "How does the s020 pipeline's q0-best closure scale with density (N_dir, N_mag, N_phi) on seed 89?",
+  "hypothesis": "Increasing density along each axis hierarchically closes q0-best toward truth.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "q0_best_baseline_deg": 50.4,
+    "q0_best_after_mag_fix_deg": 15.2,
+    "q0_best_after_dir_density_deg": 8.59,
+    "q0_best_after_phi_density_deg": 7.86,
+    "off_circle_floor_deg": 7.86,
+    "wall_scaling_factor": 0.9
+  },
+  "artefacts": [
+    { "path": "results/s033_n2000_m20_smoke/seed089/", "kind": "checkpoint" },
+    { "path": "results/s033_n2000_m20_phi60_smoke/seed089/", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s033_density_sensitivity.md"],
+  "parents": ["s032_cohort_fast", "s003_landscape_vs_omega", "s019_ls_bracket_omega_mag", "s019b_omega_dir_basin_at_truth_mag", "s031_hifi_rerank_seed6", "s034_lm_polish_seed89"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-05T00:00:00Z",
+  "narrative_md": "Density sweep on seed 89 (after a bracket-padding fix that uncaps N_mag past LS-peak count). q0-best closes hierarchically: 50.4deg -> 15.2deg (omega-mag inside tube) -> 8.59deg (omega-dir density 300->2000) -> 7.86deg (phi 12->60), then hits an off-circle floor (~8deg) that grid densification cannot close (geometric, not discretization). Wall scales sub-linearly (factor 0.9). Framework reach is density-bounded, not structurally limited; motivates the s034 LM polish."
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/machinery_overlay.schema.json",
+  "title": "Machinery overlay (curated)",
+  "description": "The hand-authored CURATION half of the machinery map (the 'visualised pseudocode'). Lives at research_os/render/machinery_overlay.json, committed. It declares the data-flow stages and maps load-bearing functions to them with a plain-language role + substrate tag. render/derive_machinery.py reads this and AST-grounds every unit in the real code (signature, line, docstring, call edges), then cross-checks for drift, emitting the DERIVED render/machinery_map.json (machinery_map.schema.json). This is NOT a canonical store object and is not referentially-closed by loop/validate.py — it references code paths, not store ids.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stages", "units"],
+  "properties": {
+    "note": { "type": "string", "description": "Free-text authoring note / contract reminder." },
+    "scope_files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Repo-relative files the derive scans for 'uncovered' drift — public module-level/method defs here that no unit covers. Keep this to the trust seams (the substrate paths) to keep the drift signal high."
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The ordered data-flow stages (the reading order of the pipeline).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "title"],
+        "properties": {
+          "key": { "type": "string", "description": "Stable stage key (units reference it)." },
+          "title": { "type": "string" },
+          "purpose": { "type": "string" },
+          "consumes": { "type": "string", "description": "What the stage takes in." },
+          "produces": { "type": "string", "description": "What the stage emits." }
+        }
+      }
+    },
+    "units": {
+      "type": "array",
+      "description": "The load-bearing functions, one per node. The derive enriches each with signature/line/doc/calls from the AST.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "file", "stage", "role"],
+        "properties": {
+          "name": { "type": "string", "description": "Function (or Class.method) name as it appears in `file`." },
+          "file": { "type": "string", "description": "Repo-relative path of the definition." },
+          "stage": { "type": "string", "description": "A stage key." },
+          "role": { "type": "string", "description": "Plain-language one-liner: what it does in the pipeline." },
+          "substrate_component": {
+            "type": ["string", "null"],
+            "description": "The substrate component this function is part of ('propagator'|'surrogate'|'scorer'), or null. Drives the substrate highlight + the deep-link to /substrate."
+          }
+        }
+      }
+    }
+  }
+}

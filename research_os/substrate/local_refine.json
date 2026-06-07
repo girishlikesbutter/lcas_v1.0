@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "local_refine",
+  "kind": "substrate_component",
+  "name": "local_refine",
+  "path": "src/inversion/optimizers.py",
+  "tier": "substrate",
+  "interface": "VARIANT: DIFFERENT method: L-BFGS-B local refinement only (axis-angle<->quat round-trip). The other composable stage. variant_of multi-start-optimize.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:5f51f8ce0092fb5b",
+  "canon": false,
+  "variant_of": "multi_start_optimize",
+  "promoted_from": null,
+  "entry_point": "src/inversion/optimizers.py:local_refine",
+  "ports": {
+    "input": [
+      "scoring"
+    ],
+    "output": {
+      "return": "candidate-set"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:5f51f8ce0092fb5b",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

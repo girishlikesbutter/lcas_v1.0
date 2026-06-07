@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_anchor-accuracy-gate",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_blind-pipeline",
+  "title": "Anchor q-accuracy + ω-direction cliff (the fast-tumbler gate)",
+  "state": "closed",
+  "spent": {
+    "runs": 3,
+    "wall_s": 2773.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s085_anchor_accuracy_gate",
+    "s086_omega_refine_rescue",
+    "s087_omega_dir_threshold"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s087_omega_dir_threshold",
+    "summary": "fast-seed truth recovery needs ω-dir ≲1.25° (119 cliff)",
+    "at": "2026-05-21T00:00:00Z"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_third-anchor",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_cross-cloud-bridging",
+  "title": "Third-anchor over-determination (disambiguator)",
+  "state": "closed",
+  "spent": {
+    "runs": 2,
+    "wall_s": 43.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s089_third_anchor_overdetermination",
+    "s090_shared_base_ablation"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s089_third_anchor_overdetermination",
+    "summary": "joint collapses winding ladder to unique truth; no fast-seed noise-floor gain",
+    "at": "2026-05-22T00:00:00Z"
+  }
+}

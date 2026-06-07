@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s060_sharpness_map",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "How does the survivor count |C_t|(t) vary across the full LC, and are the sharpest anchors confined to bright peaks?",
+  "hypothesis": "Sharp anchors are not bright-peak-only; the dimmest LC moments can be the sharpest.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [28, 89, 10],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "seed28_min_Ct": 5,
+    "seed28_min_Ct_epoch": 312,
+    "seed28_median_Ct": 719,
+    "seed89_min_Ct": 12,
+    "seed10_min_Ct": 44,
+    "Ct_variation_factor": "20-300x",
+    "pool_N": 25000,
+    "tol_mag": 0.10,
+    "wall_s": 1050
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s060_sharpness_map/seed028/", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s060_sharpness_map.md"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-09T00:00:00Z",
+  "narrative_md": "Full-LC |C_t|(t) scan (N=25k Sobol, TOL=0.10 mag) on seeds 28/89/10 shows survivor counts vary 20-300x across the LC, with sharp anchors split between bright and dim extremes and never in mid-mag. On seed 28 the single sharpest moment (|C_t|=5) is the dimmest LC point (t=312, 76x sharper than the s059j early-window argmin). Confirms sharpness is not brightness; anchor selection must scan the full LC. K=4 cluster-independent anchors exist on seeds 28 and 89; seed 10 has only 3."
+}

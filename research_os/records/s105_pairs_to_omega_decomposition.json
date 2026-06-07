@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s105_pairs_to_omega_decomposition",
+  "kind": "run_record",
+  "goal_node": "goal_windowed-photometry-polish",
+  "question": "Why does the single-shoot cross alias on seed 119, and what generator does/doesn't recover truth from a realistic ~1°-off pair?",
+  "hypothesis": "The pair→ω step has a cheap geometric rule (return-map or LS-peak prior) that picks the right ω; some generator recovers truth from a realistic pair.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    119,
+    116
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "realpair_best_rmse": 0.687,
+    "realpair_band": "D",
+    "realpair_w_dir_err_deg": 4.25,
+    "truthpair_best_rmse": 0.018,
+    "truthpair_band": "A",
+    "third_anchor_multisol": 16,
+    "dirgrid_truthnear_rank": 67,
+    "turns_ab": 3.1
+  },
+  "artefacts": [
+    {
+      "path": "results/s105/dir_basin_width.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s105/third_anchor.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s105/truthpair_fulllc.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s105/truthpair_multistart.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s105/realpair_multistart.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s105/windowed_score.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s105_pairs_to_omega_decomposition.md"
+  ],
+  "parents": [
+    "s100_5step_coverage_proto",
+    "s106_hybrid_loss_polish"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": false,
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "created_at": "2026-05-28T00:00:00Z",
+  "narrative_md": "The binding blocker is the hard-shoot trap: forcing ω to exactly connect two ~1°-off endpoints over the 3.1-turn A→B baseline bakes in a 4.25° ω-dir error → Band D (RMSE 0.687). The LM multistart generator is sound — on the EXACT truth pair it returns Band A (0.0180, dir-err ~0°). Two shortcuts refuted: the propagator return-map (every direction connects) and LS-peak |ω| priors (band-tiling). Windowing the score (not the objective) also fails. Uses oracle/exact-truth pairs as inputs → not blind.",
+  "tests": [
+    "pipeline_single-wind-lc-window-polish"
+  ],
+  "blocked_by": [
+    "hard-shoot-trap"
+  ]
+}

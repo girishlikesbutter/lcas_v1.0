@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/pipeline.schema.json",
+  "title": "Pipeline node",
+  "description": "A hypothesised APPROACH to a goal — the 'how-we're-trying' layer (ADR-0005). Distinct from a goal_node (the 'why'): densify, joint-grid-pivot, cross-cloud, single-wind-window-polish are METHODS, not questions, and were mis-filed as goal_nodes. A Pipeline is the hub the lateral edges attach to: it `serves` >=1 Goal, `composes` Tools (substrate_components), and may `supersede` a rival Pipeline. Experiments attach to it via run_record.tests (Experiment -> tests -> Pipeline); the reverse (tested_by) is derived, not stored. Stored one-file-per-node under research_os/pipelines/, git-friendly like goal_nodes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "title",
+    "state",
+    "serves",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^pipeline_[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "pipeline_<kebab-slug>. Stable; runs reference it via tests[], rivals via supersedes/superseded_by.",
+      "examples": ["pipeline_densify", "pipeline_single-wind-lc-window-polish"]
+    },
+    "kind": { "type": "string", "const": "pipeline" },
+    "title": { "type": "string" },
+    "hypothesis": {
+      "type": "string",
+      "description": "What this approach BETS on — the one-line wager that distinguishes it from a rival pipeline (e.g. 'densifying the ω-grid closes anchor starvation without oracle')."
+    },
+    "state": {
+      "type": "string",
+      "enum": ["open", "blocked", "closed", "revivable", "superseded"],
+      "description": "open = under exploration. blocked = waiting on a dependency. closed = explored to a verdict (success or dead). revivable = closed but its blocker may no longer hold. superseded = a rival pipeline replaced it (superseded_by must be set)."
+    },
+    "serves": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "goal_node ids this pipeline is an approach to (Pipeline -> serves -> Goal). >=1; a method can serve more than one goal (that is exactly the reuse signal a tree can't show)."
+    },
+    "composes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "substrate_component ids this pipeline is built from (Pipeline -> composes -> Tool). A Tool composed by many pipelines is a transfer/reuse hub. When `steps` is present this SHOULD equal the set of step tools (the flat reuse-hub view of the runnable DAG)."
+    },
+    "steps": {
+      "type": "array",
+      "default": [],
+      "description": "The runnable DAG (ADR-0007 §5.3). Ordered steps; each runs ONE Tool via the executor (loop/run_pipeline.py) and feeds the next. OPTIONAL — a pipeline with no `steps` is descriptive-only (its `composes` set still documents the Tools it draws on). Listed order MUST be a valid topological order: a step may reference only earlier steps (or pipeline inputs). The two combinators ADR-0007 §2 names: `compose` (invoke once, chain) and `map` (lift a per-epoch Tool across a collection -> a set of outputs).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "op", "tool"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "Step name, unique within the pipeline. Later steps reference its output via the ref `$steps.<id>` (or `$steps.<id>.<key>`)."
+          },
+          "op": {
+            "type": "string",
+            "enum": ["compose", "map"],
+            "description": "compose = invoke the Tool once. map = lift the per-epoch Tool across `over` (a collection), producing a LIST of outputs ('a cloud for the whole LC is the same Tool mapped over a window', ADR-0007 §2)."
+          },
+          "tool": {
+            "type": "string",
+            "description": "substrate_component id this step runs. Referential: must resolve to a Tool. The drift-check (tool_lint) runs on it before invocation, exactly as the run-button does."
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true,
+            "default": {},
+            "description": "Param overrides for THIS step, layered over the Tool's default_params (ADR-0007 'variation lives in params, not copies')."
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": true,
+            "default": {},
+            "description": "Wire the Tool's kwargs from the run context. A string VALUE beginning with `$` is a REF: `$in.<key>` (a pipeline input) or `$steps.<step_id>[.<key>]` (a prior step's whole output, or one key of its dict). Any other value is a literal. A kwarg not wired here falls back to params / the Tool's own default."
+          },
+          "over": {
+            "type": ["string", "null"],
+            "default": null,
+            "description": "map only: a ref (`$in.*` / `$steps.*`) to the collection each invocation iterates. Per element, the element binds to the kwarg named by `map_as`. Ignored when op=compose."
+          },
+          "map_as": {
+            "type": ["string", "null"],
+            "default": null,
+            "description": "map only: the Tool kwarg each element of `over` binds to (e.g. `epoch`). Null = if the element is a dict, spread it as kwargs."
+          }
+        }
+      }
+    },
+    "supersedes": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "pipeline id this one replaces (Pipeline -> supersedes -> Pipeline, rivalry/supersession). The replaced pipeline carries the mirror superseded_by + state=superseded."
+    },
+    "superseded_by": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "pipeline id that replaced this one. Set <=> state == superseded."
+    },
+    "last_measured": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "default": null,
+      "description": "The most recent headline result a run produced on this approach.",
+      "properties": {
+        "run": { "type": "string", "description": "run_record id of the measuring run." },
+        "summary": { "type": "string", "description": "One-line headline." },
+        "at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

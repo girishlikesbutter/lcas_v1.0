@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s073_cluster457_l_vector_check",
+  "kind": "run_record",
+  "goal_node": "goal_l-vector-discriminator",
+  "question": "Is the inertial angular-momentum vector L_J2000 a discriminator against the seed-89 Band A multi-solution attractor cluster_457?",
+  "hypothesis": "Real torque-free dynamics conserves L_J2000 exactly, so a cross-anchor L_J2000 comparison gates multi-solutions whose body-frame polhode matches truth but whose inertial L direction differs.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "L_mag_rel_diff_pct": 0.55,
+    "L_dir_angle_deg": 128.56,
+    "dL_over_Ltruth_pct": 180.68,
+    "cluster457_rho_hifi": 0.904,
+    "wall_s": 5
+  },
+  "artefacts": [
+    { "path": "results/s073/summary.json", "kind": "data" },
+    { "path": "results/s073/l_vectors.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s073_cluster457_l_vector_check.md"],
+  "parents": ["s069_replicate_s059k", "s066_lj2000_nonconservation"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "One-epoch computation: for seed-89 cluster_457 vs truth, |L_J2000| matches to 0.55% but the inertial L direction differs by 128.6 deg (|dL|/|L_truth|=181%). Same body-frame polhode, different inertial orientation — confirming L-conservation cross-anchor matching as a propagation-free 3-DOF discriminator against this Band A multi-sol class, with direction (not magnitude) as the load-bearing axis. Computes L at truth as reference -> oracle_clean false. N=1."
+}

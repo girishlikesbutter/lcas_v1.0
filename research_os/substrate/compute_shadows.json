@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "id": "compute_shadows",
+  "kind": "substrate_component",
+  "name": "compute_shadows",
+  "path": "src/computation/shadow_engine.py",
+  "tier": "substrate",
+  "interface": "(satellite, sun-vectors k1, articulation matrices/angles) -> lit-status-dict[component -> (N, num_facets) bool]; orchestrates mesh creation + batched RayMeshIntersector (pipeline step 3).  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:eeb96035c4f33973",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/computation/shadow_engine.py:compute_shadows",
+  "ports": {
+    "input": [
+      "satellite-model",
+      "attitude-trajectory"
+    ],
+    "output": {
+      "lit_status_dict": "lit-status"
+    }
+  },
+  "default_params": {
+    "articulation_offset": 0
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:eeb96035c4f33973",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

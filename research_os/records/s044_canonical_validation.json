@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s044_canonical_validation",
+  "kind": "run_record",
+  "goal_node": "goal_body-twin",
+  "question": "Can the s043 body-twin map be turned into a usable canonical(q0, omega) search-space-dedup primitive that is algebraically and bit-exact under the post-fix forward model?",
+  "hypothesis": "A canonical-hemisphere map with sign normalisation is idempotent, collapses twin pairs, and reproduces hi-fi LC equivalence bit-exactly.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    89
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_algebraic_checks_passed": "7/7",
+    "n_random_states": 10000,
+    "hifi_max_abs_delta_mag": 1.68e-08,
+    "hifi_rho": 7.6e-08,
+    "quat_mul_vs_scipy_max_err": 3.6e-16,
+    "wall_s": 30
+  },
+  "artefacts": [
+    {
+      "path": "results/s044_canonical_validation/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s044_canonical_validation/run.log",
+      "kind": "log"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s044_canonical_validation.md"
+  ],
+  "parents": [
+    "s042_basin_radius_cohort",
+    "s043_twin_hifi_verify"
+  ],
+  "substrate_versions": {
+    "propagator": "1.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": true,
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "Implemented lib.twin.canonical(q0, omega) + vectorised canonical_batch from the s043 body-twin finding. All seven algebraic invariants pass bit-exact at N=10000 random states; the hi-fi LC equivalence smoke test on a synthetic non-canonical state vs its canonical rep on seed 89 matches to 1.68e-8 mag. The primitive is ready to dedup every search stage for a free ~2x speedup."
+}

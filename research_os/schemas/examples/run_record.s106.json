@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s106",
+  "kind": "run_record",
+  "parents": ["s105"],
+  "goal_node": "goal_windowed-photometry-polish",
+  "contract_ref": null,
+  "question": "Can a free-ω LM-minimize of photometry over a forward A→C window (seeded from the pair shoot) break the hard-shoot trap on seed 119?",
+  "hypothesis": "Minimizing photometry over the A→C window — not hard-connecting the ~1°-off endpoints — escapes the baked ω error and reaches Band A.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [119],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "rho": 0.0300,
+    "rho_band": "A",
+    "w_dir_err": 0.57,
+    "w_mag": 1.5025,
+    "w_mag_truth": 1.482,
+    "prev_rho": 0.687,
+    "prev_rho_band": "D",
+    "prev_w_dir_err": 4.25
+  },
+  "artefacts": [
+    { "path": "data/results/inversion_diagnostics/s106_window_objective_overlay.png", "kind": "plot", "caption": "abc-window objective → Band A; full/narrow-C → Band D" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s106_windowed_photometry_polish.md"],
+  "commit": "728332e",
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_passed": ["conservation-smoke"],
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-28T12:00:00Z",
+  "executed_at": "2026-05-28T11:30:00Z",
+  "narrative_md": "First Band A on seed 119. Seeded from the **oracle-nearest** pair shoot (so oracle_clean=false — this is a diagnostic, not a blind run), then LM-minimized photometry over a forward A→C window with free ω. ρ 0.687 (Band D, ω-err 4.25°) → ρ 0.0300 (Band A, ω-err 0.57°, |ω| 1.5025 deg/s vs truth 1.482). The window-as-OBJECTIVE is the lever: abc-window → A, full-LC → D, narrow-C → D; the soft-B term was inert. **OPEN CRUX: discrimination untested** — does a far/second-attractor pair also reach Band A (phantom), or stay Band D? That is contract_windowed-polish-discrimination."
+}

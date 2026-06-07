@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s094_window_score",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-discriminator",
+  "question": "Does scoring only the between-anchor light-curve window discriminate cross-cloud survivors better than full-LC RMSE?",
+  "hypothesis": "A short between-anchor window scores free, unconstrained interior signal and discriminates better than the full LC.",
+  "status": "inconclusive",
+  "run_type": "probe",
+  "seeds": [
+    116
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_survivors": 79443
+  },
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s094_window_score.md"
+  ],
+  "parents": [
+    "s093_fullc_score_survivors",
+    "s092_cross_cloud_116"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": true,
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "BUILT, NOT RUN — session ended on a conceptual probe. The windowed-score re-score script was built and reviewed but not executed. Partly reversed by s097: the empirical claim that a short window beats the full LC was a times[0]==0 bug artifact (on correct geometry the full LC is the best window). What stands: the user's structural insight that the between-anchor interior is free, unconstrained signal that discriminates by breaking twin-degeneracy, and more of it is better. Scoring uses observed LC only.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ]
+}

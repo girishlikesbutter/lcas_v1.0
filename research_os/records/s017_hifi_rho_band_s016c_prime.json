@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s017_hifi_rho_band_s016c_prime",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Do the s016c_prime cohort-selector winners hi-fi-validate as Band A∪B (multi-solution acceptance), meeting the >=4/7 threshold?",
+  "hypothesis": "At least 4/7 cohort-selector winners render Band A∪B in hi-fi, salvaging the joint-search architecture via multi-solution acceptance.",
+  "status": "refuted",
+  "run_type": "cheap",
+  "seeds": [6, 13, 28, 41, 49, 79, 91],
+  "N": 7,
+  "claim_scope": "N1",
+  "metrics": {
+    "winners_band_A": "2/7",
+    "winners_band_AB": "3/7",
+    "threshold": ">=4/7",
+    "band_A_seeds": "13, 41",
+    "band_B_seeds": "79",
+    "decision": "C_PRIME_KILLED",
+    "wall_s": 195.8
+  },
+  "artefacts": [
+    { "path": "results/s017/rho_top3.npz", "kind": "checkpoint" },
+    { "path": "results/s017/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s017_hifi_rho_band_s016c_prime.md"],
+  "parents": ["s013_rho_band_validation", "s014_cohort_rho_band", "s014b_n_rotations_analysis", "s015_joint_q0_omega_pilot", "s016c_prime_fresh_sobol_fixed_omag"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-01T00:00:00Z",
+  "narrative_md": "Hi-fi ρ-band of the 7 s016c_prime cohort-selector winners. 3/7 validate as Band A∪B (seeds 13, 41 Band A; 79 Band B); 4/7 fall Band C∪D. Threshold was ≥4/7 → DECISION: C_PRIME_KILLED, the multi-solution reframe is rejected for this joint-search architecture. Top-3 adds zero coverage. Predictions matched all 7 seeds. Secondary finding: off-truth-ω hi-fi/surrogate MSE ratio is 3-5x wider than s014's truth-ω reference, though rank order is preserved."
+}

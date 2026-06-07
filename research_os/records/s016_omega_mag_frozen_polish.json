@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s016_omega_mag_frozen_polish",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Are ω-mag-correct ICs (harvested from s015) close enough to the truth-ω tube for 5-DOF LM (q0 + ω-dir, frozen ω-mag) to bridge into the truth basin?",
+  "hypothesis": "Re-polishing harvested s015 ICs with frozen ω-mag (5-DOF) bridges into the truth basin (Option C: ω-mag prior is sufficient).",
+  "status": "refuted",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 7,
+  "claim_scope": "N1",
+  "metrics": {
+    "in_basin_loose": "0/7 seeds",
+    "ics_lm_no_move_lt1deg": "30/41",
+    "ics_moving_toward_truth": "0/41",
+    "wall_s": 128
+  },
+  "artefacts": [
+    { "path": "results/s016c/runs.npz", "kind": "checkpoint" },
+    { "path": "results/s016c/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s016_omega_mag_frozen_polish.md"],
+  "parents": ["s003_landscape_vs_omega", "s015_joint_q0_omega_pilot", "s016c_prime_fresh_sobol_fixed_omag"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-01T00:00:00Z",
+  "narrative_md": "Refuted, but for an unexpected reason. 0/7 seeds reached loose basin with frozen-ω-mag 5-DOF re-polish — but LM did not move from most starts (30/41 ICs changed <1°). The s015 starting points were already converged local minima, so a frozen-ω-mag reparameterization just re-lands at the same minimum. The C hypothesis was tested incorrectly here; it requires fresh ICs at fixed ω-mag (re-tested in s016c_prime). Methodological lesson: re-polishing already-converged ICs with a constrained variant is a vacuous test."
+}

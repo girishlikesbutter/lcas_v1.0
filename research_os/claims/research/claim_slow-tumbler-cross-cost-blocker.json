@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_slow-tumbler-cross-cost-blocker",
+  "kind": "claim_card",
+  "deck": "research",
+  "statement": "For weak-anchor slow tumblers, the anchor-cap (dt_ab<π/ω_hi, the aliasing cure) forces a close-and-weak B anchor whose fixed-2° cell count makes the A×B cross intractable (seed 116: B=ep52 = 4.6% admission → 40941 cells → 211M cross pairs; coarse-6° localize → 16.4M). The s111 adaptive coarsening was LOAD-BEARING for cross-tractability, so the bug-fix that removed it blocks slow-tumbler generality of the as-built pipeline until the cross is redesigned to be weak-anchor-aware (C-anchor pre-prune of B, or a connectability-tube cross).",
+  "supporting_runs": ["s113_slow_tumbler_cross_cost_wall"],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "medium",
+    "gates_passed": ["oracle-leak", "n-scope", "parallelism-check"],
+    "oracle_clean": true
+  },
+  "scope": { "N": 1, "kind": "N1" },
+  "depends_on": ["propagator@2.0.0", "surrogate@v2", "scorer@1.0.0"],
+  "status": "draft",
+  "superseded_by": null,
+  "supersedes": null,
+  "links_to_writeups": ["notebooks/inversion/survey/experiments/s113_slow_tumbler_cross_cost_wall.md"],
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

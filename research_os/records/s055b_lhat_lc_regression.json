@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s055b_lhat_lc_regression",
+  "kind": "run_record",
+  "goal_node": "goal_lc-omega-priors",
+  "question": "Is the inertial angular-momentum direction L-hat recoverable from the s008 28-feature LC set plus 6 simple PAB geometric features, enough to prune the omega-direction grid?",
+  "hypothesis": "L-hat (a conserved single 3-vector) falls out of LC features well enough to collapse the omega-direction grid to a small precession disc.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 120,
+  "claim_scope": "cohort",
+  "metrics": {
+    "best_holdout_median_deg": 74.3,
+    "random_baseline_holdout_deg": 89.2,
+    "holdout_frac_within_20deg": "0%",
+    "holdout_frac_within_45deg": "15%",
+    "decision": "WEAK",
+    "wall_s": 67
+  },
+  "artefacts": [
+    { "path": "results/s055b_lhat_lc_regression/features.npz", "kind": "checkpoint" },
+    { "path": "results/s055b_lhat_lc_regression/regression.npz", "kind": "checkpoint" },
+    { "path": "results/s055b_lhat_lc_regression/summary.json", "kind": "data" },
+    { "path": "results/s055b_lhat_lc_regression/angular_error_hist.png", "kind": "plot" },
+    { "path": "results/s055b_lhat_lc_regression/predicted_vs_truth_lhat.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s055b_lhat_lc_regression.md"],
+  "parents": ["s055a_pol_diam_lc_regression", "s053_cohort_polhode_survey", "s008_lc_feature_regression_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Decisive negative: L-hat direction in J2000 is NOT operationally recoverable from the s008 LC features + 6 PAB geometric features. Best holdout median 74.3 deg vs 89.2 deg random (beats random by only ~15 deg); 0% within 20 deg, 15% within 45 deg -- decision WEAK. The LC feature set extracts omega-MAGNITUDE info (pol_diam, |omega|) but essentially no omega-DIRECTION info, so omega-direction grid pruning by an L-hat cone prior is not unlocked. Supervised regression on truth L-hat labels, so it reads truth as input."
+}

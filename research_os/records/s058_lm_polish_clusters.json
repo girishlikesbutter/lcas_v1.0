@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s058_lm_polish_clusters",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does LM-polishing the top-5 s057h cluster representatives (plus the truth cluster) convert cloud-data forward-prop seeds into Band A basins on seed 89?",
+  "hypothesis": "The cloud-data forward-propagation architecture is operational as a seed generator: LM polish of its cluster reps lands Band A basins on a multi-solution-rich seed.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "band_A_yield": "2/6",
+    "truth_cluster_rank": "107/325",
+    "truth_rho": 0.18,
+    "truth_q0_err": 0.86,
+    "truth_w_dir_err": 0.11,
+    "twin_cluster_rho": 0.17,
+    "twin_q0_err": 179.49,
+    "wall_s": 469
+  },
+  "artefacts": [
+    { "path": "results/s058_lm_polish_clusters/summary.json", "kind": "data" },
+    { "path": "results/s058_lm_polish_clusters/polished_states.npz", "kind": "checkpoint" },
+    { "path": "results/s058_lm_polish_clusters/lm_polish_clusters.png", "kind": "plot", "caption": "LM polish of cluster reps: seed vs polished rho, seed 89" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s058_lm_polish_clusters.md"],
+  "parents": ["s057g_forward_propagation", "s057h_canonical_cluster", "s057i_hifi_validate", "s044_canonical_validation"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-08T00:00:00Z",
+  "narrative_md": "On seed 89, LM-polished top-5 cluster reps PLUS the truth cluster (looked up by cluster_id) from s057h; 2/6 polishes land Band A -- the truth cluster (rank 107/325, rho 0.18, q0_err 0.86 deg) and a body-twin-direction cluster (rho 0.17, q0_err 179.5 deg). Writeup framing: architecture PASSES the seed-generator gate. CAVEAT (later retracted as oracle-tainted): the Band-A rows include the injected truth cluster, so the headline yield is not blind -- oracle-leak, N=1."
+}

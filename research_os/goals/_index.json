@@ -1,0 +1,274 @@
+[
+  {
+    "id": "goal_attitude-inversion",
+    "node_kind": "thesis",
+    "parent": null,
+    "title": "Recover satellite attitude state (q0, ω) from a single ground-based light curve",
+    "state": "open",
+    "n_experiments": 0
+  },
+  {
+    "id": "goal_forward-substrate",
+    "node_kind": "chapter",
+    "parent": "goal_attitude-inversion",
+    "title": "Forward-model substrate: correct, conserved, versioned, fast",
+    "state": "open",
+    "n_experiments": 0
+  },
+  {
+    "id": "goal_cost-landscape",
+    "node_kind": "chapter",
+    "parent": "goal_attitude-inversion",
+    "title": "Surrogate cost surface vs (q0, ω): shape, ρ-bands, joint polish",
+    "state": "open",
+    "n_experiments": 0
+  },
+  {
+    "id": "goal_omega-from-lc",
+    "node_kind": "chapter",
+    "parent": "goal_attitude-inversion",
+    "title": "Constrain ω from the light curve alone (priors & brackets)",
+    "state": "open",
+    "n_experiments": 0
+  },
+  {
+    "id": "goal_basin-polhode-twin",
+    "node_kind": "chapter",
+    "parent": "goal_attitude-inversion",
+    "title": "Solution-space structure: basin width, polhode geometry, body-twin",
+    "state": "open",
+    "n_experiments": 0
+  },
+  {
+    "id": "goal_cloud-architectures",
+    "node_kind": "chapter",
+    "parent": "goal_attitude-inversion",
+    "title": "Anchor / cloud candidate generation (cascade, threading, anchor-selection)",
+    "state": "revivable",
+    "n_experiments": 2
+  },
+  {
+    "id": "goal_cross-cloud-bridging",
+    "node_kind": "chapter",
+    "parent": "goal_attitude-inversion",
+    "title": "Two-point BVP ω-solve across anchor clouds + the discriminator",
+    "state": "open",
+    "n_experiments": 0
+  },
+  {
+    "id": "goal_blind-pipeline",
+    "node_kind": "chapter",
+    "parent": "goal_attitude-inversion",
+    "title": "End-to-end ≤15-min blind Band-A inversion on stratified seeds",
+    "state": "open",
+    "n_experiments": 1
+  },
+  {
+    "id": "goal_literature",
+    "node_kind": "chapter",
+    "parent": "goal_attitude-inversion",
+    "title": "Novelty & positioning vs Robinson–Frueh",
+    "state": "open",
+    "n_experiments": 0
+  },
+  {
+    "id": "goal_convention-bug",
+    "node_kind": "branch",
+    "parent": "goal_forward-substrate",
+    "title": "ω-sign propagator convention bug: detect, fix, validate, replicate",
+    "state": "closed",
+    "n_experiments": 3
+  },
+  {
+    "id": "goal_jacobi-propagator",
+    "node_kind": "branch",
+    "parent": "goal_forward-substrate",
+    "title": "Closed-form Jacobi-elliptic q(t) torque-free propagation",
+    "state": "closed",
+    "n_experiments": 7
+  },
+  {
+    "id": "goal_gauge-times0",
+    "node_kind": "branch",
+    "parent": "goal_forward-substrate",
+    "title": "times[0]==0 propagator-gauge bug audit",
+    "state": "closed",
+    "n_experiments": 1
+  },
+  {
+    "id": "goal_cost-at-truth",
+    "node_kind": "branch",
+    "parent": "goal_cost-landscape",
+    "title": "Cost-at-truth & surrogate landscape characterization",
+    "state": "closed",
+    "n_experiments": 17
+  },
+  {
+    "id": "goal_joint-polish",
+    "node_kind": "branch",
+    "parent": "goal_cost-landscape",
+    "title": "Joint (q0, ω) LM polish + ρ-band classification",
+    "state": "closed",
+    "n_experiments": 15
+  },
+  {
+    "id": "goal_lc-omega-priors",
+    "node_kind": "branch",
+    "parent": "goal_omega-from-lc",
+    "title": "ω from LC features (peak-spacing, regression) — DEAD class",
+    "state": "closed",
+    "n_experiments": 6
+  },
+  {
+    "id": "goal_ls-bracket",
+    "node_kind": "branch",
+    "parent": "goal_omega-from-lc",
+    "title": "Lomb–Scargle blind |ω| bracket (live tool)",
+    "state": "closed",
+    "n_experiments": 4
+  },
+  {
+    "id": "goal_omega-mag-basin",
+    "node_kind": "branch",
+    "parent": "goal_omega-from-lc",
+    "title": "|ω|-magnitude good-fit basin sharpness; 1-D refine",
+    "state": "closed",
+    "n_experiments": 2
+  },
+  {
+    "id": "goal_basin-width",
+    "node_kind": "branch",
+    "parent": "goal_basin-polhode-twin",
+    "title": "ω-mag basin width vs |ω| / pol_diam (cohort)",
+    "state": "closed",
+    "n_experiments": 4
+  },
+  {
+    "id": "goal_polhode-prior",
+    "node_kind": "branch",
+    "parent": "goal_basin-polhode-twin",
+    "title": "Polhode-conditioned ω prior (|L|, label, phase)",
+    "state": "revivable",
+    "n_experiments": 7
+  },
+  {
+    "id": "goal_body-twin",
+    "node_kind": "branch",
+    "parent": "goal_basin-polhode-twin",
+    "title": "Body-twin: canonical-hemisphere search-space halving",
+    "state": "closed",
+    "n_experiments": 3
+  },
+  {
+    "id": "goal_cloud-data-seedgen",
+    "node_kind": "branch",
+    "parent": "goal_cloud-architectures",
+    "title": "Cloud-data architecture as a seed generator",
+    "state": "closed",
+    "n_experiments": 28
+  },
+  {
+    "id": "goal_anchor-selection",
+    "node_kind": "branch",
+    "parent": "goal_cloud-architectures",
+    "title": "Anchor selection: coarse-find then dense-resample",
+    "state": "closed",
+    "n_experiments": 13
+  },
+  {
+    "id": "goal_threading",
+    "node_kind": "branch",
+    "parent": "goal_cloud-architectures",
+    "title": "Thread (q, ω) pairs from anchor under the connectability tube",
+    "state": "closed",
+    "n_experiments": 3
+  },
+  {
+    "id": "goal_bvp-shoot",
+    "node_kind": "branch",
+    "parent": "goal_cross-cloud-bridging",
+    "title": "Two-point BVP ω-solve (shoot) conditioning",
+    "state": "closed",
+    "n_experiments": 1
+  },
+  {
+    "id": "goal_third-anchor",
+    "node_kind": "branch",
+    "parent": "goal_cross-cloud-bridging",
+    "title": "Third-anchor over-determination (disambiguator)",
+    "state": "closed",
+    "n_experiments": 2
+  },
+  {
+    "id": "goal_cross-cloud-discriminator",
+    "node_kind": "branch",
+    "parent": "goal_cross-cloud-bridging",
+    "title": "Discriminator among cross-cloud survivors (full-LC RMSE / windowed)",
+    "state": "open",
+    "n_experiments": 8
+  },
+  {
+    "id": "goal_l-vector-discriminator",
+    "node_kind": "branch",
+    "parent": "goal_cross-cloud-bridging",
+    "title": "L_J2000 cross-anchor matching as a discriminator",
+    "state": "closed",
+    "n_experiments": 4
+  },
+  {
+    "id": "goal_anchor-accuracy-gate",
+    "node_kind": "branch",
+    "parent": "goal_blind-pipeline",
+    "title": "Anchor q-accuracy + ω-direction cliff (the fast-tumbler gate)",
+    "state": "closed",
+    "n_experiments": 3
+  },
+  {
+    "id": "goal_blind-fast-invert",
+    "node_kind": "branch",
+    "parent": "goal_blind-pipeline",
+    "title": "Blind fast densify inversion (≤15-min, |ω|-blind)",
+    "state": "open",
+    "n_experiments": 4
+  },
+  {
+    "id": "goal_windowed-photometry-polish",
+    "node_kind": "question",
+    "parent": "goal_blind-fast-invert",
+    "title": "Break the hard-shoot trap (+ discriminate far pairs)",
+    "state": "open",
+    "n_experiments": 4
+  },
+  {
+    "id": "goal_anchor-cap-slow-tumbler",
+    "node_kind": "branch",
+    "parent": "goal_blind-pipeline",
+    "title": "Does sharpness-based first-anchor + single-wind proximity/variation second-anchor + |ω|-clamp invert the slow-tumbler class generally?",
+    "state": "blocked",
+    "n_experiments": 3
+  },
+  {
+    "id": "goal_cross-cloud-multistart-budget",
+    "node_kind": "branch",
+    "parent": "goal_blind-pipeline",
+    "title": "Cross-cloud-multistart search cost on the aliased seed",
+    "state": "revivable",
+    "n_experiments": 1
+  },
+  {
+    "id": "goal_rf25-audit",
+    "node_kind": "branch",
+    "parent": "goal_literature",
+    "title": "Robinson–Frueh 2025 residual-threat paper audit (no encroachment)",
+    "state": "open",
+    "n_experiments": 2
+  },
+  {
+    "id": "goal_basin-char-cheap-broad",
+    "node_kind": "question",
+    "parent": "goal_basin-polhode-twin",
+    "title": "Basin characterisation, cheap-and-broad: across the cohort (not the N=3 s003 result), does RMSE-argmin-over-q recover truth-q with ω held near truth? (vary q, hold ω near truth, cost RMSE)",
+    "state": "open",
+    "n_experiments": 0
+  }
+]

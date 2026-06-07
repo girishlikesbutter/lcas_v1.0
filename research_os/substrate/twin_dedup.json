@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "twin_dedup",
+  "kind": "substrate_component",
+  "name": "canonical_batch",
+  "path": "notebooks/inversion/survey/lib/twin.py",
+  "tier": "substrate",
+  "interface": "(q0_arr (N,4), omega_arr (N,3)) -> canonical-hemisphere representatives with sign-normalised quaternions; the free 2-to-1 search-space halving (s043/s044).  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:6635c469cdf06eb3",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/twin.py:canonical_batch",
+  "ports": {
+    "input": {
+      "q0_arr": "ia-cloud",
+      "omega_arr": "omega-cloud"
+    },
+    "output": {
+      "q0_canon": "ia-cloud"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:6635c469cdf06eb3",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

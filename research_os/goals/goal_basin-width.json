@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_basin-width",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_basin-polhode-twin",
+  "title": "ω-mag basin width vs |ω| / pol_diam (cohort)",
+  "state": "closed",
+  "spent": {
+    "runs": 4,
+    "wall_s": 3309.89
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s009_cohort_basin_radius_probe",
+    "s040_basin_radius_3seed",
+    "s042_basin_radius_cohort",
+    "s053_cohort_polhode_survey"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s053_cohort_polhode_survey",
+    "summary": "pol_diam Spearman -0.94 vs basin width (n=100)",
+    "at": "2026-05-07T00:00:00Z"
+  }
+}

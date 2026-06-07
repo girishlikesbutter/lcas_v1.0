@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "id": "ai_twin_dedup_20260608t050846_0",
+  "kind": "artifact_instance",
+  "artifact_type": "ia-cloud",
+  "cardinality": "one",
+  "produced_by": {
+    "run": "tr_twin_dedup_20260608t050846",
+    "step": null
+  },
+  "port": "q0_canon",
+  "path": "research_os/artifact_instances/data/ai_twin_dedup_20260608t050846_0.npz",
+  "cardinality_n": null,
+  "size_bytes": 61370,
+  "sample": {
+    "shape": [
+      2000,
+      4
+    ],
+    "dtype": "float64"
+  },
+  "caption": "ia-cloud . from twin_dedup",
+  "commit": "29c875d",
+  "created_at": "2026-06-08T05:08:46"
+}

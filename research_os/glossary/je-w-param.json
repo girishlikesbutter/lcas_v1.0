@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "je-w-param",
+  "kind": "glossary_term",
+  "term": "Jacobi Elliptic W Parameterisation",
+  "definition": "Reparameterise ω (W = capital Ω) via the Jacobi-elliptic / polhode closed form: ω = (|L|, polhode label, Jacobi argument), not a free 3-vector. Rides lib/jacobi_propagator.py. (W is ω, NOT phase.)",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "aliases": [
+    "W-param",
+    "W-parameterisation"
+  ],
+  "related_terms": [
+    "basin-characterisation"
+  ]
+}

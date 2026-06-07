@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_blind-fast-invert",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_blind-pipeline",
+  "title": "Blind fast densify inversion (≤15-min, |ω|-blind)",
+  "state": "open",
+  "spent": {
+    "runs": 4,
+    "wall_s": 8398.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s054_generate_holdout",
+    "s098_local_densify_116",
+    "s099_blind_fast_invert_116",
+    "s100_5step_coverage_proto"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s100_5step_coverage_proto",
+    "summary": "5-step coverage prototype; |ω|-clamp + anchor-cap inverts 116",
+    "at": "2026-05-28T00:00:00Z"
+  }
+}

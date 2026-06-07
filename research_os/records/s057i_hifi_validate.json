@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057i_hifi_validate",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Are the top forward-prop candidate clusters genuine Band A/B multi-solution alternates or local-window false positives when rendered in hi-fi over the full trajectory?",
+  "hypothesis": "The top s057h clusters are genuine multi-solution alternates (Band A/B) recoverable by back-propagating (q_a, omega) to (q0, omega0) and rendering hi-fi.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_rendered": 16,
+    "all_band": "D",
+    "truth_cluster_rho": 44.07,
+    "exact_truth_render_rho": 0.0,
+    "truth_backprop_rho": 0.6456,
+    "accumulated_rotation_deviation_deg": 445,
+    "w_mag_err_pct": 15
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057i_hifi_validate.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Architectural reframe: ALL 16 hi-fi-rendered candidates (top-15 clusters + truth cluster) are Band D; truth cluster rho=44.07. Smoke tests confirm the methodology (exact-truth render rho=0, truth back-prop rho=0.65 Band A). The killer is back-propagation amplification of the candidates' +15% |omega| error -- ~445deg accumulated rotation deviation over the 50-min rewind. The architecture finds LOCALLY consistent (q_a, omega) over the validator window, not full-trajectory inversions; candidates need LM polish. Renders truth cluster -- oracle-leak, N=1."
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_cloud-architectures",
+  "kind": "goal_node",
+  "node_kind": "chapter",
+  "parent": "goal_attitude-inversion",
+  "title": "Anchor / IA Cloud candidate generation (cascade, threading, anchor-selection)",
+  "state": "revivable",
+  "spent": {
+    "runs": 2,
+    "wall_s": 1680.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s059k_densify_ndirs",
+    "s069_replicate_s059k"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-04T00:00:00Z"
+}

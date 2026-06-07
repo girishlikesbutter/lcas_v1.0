@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s048c_cloud_viewer",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Can the s048b per-epoch C_t survival sweep be turned into a browseable, animated 3D viewer of cloud evolution with truth-q overlay?",
+  "status": "inconclusive",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "pipeline_byte_equivalence_to_s048b": "0 mismatches / 30 epochs",
+    "compute_wall_s_500ep_100k": 369.7,
+    "Ct_breathing_min_max": "44 / 17085 (388x)",
+    "closest_to_truth_min_max_deg": "0.59 / 6.04"
+  },
+  "artefacts": [
+    { "path": "results/s048c_cloud_viewer/seed089/8bb9b81f1602/animation.html", "kind": "anim", "caption": "500-epoch cloud-evolution viewer, seed 89" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s048c_cloud_viewer.md"],
+  "parents": ["s048_peak_cascade_smoke", "s048b_per_epoch_spread_v1"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Built a single-user Flask cloud-evolution viewer that animates the per-epoch C_t survival cloud with truth-q (green), closest candidate (yellow), and killed-haze, plus synchronised satellite-mesh / omega-direction-sphere / |omega|(t) side panels. Lifted primitives into lib.c_t_pipeline byte-equivalent to s048b (0 mismatches). A tool, not an experiment -- no inversion result. Overlays cached truth-q per frame, so it reads truth as input."
+}

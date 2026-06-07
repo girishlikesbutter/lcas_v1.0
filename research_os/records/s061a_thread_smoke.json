@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s061a_thread_smoke",
+  "kind": "run_record",
+  "goal_node": "goal_threading",
+  "question": "Does the 1-step cloud-threading mechanism (expand outward under a connectability tube + brightness filter) work, and does truth thread continuously?",
+  "hypothesis": "Truth threads continuously through the connectability tube and per-pair derived omega is an informative per-step omega estimate.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [
+    89
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "anchor_epoch": 208,
+    "anchor_Ct": 48,
+    "n_clusters": 5,
+    "truth_dist_to_survivor_deg": 8.6,
+    "truth_step_deg": 1.75,
+    "tube_radius_deg": 10.82,
+    "w_mag": 0.24,
+    "pool_N": 25000
+  },
+  "artefacts": [
+    {
+      "path": "notebooks/inversion/survey/results/s061a_thread_smoke/seed089/summary.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s061a_thread_smoke.md"
+  ],
+  "parents": [
+    "s048c_cloud_viewer",
+    "s060_anchor_topology",
+    "s060_multi_anchor_design"
+  ],
+  "substrate_versions": {
+    "propagator": "1.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-10T00:00:00Z",
+  "narrative_md": "1-step threading mechanism check on seed 89 anchor t=208 (clean-dim, |C_t|=48, 5 clusters). Mechanism works: truth is in the largest cluster (8.6 deg to nearest survivor); both adjacent epochs preserve all 5 clusters at 54-72% brightness retention. Truth's actual step (1.75 deg) matches |omega|*dt (1.73 deg). But per-pair derived omega from the tube spreads uniformly (|w| 0-1.5 dps, axis err 2-90 deg) -- NOT informative as a per-step omega estimate. Tracks truth-cluster lineage (truth read as input)."
+}

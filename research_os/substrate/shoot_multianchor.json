@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "shoot_multianchor",
+  "kind": "substrate_component",
+  "name": "shoot_multianchor",
+  "path": "notebooks/inversion/survey/lib/shoot.py",
+  "tier": "substrate",
+  "interface": "VARIANT: DIFFERENT geometry: over-determined joint LM fit of one \u03c9_a to K>=2 (q_k, dt_k) anchors (s088/s089 winding-alias fix). variant_of shoot. in_use only s088\u2013s090 (dormant).  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:3e0bfe4cb1bf1732",
+  "canon": false,
+  "variant_of": "shoot",
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/shoot.py:shoot_multianchor",
+  "ports": {
+    "input": [
+      "anchor-epoch",
+      "q0-omega-state"
+    ],
+    "output": {
+      "omega": "q0-omega-state",
+      "residual_norm": "hard-shoot-trap"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:3e0bfe4cb1bf1732",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

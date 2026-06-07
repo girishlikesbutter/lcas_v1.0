@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s063b_polhode_curvature",
+  "kind": "run_record",
+  "goal_node": "goal_polhode-prior",
+  "question": "At truth, is the cost surface softer along the polhode tangent than along the two off-polhode normals?",
+  "hypothesis": "The polhode tangent is the soft direction; off-polhode normals are sharper.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89, 28, 14],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "seed89_ratio_E": 8.13,
+    "seed89_ratio_L": 4.18,
+    "seed28_ratio_E": 10.53,
+    "seed28_ratio_L": 17.46,
+    "seed14_ratio_E": 6.75,
+    "seed14_ratio_L": 4.15,
+    "curvature_ratio_range": "4-17x",
+    "seed89_rho_truth": 0.40,
+    "seed28_rho_truth": 0.48,
+    "seed14_rho_truth": 0.29,
+    "rho_band": "A"
+  },
+  "artefacts": [
+    { "path": "results/s063b/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s063b_polhode_curvature.md"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "At truth (q0, omega0) on seeds 89/28/14, off-polhode curvature is 4-17x sharper than along-polhode -- the Euler-equation tangent is the soft direction, consistently across |omega| in [0.24, 1.44] dps. Implies LM polish should reparameterize omega onto the polhode basis (|L|, 2T, phase) to align polish axes with the cost-surface anisotropy. Curvature/rho measured AT truth (oracle-leak by construction)."
+}

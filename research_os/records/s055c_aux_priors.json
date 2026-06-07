@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s055c_aux_priors",
+  "kind": "run_record",
+  "goal_node": "goal_lc-omega-priors",
+  "question": "Can the scalar auxiliary priors |cos(L-hat, PAB_mean)| (regression) or polhode-topology binary class be recovered from LC features?",
+  "hypothesis": "LC features carry usable scalar omega-direction information via |cos(L-hat,PAB)| or polhode-class, even though full L-hat direction (s055b) was unrecoverable.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "claim_scope": "cohort",
+  "metrics": {
+    "cos_holdout_rmse": 0.299,
+    "cos_baseline_rmse": 0.285,
+    "polhode_class_best_acc": 0.80,
+    "polhode_majority_baseline_acc": 0.85,
+    "polhode_balanced_acc": 0.745
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s055c_aux_priors.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Tested two scalar reductions of the unrecoverable L-hat direction: |cos(L-hat,PAB_mean)| regression and polhode-binary topology class. Both WEAK -- |cos| holdout RMSE 0.299 is WORSE than the cohort-mean baseline 0.285, and polhode-class best accuracy 0.80 is below the 0.85 majority baseline. Decisive negative: at the s008-style feature granularity the LC carries omega-MAGNITUDE info (pol_diam) but essentially no usable omega-DIRECTION info. Targets computed analytically from cached truth (q0, omega0, I) -- oracle-leak."
+}

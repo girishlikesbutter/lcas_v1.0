@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s032_cohort_fast",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Can the s020 filter pipeline run at cohort scale (100 seeds) with a geo-fail gate, and what is the bracket coverage across the cohort?",
+  "hypothesis": "Gating the geo-fail alignment pass makes the pipeline cohort-cheap and the bracket subsampling preserves s019-level omega-mag coverage.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "speedup_seed6": "49x",
+    "wall_seed6_s": 75,
+    "cohort_wall_min": 266,
+    "n_ok": 78,
+    "n_fail_zero_classifiable": 19,
+    "bracket_within_5pct": "4/79",
+    "bracket_nearest_cell_median_pct": 32.06,
+    "zero_survivor_seeds": "47/79"
+  },
+  "artefacts": [
+    { "path": "results/s032_cohort_fast/cohort_progress.csv", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s032_cohort_fast.md"],
+  "parents": ["s020_seed_pipeline", "s019_ls_bracket_omega_mag", "s018b_face_identity_tiers", "s031_hifi_rerank_seed6"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-05T00:00:00Z",
+  "narrative_md": "A geo-fail gate dropped seed-6 wall 49x (3684s -> 75s); full 100-seed cohort ran in 266 min (78 OK, 19 zero-classifiable matching s018b exactly, 2 bug-related). Headline: bracket subsampling (top-N LS peaks) collapses cohort omega-mag coverage to 4/79 within 5% (median 32% off) — contradicting s019's 98/100 on the full grid. Seed 6's 4.6% (the s031 test case) was in the best decile, so s031's pessimism measured a subsampling artifact, not a framework limit."
+}

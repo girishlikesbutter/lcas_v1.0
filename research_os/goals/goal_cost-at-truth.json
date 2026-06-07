@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_cost-at-truth",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_cost-landscape",
+  "title": "Cost-at-truth & surrogate landscape characterization",
+  "state": "closed",
+  "spent": {
+    "runs": 17,
+    "wall_s": 9570.2
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s001_cost_at_truth_cohort",
+    "s002_surrogate_landscape_probe",
+    "s003_landscape_vs_omega",
+    "s004_alignment_landscape_vs_omega",
+    "s006_seed28_landscape_at_truth_omega",
+    "s010_seed44_landscape_at_truth_omega",
+    "s012a_seed10_density_probe",
+    "s013_rho_band_validation",
+    "s014_cohort_rho_band",
+    "s014b_n_rotations_analysis",
+    "s017_hifi_rho_band_s016c_prime",
+    "s018a_bright_band_calibration",
+    "s018b_face_identity_tiers",
+    "s018c_phi_sweep_pilot",
+    "s021_truth_vs_random",
+    "s022_known_good",
+    "s033_density_sensitivity"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s081_hifi_rho_bands_twin",
+    "summary": "surrogate↔hi-fi agreement holds; surrogate-MSE the universal cost",
+    "at": "2026-05-20T00:00:00Z"
+  }
+}

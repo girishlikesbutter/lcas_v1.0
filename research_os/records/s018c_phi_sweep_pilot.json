@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s018c_phi_sweep_pilot",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Can a phi-sweep face-PAB-anchored q0 IC generator plus a coarse joint (q0, omega) grid hit >=4/5 Band A on the pilot seeds?",
+  "hypothesis": "Phi-sweep ICs over a feasible coarse omega-grid land Band A across the pilot seeds.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [6, 28, 79, 44, 84],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "q0_err_truth_omega": 0.287,
+    "surr_mse_truth_omega": 2.79e-3,
+    "q0_err_coarse_grid": 140.0,
+    "omega_dir_grab_deg": 1.0,
+    "wall_s": 2160
+  },
+  "artefacts": [
+    { "path": "results/s018c_truth_omega_diag/summary.json", "kind": "data" },
+    { "path": "results/s018c_omega_grab_diag/summary.json", "kind": "data" },
+    { "path": "results/s018c_omega_grab_diag/lm_grab_in_omega.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s018c_phi_sweep_pilot.md"],
+  "parents": ["s018b_face_identity_tiers", "s018a_bright_band_calibration", "s011_q4cii_sobol_so3_polish_pilot", "s015_joint_q0_omega_pilot", "s016c_prime_fresh_sobol_fixed_omag", "s017_hifi_rho_band_s016c_prime", "s003_landscape_vs_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-02T00:00:00Z",
+  "narrative_md": "Pilot CANCELLED at the design gate: the phi-sweep q0-IC primitive is geometrically sound (q0_err 0.287deg at truth-omega on seed 6) but the omega-grab diagnostic measured a fragility tube of |Delta-dir| <= 1deg and Delta-mag in [-10%, +5%] around truth-omega, so no feasible omega-grid puts a cell inside the tube. Phi-sweep retained as a q0-IC sub-component; joint-search omega-grid architecture refuted."
+}

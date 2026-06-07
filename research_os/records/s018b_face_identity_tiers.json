@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s018b_face_identity_tiers",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Does spec-event peak brightness alone partition the 10 m048 face groups into clean face-identity tiers, and what cohort coverage do those tiers give?",
+  "hypothesis": "Per-face spec-event magnitude distributions are well-separated by face area, so brightness alone shortlists candidate body-frame faces for any LC peak.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "tier_T1_X_purity": 0.994,
+    "tier_T2_YZ_purity": 0.977,
+    "tier_T3_any_purity": 1.000,
+    "tier_T4_D_purity": 0.974,
+    "n_seeds_ge1_T1": "45/100",
+    "n_seeds_ge2_tiers": "73/100",
+    "n_seeds_zero_classifiable": "19/100"
+  },
+  "artefacts": [
+    { "path": "results/s018b/face_tiers.npz", "kind": "checkpoint" },
+    { "path": "results/s018b/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s018b_face_identity_tiers.md"],
+  "parents": ["s018a_bright_band_calibration", "s001_cost_at_truth_cohort"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-02T00:00:00Z",
+  "narrative_md": "Per-face spec-event mag distributions are well-separated by face area, partitioning the 10 face groups into 4 clean brightness tiers: T1_X (mag<6, ±X, 99.4% purity), T2_YZ (6-7, ±Y/±Z, 97.7%), T3_any (7-8, 100%), T4_D (8-9, dishes, 97.4%). This is the structured IC-generation primitive the survey was missing: magnitude alone shortlists 2-8 candidate body faces per LC peak. Cohort coverage: 45/100 with ≥1 T1, 73/100 with ≥2 distinct tiers, 19/100 with zero classifiable peaks (Sobol fallback). Tier thresholds stored as mag_abs at D_REF_KM=38649.2 for portability."
+}

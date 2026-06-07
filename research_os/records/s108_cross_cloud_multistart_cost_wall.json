@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s108_cross_cloud_multistart_cost_wall",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-multistart-budget",
+  "question": "Can the s107 'multistart inside the cross filter' delivery plan (drop C-pass, rank multistart roots by coarse-K full-LC RMSE) surface truth-near pairs blind AND meet the 15-min/seed budget on aliased seed 119?",
+  "hypothesis": "Multistart inside the cross filter, ranked by coarse-K RMSE, can deliver a truth-near seed to the polish at production scale within the 15-min/seed budget.",
+  "status": "refuted",
+  "run_type": "batch",
+  "seeds": [
+    119
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "band_A_count": 6,
+    "phantoms": 0,
+    "oracle_blind_rank": "3/1675",
+    "oracle_polish_rho": 0.02996,
+    "oracle_polish_dir_err": 0.57,
+    "no_cpass_survivors": 3169400,
+    "multistart_full_run_hr": 71.5,
+    "coarse_cross_min_at_15min_feasible": "65 min (deg=10, nearest-truth 4.4 deg)"
+  },
+  "artefacts": [
+    {
+      "path": "results/s108/seed119/stage0_oracle.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s108/seed119/no_cpass_cross_summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s108/seed119/multistart_coarse_summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s108/seed119/multistart_density.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s108_cross_cloud_multistart_cost_wall.md"
+  ],
+  "parents": [
+    "s107_discrimination_test",
+    "s106_hybrid_loss_polish",
+    "s100_5step_coverage_proto",
+    "s098_local_densify_116"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-29T00:00:00Z",
+  "narrative_md": "The s107 delivery plan is dead: Stage 0 showed C-pass rejects 0/23 multistart roots of the s106 oracle pair (truth-near root only fits brightness post-polish). The redesign -- drop C-pass, rank by coarse-K full-LC RMSE -- WORKS as a blind, phantom-free discriminator (6 Band A, 0 phantoms on a 1675-pair subsample; oracle reproduces s106 0.0300 via a fully blind path). BUT it cannot meet the 15-min budget: dropping C-pass leaves 3.17M survivors, multistart needs n_dir=16 to find the winding (71.5 hr full run), coarse cross at deg=10 is 65 min and drifts to 4.4 deg -- ~100x over budget. Bankable: the coarse-K-on-best-winding-root discriminator is clean. Redirect to the anchor-baseline-aliasing blocker. Stage 0 uses the oracle pair + truth labels (oracle-leak); N=1.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ],
+  "blocked_by": [
+    "finite-diff-omega-aliasing"
+  ]
+}

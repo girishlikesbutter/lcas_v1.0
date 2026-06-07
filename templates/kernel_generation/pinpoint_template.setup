@@ -1,0 +1,80 @@
+\begintext
+================================================================================
+PINPOINT Setup File Template - Create Observer/Ground Station Kernel
+================================================================================
+
+This file tells pinpoint how to create an SPK file for a ground-based observer
+(telescope, tracking station, etc.). The SPK file contains the observer's
+position on Earth.
+
+HOW TO USE:
+1. Copy this file and rename it for your station (e.g., my_observatory.setup)
+2. Fill in the values below (see comments for guidance)
+3. Run: create_observer_kernel("your_setup.setup", output_dir)
+
+NOTE: The output file path is specified when you call the function, not in
+this setup file. Pinpoint reads the station definition from here.
+
+================================================================================
+\begindata
+
+\begintext
+--------------------------------------------------------------------------------
+SITE NAME
+--------------------------------------------------------------------------------
+SITES: A short identifier for your observing site (no spaces, use underscores)
+       This name is used as a prefix for all other parameters below.
+       Example: 'MY_OBS' means you'll have MY_OBS_CENTER, MY_OBS_FRAME, etc.
+--------------------------------------------------------------------------------
+\begindata
+
+SITES             = 'MY_OBSERVATORY'
+
+\begintext
+--------------------------------------------------------------------------------
+REFERENCE BODY AND FRAME
+--------------------------------------------------------------------------------
+{SITE}_CENTER: The body the station is on (399 = Earth)
+{SITE}_FRAME:  The reference frame for coordinates
+               'ITRF93' is the standard Earth-fixed frame for ground stations
+--------------------------------------------------------------------------------
+\begindata
+
+MY_OBSERVATORY_CENTER = 399
+MY_OBSERVATORY_FRAME  = 'ITRF93'
+
+\begintext
+--------------------------------------------------------------------------------
+STATION ID CODE
+--------------------------------------------------------------------------------
+{SITE}_IDCODE: A unique SPICE ID for this station
+               Convention: Use 399XXX for Earth-based stations
+               Examples: 399001, 399002, etc.
+               Make sure this doesn't conflict with existing IDs
+--------------------------------------------------------------------------------
+\begindata
+
+MY_OBSERVATORY_IDCODE = 399001
+
+\begintext
+--------------------------------------------------------------------------------
+GEODETIC COORDINATES
+--------------------------------------------------------------------------------
+{SITE}_LATLON: (latitude, longitude, altitude)
+
+               latitude:  Degrees (-90 to +90, positive = North)
+               longitude: Degrees (-180 to +360, positive = East)
+               altitude:  Kilometers above the reference ellipsoid
+
+               You can find these from Google Maps or your observatory's specs.
+
+Example locations:
+  Auckland, NZ:     (-36.85, 174.76, 0.0)
+  Mt. Palomar, CA:  (33.36, -116.86, 1.7)
+  Mauna Kea, HI:    (19.82, -155.47, 4.2)
+--------------------------------------------------------------------------------
+\begindata
+
+MY_OBSERVATORY_LATLON = (33.36, -116.86, 1.7)
+
+\begintext

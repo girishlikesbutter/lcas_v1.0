@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "surrv2-rmse-lm-polish",
+  "kind": "glossary_term",
+  "term": "SurrV2-RMSE LM-Polish",
+  "definition": "The specific instance run: SurrV2-RMSE objective, LM optimiser, over a Single-Wind LC Window. The concrete realisation of a Single-Wind-LC-Window Polish.",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "coined_in": "s106_hybrid_loss_polish",
+  "related_terms": [
+    "single-wind-lc-window-polish",
+    "lm-polish",
+    "generator"
+  ]
+}

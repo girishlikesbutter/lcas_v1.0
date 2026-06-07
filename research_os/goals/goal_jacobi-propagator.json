@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_jacobi-propagator",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_forward-substrate",
+  "title": "Closed-form Jacobi-elliptic q(t) torque-free propagation",
+  "state": "closed",
+  "spent": {
+    "runs": 7,
+    "wall_s": 0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s062_jacobi",
+    "s062_jacobi_design",
+    "s062b_jacobi_quaternion",
+    "s071_replicate_s062a",
+    "s072_path2_closed_form_q",
+    "s073b_path2_cprofile",
+    "s074_elliprj_path2"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s074_elliprj_path2",
+    "summary": "elliprj Path-2 default, 4.76 ms/cand Pool(24), all gates PASS",
+    "at": "2026-05-20T00:00:00Z"
+  }
+}

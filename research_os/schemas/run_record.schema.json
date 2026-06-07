@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/run_record.schema.json",
+  "title": "Run record",
+  "description": "Immutable, append-only record of a single executed run (one batch / one experiment unit). PLAN §2 (Q2). Prose lives in `narrative_md`, authored by the agent, not the human. A run is stamped with the substrate versions it ran against (Q6) — that stamp is what powers automatic blast-radius. Once written, a run record is never edited; a re-run produces a NEW record with this one in `parents`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "goal_node",
+    "question",
+    "status",
+    "oracle_clean",
+    "substrate_versions",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Version of THIS schema the instance was written against."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^s[0-9]+[a-z]*(_[a-z0-9]+)*$",
+      "description": "Run id = the experiment writeup's filename stem (1:1 with the .md, unique by construction). s + number + optional variant letter(s) + optional underscore-words. Short forms (s106) also validate. Stable forever; referenced by claims and goal nodes.",
+      "examples": ["s106", "s106_hybrid_loss_polish", "s059i_validator_perturbed", "s050cde_c1_concentration_dead"]
+    },
+    "kind": { "type": "string", "const": "run_record" },
+    "parents": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Run ids this run descends from (re-run lineage, cascade stages). Forms the run DAG."
+    },
+    "goal_node": {
+      "type": "string",
+      "description": "Id of the goal node this run attaches to (PLAN §2 goal tree). Referential: must resolve to a goal_node. The goal = WHY the run was done; the pipeline (tests[]) = the METHOD it exercised (ADR-0005)."
+    },
+    "tests": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "pipeline ids this run exercises (Experiment -> tests -> Pipeline, ADR-0005). The reverse edge (pipeline tested_by run) is derived from this, not stored. Empty for runs not attached to a first-class method."
+    },
+    "blocked_by": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "glossary_term ids of the named obstacle(s) that blocked this run (Experiment -> blocked-by -> Blocker, ADR-0005; the blocker is modelled as a glossary term, e.g. 'finite-diff-omega-aliasing'). Tagging runs across pipelines with a shared blocker surfaces 'this obstacle keeps killing different regimes' — the ADR-0005 payoff edge."
+    },
+    "contract_ref": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "The frozen branch contract this run executed against, with the amendment version in force at run time. Null for cheap auto-runs / probes that need no contract (Q4).",
+      "properties": {
+        "contract": { "type": "string", "description": "branch_contract id" },
+        "amendment": { "type": "string", "description": "Amendment version in force (e.g. 'v0' for the frozen original, 'v2' after two amendments)." }
+      },
+      "required": ["contract"]
+    },
+    "question": { "type": "string", "description": "The specific question this run answered." },
+    "hypothesis": { "type": "string", "description": "The prediction under test before running." },
+    "status": {
+      "type": "string",
+      "enum": ["confirmed", "refuted", "inconclusive"],
+      "description": "Outcome of the run against ITS OWN (often local) hypothesis — NOT whether the research thread advanced. A run can be 'confirmed' while sitting inside a thread that later died (e.g. 'confirmed the bug exists', 'confirmed the cheap path is insufficient'). So aggregate counts of `confirmed` measure local-hypothesis hit-rate, NOT research progress, and do NOT correspond to the PLAN's rework / binding-constraint figure (53/100 dead experiments). Do not chart `confirmed` totals as a progress metric without re-deriving research-advanced/dead at the thread level."
+    },
+    "run_type": {
+      "type": "string",
+      "enum": ["probe", "cheap", "expensive", "batch"],
+      "description": "Governs the contract gate (Q4) and the execution queue (Q5). probe = the ≤3-min off-contract carve-out; cheap = auto; expensive/batch = gated, serialised per the no-stacking rule."
+    },
+    "seeds": {
+      "type": "array",
+      "items": { "type": "integer" },
+      "default": [],
+      "description": "Cohort seed ids exercised (m048 cohort 0..119)."
+    },
+    "N": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sample size backing this run's claim (usually len(seeds) but may differ)."
+    },
+    "claim_scope": {
+      "type": "string",
+      "enum": ["N1", "cohort"],
+      "description": "Scope of claim this run can support. The N-scope gate auto-downgrades a 'cohort' tag with N below threshold to 'N1'."
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Open metric bag. Common keys (units): q0_err [deg], w_dir_err [deg], w_mag_err [deg/s or %], w_mag [deg/s], rho [surrogate residual], rho_band [A|B|C|D], wall_s [s]. |ω| is ALWAYS in deg/s (working-preference claim). Add domain keys freely; the dashboard indexes whatever is present.",
+      "examples": [{ "rho": 0.0300, "rho_band": "A", "w_dir_err": 0.57, "w_mag": 1.5025, "prev_rho": 0.687 }]
+    },
+    "artefacts": {
+      "type": "array",
+      "default": [],
+      "description": "Output files produced. Plots/anims surface to the web-app plot stream tagged by this run (PLAN §8 visual-validation).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind"],
+        "properties": {
+          "path": { "type": "string", "description": "Repo-relative path." },
+          "kind": {
+            "type": "string",
+            "enum": ["checkpoint", "plot", "anim", "data", "report", "log"]
+          },
+          "caption": { "type": "string", "description": "One-line caption for the plot stream." }
+        }
+      }
+    },
+    "writeup_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Paths to the original prose writeup(s) (the experiment .md). PLAN W-B: every backfilled record links back to its writeup for nuance."
+    },
+    "commit": {
+      "type": "string",
+      "description": "git SHA the run executed at (reproducibility)."
+    },
+    "substrate_versions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Map of substrate component id -> version in force at run time (e.g. {\"propagator\": \"2.0.0\", \"surrogate\": \"v2\", \"scorer\": \"1.0.0\"}). Keys must resolve to substrate_component ids. THIS is the blast-radius stamp: when a component bumps past a stamped version, this run (and claims that cite it) flip to needs_replication.",
+      "examples": [{ "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" }]
+    },
+    "gates_passed": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "oracle-leak",
+          "n-scope",
+          "validator-not-production",
+          "conservation-smoke",
+          "parallelism-check",
+          "glossary-clean",
+          "no-duplicate-symbol",
+          "deep-module-review",
+          "visible-test"
+        ]
+      },
+      "default": [],
+      "description": "Trust-machine gates this run passed (PLAN §3). Epistemic gates dominate for runs; code-discipline gates apply at substrate promotion."
+    },
+    "gates_failed": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Gates this run knowingly did not pass (e.g. a diagnostic that intentionally reads oracle data fails 'oracle-leak'). Lets the calibration skill learn from honest non-blind runs."
+    },
+    "oracle_clean": {
+      "type": "boolean",
+      "description": "True iff no truth_* key was read during the run (oracle-leak gate). A diagnostic that seeds from an oracle-nearest pair is oracle_clean=false even when it succeeds — this is the s058/s059 disease made explicit."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the record was written (ISO-8601). Set by the writer (close/run skill)."
+    },
+    "executed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the compute actually ran, if different from created_at."
+    },
+    "narrative_md": {
+      "type": "string",
+      "description": "Agent-authored prose narrative (Q2). The human reads this; the structured fields drive the machine. Markdown."
+    }
+  }
+}

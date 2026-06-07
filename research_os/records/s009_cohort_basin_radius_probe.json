@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s009_cohort_basin_radius_probe",
+  "kind": "run_record",
+  "goal_node": "goal_basin-width",
+  "question": "Across the full 100-seed cohort, what fraction is recoverable by joint LM from T1/T3 ICs, and how is basin radius distributed?",
+  "hypothesis": "Most cohort seeds have wide-enough basins to be recoverable from T1-style ICs; the tight-basin tail is small.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "T1_pass": "97/100",
+    "T3_pass": "45/100",
+    "class_wide_ge8deg": "45/100",
+    "class_mid_2to8deg": "52/100",
+    "class_tight_lt2deg": "3/100",
+    "tight_seeds": "7, 44, 76",
+    "twin_recoveries": "0/200",
+    "wall_s": 564
+  },
+  "artefacts": [
+    { "path": "results/s009/runs.npz", "kind": "checkpoint" },
+    { "path": "results/s009/summary.json", "kind": "data" },
+    { "path": "results/s009/cohort_basins.png", "kind": "plot" },
+    { "path": "results/s009/error_panels.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s009_cohort_basin_radius_probe.md"],
+  "parents": ["s002_surrogate_landscape_probe", "s005_joint_local_descent", "s006_seed28_landscape_at_truth_omega", "s007_omega_mag_peak_spacing_pilot", "s008_lc_feature_regression_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "100 seeds x 2 LM ICs (T1, T3 along body-X from truth) = 200 runs, 564 s. 97/100 pass T1 strict, 45/100 pass T3. Basin classification: 45 WIDE (≥8°), 52 MID (2-8°), 3 TIGHT (<2°: seeds 7, 44, 76). New finding: seeds 44 and 76 are competing-basin-deceptive — LM converges to a distinct q0 ~100° from truth at near-truth ω with low final_mse (0.018-0.06 mag^2), a real (q0, ω)-coupled deception s002's sample missed. Confirms multi-axis Sobol(q0) is necessary."
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s049_cascade_seed14",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does the multi-epoch consistency cascade (finite-diff omega from per-epoch C_t pairs + local validation) survive on a high-|omega| seed (14), fixing the s048 low-|omega| failure?",
+  "hypothesis": "On a high-|omega| seed where per-dt rotation dwarfs sample resolution, the cascade preserves truth-adjacent (q_a, omega) at the expected ~17% omega-noise floor and acts as an LM seed generator.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [14],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "raw_hypotheses_in_omega_bounds": 141706,
+    "survivors_tol010_K3": 35835,
+    "truth_qa_best_q_dist_deg": 0.0,
+    "best_omega_rel_err_pct": 16.82,
+    "cascade_truth_omega_vec_err_pct": 26.71,
+    "wall_s": 340
+  },
+  "artefacts": [
+    { "path": "results/s049_cascade_seed14/scan.npz", "kind": "checkpoint" },
+    { "path": "results/s049_cascade_seed14/cascade.npz", "kind": "checkpoint" },
+    { "path": "results/s049_cascade_seed14/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s049_cascade_seed14.md"],
+  "parents": ["s048_peak_cascade_smoke", "s048b_per_epoch_spread_v1", "s042_basin_radius_cohort", "s044_canonical_validation"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v1", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "On seed 14 (|omega|=1.229 dps) the cascade works as the s048 author predicted: the truth-adjacent discrete sample survives at q_dist=0 deg with the expected ~17% omega-noise, and the cascade-derived truth-omega survives K=2-3 at tol>=0.15. 141706 raw hypotheses -> 35835 survivors at tol=0.10/K=3 in 340 s single-thread. Framed as a SEED GENERATOR for LM (17% omega-noise sits inside the LM q-basin). Reads truth-q anchors for the truth-check, so not blind."
+}

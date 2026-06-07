@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "anchor-based-ia-cloud-cross",
+  "kind": "glossary_term",
+  "term": "Anchor-Based IA Cloud Cross",
+  "definition": "An IA Cloud Cross whose two epochs are chosen as anchors (sharp / informative moments), not arbitrary epochs.",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "related_terms": [
+    "ia-cloud-cross"
+  ]
+}

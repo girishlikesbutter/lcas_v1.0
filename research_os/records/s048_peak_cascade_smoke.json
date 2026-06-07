@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s048_peak_cascade_smoke",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does the user's peak-cascade construction (per-epoch C_t pre-image + finite-diff omega + multi-epoch consistency) recover truth (q, omega) on seed 89?",
+  "hypothesis": "At each LC peak (q, omega) is constrained, so cascading the per-epoch pre-image filters across peaks isolates truth.",
+  "status": "refuted",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "tier0_survivors": "396/500k",
+    "tier1_accepted_triples": 6,
+    "tier1_nearest_to_truth_q_deg": 25.41,
+    "tier1_nearest_to_truth_omega_rel_pct": 450,
+    "truth_q_nearest_in_Ct_deg": 0.53,
+    "wall_s": 170
+  },
+  "artefacts": [
+    { "path": "results/s048_peak_cascade_smoke/seed089/summary.json", "kind": "data" },
+    { "path": "results/s048_peak_cascade_smoke/run.log", "kind": "log" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s048_peak_cascade_smoke.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Per-epoch C_t pre-image filtering works (truth-q within 0.53-2.14 deg at each of 3 epochs), but Tier-1 joint (q, omega) consistency fails on seed 89: 6 triples accepted, none near truth (nearest 25 deg in q, 450% in omega). Diagnosed as a low-|omega| structural failure -- per-dt rotation (1.7 deg) ~ discrete-q sample resolution (1.5 deg) so finite-diff omega accumulates O(100%) noise. Predicted to work at higher |omega| (revisited in s049). Reads truth-q nearest checks; v2 surrogate (s048b retests on v1)."
+}

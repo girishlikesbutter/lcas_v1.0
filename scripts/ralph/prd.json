@@ -1,0 +1,233 @@
+{
+  "project": "LCAS",
+  "branchName": "ralph/mixed-fidelity-inversion",
+  "description": "Mixed-Fidelity Hierarchical Inversion - Two-stage optimization strategy using shadow-free global search and shadow-enabled local refinement for faster lightcurve inversion",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create notebook 08 with setup and dual-fidelity objective functions",
+      "description": "As a scientist, I need the same Intelsat 901 test case as notebooks 04-07 with two ObjectiveFunction instances differing only in compute_shadows_flag.",
+      "acceptanceCriteria": [
+        "Create notebooks/inversion/08_mixed_fidelity_inversion.py as Jupytext percent format",
+        "Reuse Intelsat 901 config loading, geometry, articulation, and inertia tensor from notebooks 04-07",
+        "Use tumbling mode with n_observations=50, noise_sigma=0.05 mag",
+        "Generate synthetic lightcurve with shadows enabled (same as notebooks 04-07)",
+        "Create obj_hifi = ObjectiveFunction with compute_shadows_flag=True",
+        "Create obj_lofi = ObjectiveFunction with compute_shadows_flag=False",
+        "Verify both objective functions evaluate correctly at true_params",
+        "Store true_params, param_names, bounds matching notebook 06 format",
+        "Reuse evaluate_success() function (omega error < 0.1 deg/s AND rms < 2x noise_sigma)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Copy minimal setup from notebook 06/07. Both objectives must use identical observation data."
+    },
+    {
+      "id": "US-002",
+      "title": "Implement Experiment 1: Fidelity benchmarking timing and lightcurve comparison",
+      "description": "As a scientist, I want to quantify the speedup factor and lightcurve discrepancy between shadow-enabled and shadow-disabled evaluation.",
+      "acceptanceCriteria": [
+        "Time N=20 evaluations of obj_hifi and obj_lofi at true_params using time.perf_counter()",
+        "Print mean and std evaluation time for each fidelity level",
+        "Print speedup factor: t_hifi / t_lofi",
+        "Generate predicted lightcurves at true_params for both fidelity levels",
+        "Compute magnitude residual: mag_hifi - mag_lofi",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Uses time.perf_counter() not time.time() per FR-3."
+    },
+    {
+      "id": "US-003",
+      "title": "Implement Experiment 1: Rank correlation and benchmark figure",
+      "description": "As a scientist, I want to assess whether the low-fidelity landscape preserves the ranking of solutions via Spearman correlation.",
+      "acceptanceCriteria": [
+        "Evaluate both objectives on 100 random parameter samples within bounds",
+        "Compute Spearman rank correlation between lofi and hifi objective values",
+        "Print Spearman rho value",
+        "Create 3-panel figure mixed_fidelity_benchmark.png: (a) lightcurve overlay, (b) magnitude residual vs time, (c) scatter of lofi vs hifi objectives with correlation annotation",
+        "Save figure to data/results/inversion_diagnostics/mixed_fidelity_benchmark.png at 150 DPI with bbox_inches='tight'",
+        "Add markdown summary cell with expected range assessment (5-20x speedup, rho > 0.9 good proxy)",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Uses scipy.stats.spearmanr for rank correlation."
+    },
+    {
+      "id": "US-004",
+      "title": "Implement Experiment 2: Basin shift analysis from true parameters",
+      "description": "As a scientist, I want to determine whether the global minimum shifts when shadows are disabled.",
+      "acceptanceCriteria": [
+        "Run L-BFGS-B from true_params on both obj_hifi and obj_lofi",
+        "Compare converged solutions: compute Euclidean distance, axis-angle displacement (degrees), and omega displacement (deg/s)",
+        "Run L-BFGS-B from 20 perturbed starting points (within basin radius from notebook 05) on both fidelity levels",
+        "Compute pairwise displacement for each start between hifi and lofi converged solutions",
+        "Report displacement statistics: mean, std, max across 20 starts",
+        "Print qualitative assessment: negligible (<1% basin width), moderate (1-10%), or significant (>10%)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Reuse sample_in_ball pattern from notebook 05 for perturbed starts."
+    },
+    {
+      "id": "US-005",
+      "title": "Implement Experiment 2: Basin shift visualization",
+      "description": "As a scientist, I want contour overlays and scatter plots showing how basin locations compare between fidelity levels.",
+      "acceptanceCriteria": [
+        "Create 2D contour overlay: pick 2 most sensitive parameter dimensions, plot objective contours for both fidelity levels overlaid, mark minima locations",
+        "Save as data/results/inversion_diagnostics/basin_shift_contours.png at 150 DPI",
+        "Create scatter plot of converged hifi vs lofi parameter values across 20 starts",
+        "Save as data/results/inversion_diagnostics/basin_shift_scatter.png at 150 DPI",
+        "Add markdown summary cell interpreting basin shift results",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Use compute_2d_slice pattern from notebook 04. Overlay contours with different colormaps/linestyles."
+    },
+    {
+      "id": "US-006",
+      "title": "Implement Experiment 3: Mixed-fidelity pipeline function",
+      "description": "As a scientist, I need the core two-stage pipeline: low-fidelity DE global search followed by high-fidelity L-BFGS-B local refinement.",
+      "acceptanceCriteria": [
+        "Implement run_mixed_fidelity(obj_lofi, obj_hifi, bounds, lofi_budget, top_n, hifi_evals_per_candidate, seed) function",
+        "Stage 1: Run DE with polish=False on obj_lofi, extract top N candidates from .population/.population_energies",
+        "Stage 2: Run L-BFGS-B on obj_hifi for each of N candidates, select overall best",
+        "Return results dict with keys: x_best, f_best, n_evals, n_evals_lofi, n_evals_hifi, stage1_time, stage2_time, candidates (list of per-candidate results)",
+        "DE config: strategy='best1bin', mutation=(0.5, 1.0), recombination=0.7, popsize=15, polish=False",
+        "Use CountedObjective wrapper for budget enforcement on both stages",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Access DE population via result.population and result.population_energies (scipy >= 1.7). CountedObjective pattern from notebook 06."
+    },
+    {
+      "id": "US-007",
+      "title": "Implement Experiment 3: Pipeline validation on standard test case",
+      "description": "As a scientist, I want to validate the mixed-fidelity pipeline produces correct results on the standard test case.",
+      "acceptanceCriteria": [
+        "Run pipeline once with N=3, lofi_budget=5000, hifi_evals_per_candidate=200",
+        "Print: Stage 1 time, Stage 2 time (per candidate and total), total time",
+        "Print: evaluation counts (lofi evals, hifi evals, total)",
+        "Print: final parameter error (omega error in deg/s) and RMS residual",
+        "Evaluate success using evaluate_success() function",
+        "Print success/fail with parameter errors",
+        "Add markdown summary cell interpreting pipeline validation results",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Single validation run, not a statistical comparison yet."
+    },
+    {
+      "id": "US-008",
+      "title": "Implement Experiment 4: Evaluation-count matched baseline comparison",
+      "description": "As a scientist, I want to compare mixed-fidelity against notebook 06 baselines with the same total evaluation budget (5000).",
+      "acceptanceCriteria": [
+        "Implement run_trial() function dispatching to multistart, DE, basinhopping, and mixed-fidelity strategies",
+        "Reuse multistart_local, run_de, run_basinhopping implementations from notebook 06",
+        "Mixed-fidelity budget: lofi_budget = total_budget - hifi_budget, hifi_budget = N * 200",
+        "Run 10 trials per strategy, seeds = BASE_SEED + trial * 100",
+        "Record per-trial: strategy, seed, best_objective, omega_error, rms_residual, success, n_evals, wall_time",
+        "Print comparison table: strategy, success rate, mean objective, mean omega error, mean wall time",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Reuse optimizer implementations from notebook 06. All strategies get 5000 total evals."
+    },
+    {
+      "id": "US-009",
+      "title": "Implement Experiment 4: Evaluation-count comparison visualization",
+      "description": "As a scientist, I want box plots and bar charts comparing strategy performance at matched evaluation counts.",
+      "acceptanceCriteria": [
+        "Create box plot of final objective values per strategy (4 strategies)",
+        "Save as data/results/inversion_diagnostics/evalcount_comparison_objectives.png at 150 DPI",
+        "Create bar chart of success rates with 95% Wilson score confidence intervals",
+        "Save as data/results/inversion_diagnostics/evalcount_comparison_success.png at 150 DPI",
+        "Add markdown summary cell interpreting evaluation-count comparison",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Reuse Wilson CI calculation from notebook 06."
+    },
+    {
+      "id": "US-010",
+      "title": "Implement Experiment 5: Wall-clock matched comparison",
+      "description": "As a scientist, I want to compare mixed-fidelity against full-fidelity DE under the same wall-clock budget.",
+      "acceptanceCriteria": [
+        "Run full-fidelity DE (10 trials) to establish mean wall-clock time per trial T_ref",
+        "Calculate lofi_budget so mixed-fidelity total wall time approx equals T_ref using Experiment 1 timing",
+        "Run mixed-fidelity (10 trials) with adjusted lofi budget, same seeds",
+        "Print comparison table with wall-clock column showing near-equal times",
+        "Print effective evaluations: how many lofi evals fit in the time budget vs hifi evals",
+        "Create grouped bar chart: success rate and mean omega error for Full-Fidelity DE vs Mixed-Fidelity with wall time annotations",
+        "Save as data/results/inversion_diagnostics/wallclock_comparison.png at 150 DPI",
+        "Create scatter plot of (wall_time, omega_error) for all trials with Pareto front",
+        "Save as data/results/inversion_diagnostics/wallclock_pareto.png at 150 DPI",
+        "Add markdown summary cell interpreting wall-clock comparison",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "This is the primary practical comparison. Must re-measure baseline times for fair comparison (FR-11)."
+    },
+    {
+      "id": "US-011",
+      "title": "Implement Experiment 6: Handoff parameter ablation",
+      "description": "As a scientist, I want to determine the optimal number of candidates (N) to pass from Stage 1 to Stage 2.",
+      "acceptanceCriteria": [
+        "Sweep N in {1, 3, 5, 10}",
+        "For each N: run 10 trials with fixed lofi budget (5000 evals), hifi budget = N * 200",
+        "Record success rate, mean omega error, mean total time, mean Stage 2 time per N",
+        "Print table: N vs (success rate, mean omega error, mean total time, stage2 time fraction)",
+        "Create 2-panel figure: (a) success rate vs N with 95% CI error bars, (b) mean total wall time vs N with Stage 1 + Stage 2 stacked breakdown",
+        "Save as data/results/inversion_diagnostics/handoff_ablation.png at 150 DPI",
+        "Add markdown summary cell with recommended N value",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Stage 1 lofi budget is fixed while N and Stage 2 hifi budget vary (FR-12)."
+    },
+    {
+      "id": "US-012",
+      "title": "Implement Experiment 7: Phase angle failure regime identification",
+      "description": "As a scientist, I want to identify phase angle ranges where the low-fidelity approximation fails.",
+      "acceptanceCriteria": [
+        "Generate synthetic test cases at phase angles spanning [10, 170] degrees in 10-degree steps (17 cases)",
+        "For each phase angle: compute lightcurve discrepancy RMS(mag_hifi - mag_lofi) at true params",
+        "For each phase angle: run mixed-fidelity (5 trials) and full-fidelity DE (5 trials)",
+        "Record success rate and omega error for both strategies per phase angle",
+        "Identify crossover phase angle where mixed-fidelity success drops below full-fidelity DE",
+        "Print table: phase angle vs (discrepancy, mixed-fidelity success rate, full-fidelity success rate)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Phase angle = arccos(dot(sun_vec, obs_vec)). Prefer searching existing epoch range for target angles. If unavailable, rotate observer position analytically."
+    },
+    {
+      "id": "US-013",
+      "title": "Implement Experiment 7: Phase angle failure visualization and study summary",
+      "description": "As a scientist, I want visualization of failure regimes and a comprehensive study summary with recommendations.",
+      "acceptanceCriteria": [
+        "Create 3-panel figure: (a) lightcurve fidelity discrepancy vs phase angle, (b) success rate vs phase angle for both strategies with error bars, (c) mean omega error vs phase angle for both strategies",
+        "Save as data/results/inversion_diagnostics/phase_angle_failure.png at 150 DPI",
+        "Print recommended phase angle range where mixed-fidelity is viable",
+        "Save mixed_fidelity_summary.txt to data/results/inversion_diagnostics/ with all key numerical results from Experiments 1-7",
+        "Add final markdown summary section covering viability assessment against success criteria (3x speedup, success rate within 5pp, accuracy within 5%)",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Summary must reference all success metrics from the PRD Success Metrics table."
+    }
+  ]
+}

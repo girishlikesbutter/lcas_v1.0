@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "inversion-result",
+  "kind": "glossary_term",
+  "term": "inversion-result",
+  "definition": "The InversionResult bundle from the lightcurve-inversion pipeline: estimated q0 + omega0, fit metrics (chi-squared, RMS residual), parameter uncertainties (Fisher or MCMC), and the predicted/observed light curves with their observation times (plus omega_history / MCMC samples when present). Richer than a bare q0-omega-state — it is the whole solved-inversion record, not just the recovered state.",
+  "status": "provisional",
+  "coined_in": "research_os/plans/artifact-instances-and-lab-surface.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [
+    "q0-omega-state",
+    "candidate-set",
+    "hifi-lightcurve",
+    "parameter-uncertainty"
+  ],
+  "created_at": "2026-06-08T00:00:00Z"
+}

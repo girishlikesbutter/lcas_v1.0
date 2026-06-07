@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_anchor-selection",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_cloud-architectures",
+  "title": "Anchor selection: coarse-find then dense-resample",
+  "state": "closed",
+  "spent": {
+    "runs": 13,
+    "wall_s": 1270.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s056_ct_breathing_spectrum",
+    "s056b_ct_residual_spectrum",
+    "s059_thread",
+    "s059i_cohort_density_scan",
+    "s059i_density_scan",
+    "s059i_validator",
+    "s059i_validator_perturbed",
+    "s060_anchor_topology",
+    "s060_cohort_anchor_topology",
+    "s060_multi_anchor_design",
+    "s060_sharpness_map",
+    "s060_v1_v2_cloud_compare",
+    "s060_v1_v2_lc_compare"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s085_anchor_accuracy_gate",
+    "summary": "sharp-|C_t| anchor delivers fast-seed q 1.65-3.30° @400k",
+    "at": "2026-05-21T00:00:00Z"
+  }
+}

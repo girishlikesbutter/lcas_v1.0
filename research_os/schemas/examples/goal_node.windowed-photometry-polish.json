@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_windowed-photometry-polish",
+  "kind": "goal_node",
+  "node_kind": "question",
+  "parent": "goal_blind-fast-inversion",
+  "title": "Does windowed-photometry polish break the hard-shoot trap — and does it discriminate truth from phantoms?",
+  "state": "open",
+  "budget": { "expected_runs": 8, "expected_wall_s": 7200 },
+  "spent": { "runs": 1, "wall_s": 1800 },
+  "contract_refs": ["contract_windowed-polish-discrimination"],
+  "child_runs": ["s106"],
+  "last_measured": {
+    "run": "s106",
+    "summary": "window-as-objective → Band A on 119 (ρ 0.0300); discrimination untested",
+    "at": "2026-05-28T12:00:00Z"
+  },
+  "is_trunk_artifact": false,
+  "created_at": "2026-05-28T09:00:00Z",
+  "updated_at": "2026-05-28T12:00:00Z"
+}

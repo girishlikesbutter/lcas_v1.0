@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s087_omega_dir_threshold",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-accuracy-gate",
+  "question": "At what ω-direction error does the fast-tumbler joint polish stop recovering truth, and what grid density does that imply?",
+  "hypothesis": "There is a sharp ω-direction tolerance below which the fast-seed polish recovers truth; the N_dir=2000 grid sits near it.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [119, 108, 100],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "w_dir_threshold_deg": 1.25,
+    "recovery_rate_119_at_1p25": 1.0,
+    "recovery_rate_119_at_1p50": 0.2,
+    "q0_seed_err_at_1p25_deg": 4.8,
+    "q0_seed_err_at_1p50_deg": 15.5,
+    "wall_s": 341,
+    "N_dir_required": 9300
+  },
+  "artefacts": [
+    { "path": "results/s087/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s087_omega_dir_threshold.md"],
+  "parents": ["s086_omega_refine_rescue", "s085_anchor_accuracy_gate", "s082_joint_grid_pivot"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-21T00:00:00Z",
+  "narrative_md": "Sweeping ω-direction error at a fixed 2° q-anchor (|ω| held exact), seed 119 shows a sharp cliff: truth-recovery is 5/5 through 1.25°, then collapses to 1/5 at 1.50° (q0_seed_err 4.8°→15.5°). The fast-seed polish recovers truth only when ω-dir error ≲1.25°. Implication: the N_dir=2000 grid sits at the cliff and must be ~4-5× denser (N_dir≈9300). Perturbed-truth anchors → not blind."
+}

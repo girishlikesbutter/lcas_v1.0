@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s013_rho_band_validation",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Do s011 in-basin landings render Band A in hi-fi, and are seed-10's competing basins observationally indistinguishable from truth (multi-solution) or visibly worse (failure)?",
+  "hypothesis": "In-basin landings are Band A under hi-fi; seed-10's competing basins are either multi-solution (any ρ<4) or a genuine failure (all ρ≥4).",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [6, 10, 21, 28, 41, 44, 48, 60, 84, 91],
+  "N": 10,
+  "claim_scope": "N1",
+  "metrics": {
+    "cohortA_bands": "A=36, B=0, C=0, D=0",
+    "cohortA_rho_median": 0.078,
+    "seed10_bands": "A=0, B=2, C=132, D=122",
+    "seed10_rho_median": 7.82,
+    "seed10_best_rho": 3.90,
+    "spearman_surr_hifi": 0.999,
+    "seed10_decision": "MULTI_SOLUTION"
+  },
+  "artefacts": [
+    { "path": "results/s013/rho_in_basin.npz", "kind": "checkpoint" },
+    { "path": "results/s013/rho_seed10.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s013_rho_band_validation.md"],
+  "parents": ["s011_q4cii_sobol_so3_polish_pilot", "s012a_seed10_density_probe", "s005_joint_local_descent"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-01T00:00:00Z",
+  "narrative_md": "Hi-fi ρ-band of s011/s012a candidates. Cohort A (36 in-basin landings): all Band A, ρ 0.04-0.23, median 0.078 — surrogate-MSE convergence matches hi-fi ρ<1 cleanly. Cohort B (seed 10, N=256): A=0, B=2, C=132, D=122; best ρ=3.90 (Band B); surrogate↔hi-fi Spearman 0.999; surrogate-best == hi-fi-best (IC#6). DECISION: MULTI_SOLUTION (2/256 candidates ρ<4). Greedy 5° clustering yields 158 distinct attractors."
+}

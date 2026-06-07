@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "lc-feature-vector",
+  "kind": "glossary_term",
+  "term": "lc-feature-vector",
+  "definition": "A fixed-length (28-dim) descriptor of an LC: LS-periodogram peaks, power-band ratios, statistical moments, ACF lags, glint count/spacing \u2014 LC-only, no geometry.",
+  "status": "provisional",
+  "coined_in": "research_os/backfill/W-D_tool_pipeline_scour.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [
+    "light-curve",
+    "multi-omegadir-start"
+  ],
+  "created_at": "2026-06-07T00:00:00Z"
+}

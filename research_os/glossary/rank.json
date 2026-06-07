@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "rank",
+  "kind": "glossary_term",
+  "term": "Rank",
+  "definition": "Order candidates by score. Valid ONLY when the score is truth-faithful (truth ⇒ best). Full-LC SurrV2-RMSE qualifies; a short window does NOT. (Half of the retired 'discriminator'.)",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "synonyms_blocked": [
+    "discriminator"
+  ],
+  "related_terms": [
+    "scoring",
+    "filter",
+    "spurious-survivor"
+  ]
+}

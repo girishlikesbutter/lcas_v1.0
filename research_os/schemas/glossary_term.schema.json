@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/glossary_term.schema.json",
+  "title": "Glossary term",
+  "description": "One canon (or provisional) vocabulary term (PLAN §2/§7, Q7). Two-tier like code: provisional -> canon via a promotion gate. The glossary-lint hook does a mechanical canon-membership check; the semantic synonym-block prevents drift (e.g. 'twin attitude' must be written 'body-twin'). Seeded from the de-facto PROGRESS vocabulary (PLAN §7.4): body-twin, anchor-baseline aliasing, polhode diameter, hard-shoot trap, ρ-band, ...",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "term",
+    "definition",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Kebab slug of the term (also the filename). e.g. 'body-twin', 'hard-shoot-trap'.",
+      "examples": ["body-twin", "hard-shoot-trap"]
+    },
+    "kind": { "type": "string", "const": "glossary_term" },
+    "term": { "type": "string", "description": "Display form of the term (e.g. 'body-twin', 'ρ-band')." },
+    "definition": {
+      "type": "string",
+      "description": "Canonical definition. Should be self-contained and cite the coining run/finding."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["provisional", "canon"],
+      "description": "provisional = coined in flight, not yet blessed. canon = promoted; the linter enforces its use and synonym-block."
+    },
+    "coined_in": {
+      "type": "string",
+      "description": "run_record id or writeup path where the term first appeared.",
+      "examples": ["s043", "notebooks/inversion/survey/experiments/s105_hard_shoot_trap.md"]
+    },
+    "promoted_on": {
+      "type": "string",
+      "format": "date",
+      "description": "Date promoted provisional->canon. Absent while provisional."
+    },
+    "synonyms_blocked": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Forbidden synonyms the lint replaces with `term` (the semantic synonym-block, Q7).",
+      "examples": [["twin attitude", "body double", "mirror attitude"]]
+    },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Accepted alternate spellings/abbreviations that are NOT blocked (e.g. 'pol_diam' for 'polhode diameter')."
+    },
+    "related_terms": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "ids of related glossary terms (cross-links)."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

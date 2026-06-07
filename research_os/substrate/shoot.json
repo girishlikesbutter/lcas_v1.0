@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "id": "shoot",
+  "kind": "substrate_component",
+  "name": "shoot",
+  "path": "notebooks/inversion/survey/lib/shoot.py",
+  "tier": "substrate",
+  "interface": "(q_a, q_b, dt, inertia, omega_init, method) -> {omega, geo_err_deg, jac_cond, connected}; LM-solve for \u03c9_a s.t. torque-free q_a->q_b in dt. jac_cond is the separatrix/degenerate-solution diagnostic.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:3e0bfe4cb1bf1732",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/shoot.py:shoot",
+  "ports": {
+    "input": [
+      "anchor-epoch",
+      "q0-omega-state"
+    ],
+    "output": {
+      "omega": "q0-omega-state",
+      "residual_norm": "hard-shoot-trap"
+    }
+  },
+  "default_params": {
+    "method": "elliprj",
+    "xtol": 1e-12,
+    "ftol": 1e-12
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:3e0bfe4cb1bf1732",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

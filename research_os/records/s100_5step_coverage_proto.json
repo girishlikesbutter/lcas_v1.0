@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s100_5step_coverage_proto",
+  "kind": "run_record",
+  "goal_node": "goal_blind-fast-invert",
+  "question": "On fast seed 119, does a coverage-fix (dense isophote fill → decimate → cross) close anchor starvation, and is single-shoot ω-aliasing the binding blocker?",
+  "hypothesis": "Closing anchor starvation by coverage will let the s099 pipeline invert seed 119.",
+  "status": "refuted",
+  "run_type": "batch",
+  "seeds": [119],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "rho": 48.17,
+    "rho_band": "D",
+    "n_bandA": 0,
+    "nt_a_dense_deg": 1.02,
+    "nt_b_dense_deg": 0.68,
+    "single_shoot_dir_err_deg": 104.07,
+    "multistart_best_dir_err_deg": 4.58,
+    "best_full_rmse": 2.41,
+    "truth_floor_rmse": 0.018,
+    "w_mag": 1.5023,
+    "wall_s": 989
+  },
+  "artefacts": [
+    { "path": "results/s100/seed119/invert.json", "kind": "data" },
+    { "path": "results/s100/seed119/hifi_rho.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s100_5step_coverage_proto.md"],
+  "parents": ["s099_blind_fast_invert_116", "s105_pairs_to_omega_decomposition", "s106_hybrid_loss_polish"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-28T00:00:00Z",
+  "narrative_md": "Coverage works: a 12M adaptive isophote fill drops anchor B's nearest-truth rep from a starved 10.5° to 0.68° (A to 1.02°). But the end-to-end inversion still lands top blind ρ 48.17, Band D, 0/15 Band A. Cause: the single finite-diff-init shoot on the truth-near pair connects to an ω 104° off truth at |ω| below the bracket → rejected; a bounded multi-start recovers it to 4.58°. Coverage is not the binding blocker — single-shoot ω-selection is. Blind pipeline; truth used only for labels/probe."
+}

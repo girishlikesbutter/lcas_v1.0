@@ -1,0 +1,9 @@
+# Derived frontier ranking emitted by /strategize (req #9). Ephemeral + lens-
+# dependent — re-derive it; not canonical state. (The plot-stream cache has its
+# own .gitignore under stream/.)
+frontier_ranking.json
+
+# Derived machinery map emitted by derive_machinery.py — the AST-grounded view of
+# machinery_overlay.json (which IS committed). Re-derivable from overlay + code; the
+# indexer flags it stale when the code fingerprint moves. Not canonical state.
+machinery_map.json

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s059_thread",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "Is the s058 cloud-data forward-prop architecture cohort-viable without truth-cluster oracle injection, and if not, why does its score function fail to rank truth?",
+  "hypothesis": "The cloud-data forward-prop architecture proven on seed 89 generalises blind across the cohort; the hit-count score ranks truth into a practical top-K.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [89, 28],
+  "N": 2,
+  "claim_scope": "N1",
+  "metrics": {
+    "truth_rank_seed89": "107/325",
+    "truth_rank_seed28": "390/25000",
+    "seed28_discrimination_over_null": "6524x",
+    "seed28_forwardprop_truth_rank": "6/4331",
+    "finitediff_w_mag_err_pct": 17.33,
+    "s059e_local_polish_band": "B",
+    "s059e_polish_rho": 0.31,
+    "s059g_realdyn_truth_rank": "15502"
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s059_thread.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-08T00:00:00Z",
+  "narrative_md": "Diagnostic thread (s059_pilot..s059h). Decisive negative on the architecture-as-was: the s058 'PROVEN-on-89' result relied on truth-cluster oracle injection; blind, the const-omega hit-count score ranks truth at 107/325 (seed 89) and 390/25k (seed 28). The score rewards const-omega trajectories that graze dense validator regions, not dynamics-consistent (q, omega) -- the candidate's finite-diff omega is ~17% off truth (so real dynamics ranks truth WORSE, 15502). s059e local-window LM polish reaches Band B (rho 0.31) but ONLY via truth-cluster injection. Principled reframe: omega-grid + real-dynamics + local-window surrogate-MSE (-> s059i/s059j). Reads truth ranks + oracle injection -- oracle-leak."
+}

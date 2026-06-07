@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "epoch-observation",
+  "kind": "glossary_term",
+  "term": "epoch-observation",
+  "definition": "The per-seed geometry/observation bundle from the truth NPZ: epoch ET array + J2000 sun/observer/satellite positions + observer distances + mag_hifi.",
+  "status": "provisional",
+  "coined_in": "research_os/backfill/W-D_tool_pipeline_scour.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [
+    "attitude-trajectory",
+    "satellite-model"
+  ],
+  "created_at": "2026-06-07T00:00:00Z"
+}

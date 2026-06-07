@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s054_generate_holdout",
+  "kind": "run_record",
+  "goal_node": "goal_blind-fast-invert",
+  "question": "Can a holdout corpus of fresh m048 trajectories (seeds 100-119) be generated with the post-fix generator for clean holdout validation of cohort-derived priors?",
+  "hypothesis": "The post-fix generator produces seeds 100-119 with schema/units consistent with the original 0-99 cohort, usable via lib.traj_load.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119],
+  "N": 20,
+  "claim_scope": "cohort",
+  "metrics": {
+    "n_holdout_seeds": 20,
+    "seed100_omega_dps": 1.348,
+    "seed100_hifi_peaks": 45,
+    "gen_wall_per_seed_s_median": 167,
+    "total_wall_min": 15
+  },
+  "artefacts": [
+    { "path": "data/results/inversion_diagnostics/m048_trajectories/per_trajectory/traj_seed100.npz", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s054_generate_holdout.md"],
+  "parents": ["s053_cohort_polhode_survey"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Generated 20 holdout trajectories (m048 seeds 100-119) with the post-fix generator, symlinked into the survey workspace and reachable via lib.traj_load.load_truth. Same code path / schema / inertia tensor as the 0-99 cohort; the master NPZ is left unmodified so buggy-era consumers are unaffected. This is the holdout test set required before any cohort-derived prior can be claimed operational. Produces ground-truth trajectories rather than consuming truth as an inversion input."
+}

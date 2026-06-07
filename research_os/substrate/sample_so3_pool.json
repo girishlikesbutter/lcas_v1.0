@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "sample_so3_pool",
+  "kind": "substrate_component",
+  "name": "sample_so3_pool",
+  "path": "notebooks/inversion/survey/lib/c_t_pipeline.py",
+  "tier": "substrate",
+  "interface": "(n_samples, sample_seed) -> {R_cache (N,3,3), q_pool_wxyz, q_pool_xyzw, rotvec_pool}; the candidate attitude pool that every C_t / cross-cloud experiment draws from.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:3893ace4b5223f1b",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:sample_so3_pool",
+  "ports": {
+    "input": [],
+    "output": {
+      "q_pool_wxyz": "ia-cloud",
+      "rotvec_pool": "omega-cloud"
+    }
+  },
+  "default_params": {
+    "sample_seed": 42,
+    "n_samples": 1000000
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:3893ace4b5223f1b",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_polhode-prior",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_basin-polhode-twin",
+  "title": "Polhode-conditioned ω prior (|L|, label, phase)",
+  "state": "revivable",
+  "spent": {
+    "runs": 7,
+    "wall_s": 15.02
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s051_polhode_observation",
+    "s052_polhode_overlay",
+    "s055d_cascade_pol_diam_filter",
+    "s063a_polhode_bijectivity",
+    "s063b_polhode_curvature",
+    "s063c_polhode_census",
+    "s063d_polhode_identity_filter"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s063d_polhode_identity_filter",
+    "summary": "polhode label not preserved through cascade noise; survives for upstream sampling",
+    "at": "2026-05-12T00:00:00Z"
+  }
+}

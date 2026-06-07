@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s002_surrogate_landscape_probe",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "At fixed truth-ω, does the surrogate full-LC MSE landscape have its argmin at truth-q0, and is the body-x twin a competing minimum?",
+  "hypothesis": "Surrogate-MSE is structurally honest at correct truth-ω (argmin = truth-q0), and the m145 'deceptive q0=135° attractor' on seed 91 is a buggy-era artifact.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [6, 10, 21, 41, 48, 60, 84, 91],
+  "N": 8,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_seeds_argmin_truth": "8/8",
+    "n_sobol_below_truth": 0,
+    "truth_mse_range": "1.33e-4 to 3.59e-3 mag^2",
+    "twin_mse_range": "1.10 to 10.19 mag^2",
+    "best_sobol_over_truth_ratio": "53x to 1975x",
+    "wall_s": 199
+  },
+  "artefacts": [
+    { "path": "results/s002/per_seed_landscape.npz", "kind": "checkpoint" },
+    { "path": "results/s002/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s002_surrogate_landscape_probe.md"],
+  "parents": ["s001_cost_at_truth_cohort"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "On 8 PA-stratified m048 seeds, holding ω at truth-ω and probing 2046 Sobol-Shoemake q0 + truth + twin, the surrogate full-LC MSE argmin sits at truth-q0 on 8/8 seeds (n_sobol_below_truth = 0), 53x-1975x below the best non-truth candidate. The body-x twin is not a competing minimum at fixed truth-ω (twin_mse 1.1-10.2 mag^2). Refutes the m145 deceptive-attractor claim on seed 91; surrogate-MSE is structurally honest when ω is correct, but the basin is narrow (closest Sobol 4-12° already 50-2000x above truth)."
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "pipeline_joint-grid-pivot",
+  "kind": "pipeline",
+  "title": "Dense joint (q0, \u03c9) grid \u2192 top-K polish",
+  "hypothesis": "A dense joint (q0, \u03c9) grid scored by full-LC Jacobi+surrogate MSE surfaces the truth-nearest cell in a polishable top-K, as a blind pipeline.",
+  "state": "closed",
+  "serves": [
+    "goal_blind-pipeline"
+  ],
+  "composes": [
+    "propagator",
+    "surrogate",
+    "scorer",
+    "ls_bracket",
+    "sample_so3_pool",
+    "twin_dedup"
+  ],
+  "supersedes": null,
+  "superseded_by": null,
+  "last_measured": {
+    "run": "s082_joint_grid_pivot",
+    "summary": "truth-nearest cell ranks 70823/320000 \u2014 dense joint grid does NOT surface truth; pivot abandoned",
+    "at": "2026-05-20T00:00:00Z"
+  },
+  "created_at": "2026-06-04T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

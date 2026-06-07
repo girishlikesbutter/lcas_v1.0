@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "id": "pipeline_densify",
+  "kind": "pipeline",
+  "title": "Densified \u03c9-grid + full-LC multi-mag-start polish",
+  "hypothesis": "Densifying the \u03c9-direction grid (N_DIRS 200\u2192800) + full-LC polish + multi-magnitude-start lands Band A inversions on slow tumblers without oracle injection.",
+  "state": "closed",
+  "serves": [
+    "goal_cloud-architectures"
+  ],
+  "composes": [
+    "propagator",
+    "surrogate",
+    "scorer"
+  ],
+  "supersedes": null,
+  "superseded_by": null,
+  "last_measured": {
+    "run": "s059k_densify_ndirs",
+    "summary": "seeds 89 & 10 \u2192 Band A (\u03c1 0.177 / 0.638), no oracle \u2014 slow-tumbler class GO",
+    "at": "2026-05-08T00:00:00Z"
+  },
+  "created_at": "2026-06-04T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

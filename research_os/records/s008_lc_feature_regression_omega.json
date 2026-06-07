@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s008_lc_feature_regression_omega",
+  "kind": "run_record",
+  "goal_node": "goal_lc-omega-priors",
+  "question": "Can a 28-feature LOO-cross-validated regression model predict ω-magnitude within s005's 3-5% basin radius?",
+  "hypothesis": "An LC-feature regression (linear/ridge/RF/GB) can predict ω-mag accurately enough to seed LM polish.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "best_model": "gradient-boosting on log target",
+    "best_loo_mape_pct": 16.4,
+    "oracle_ceiling_pct": 7.4,
+    "threshold_pct": 3,
+    "n_features": 28
+  },
+  "artefacts": [
+    { "path": "results/s008/features.npz", "kind": "checkpoint" },
+    { "path": "results/s008/predictions.npz", "kind": "checkpoint" },
+    { "path": "results/s008/summary.json", "kind": "data" },
+    { "path": "results/s008/scatter.png", "kind": "plot" },
+    { "path": "results/s008/feature_importance.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s008_lc_feature_regression_omega.md"],
+  "parents": ["s007_omega_mag_peak_spacing_pilot", "s003_landscape_vs_omega", "s005_joint_local_descent"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "Decisive negative. A 28-feature LOO-CV regression (linear/ridge/RF/GB x {direct ω, log ω}) on 100 m048 truth LCs cannot predict ω-magnitude within s005's 3-5% basin radius: best model (GB on log target) median LOO MAPE 16.4%, worse than s007's truth-aware oracle ceiling (7.4%) and far above the 3% bar. Confirms s007 — naive LC-feature → ω priors hit the multi-periodicity wall and are structurally dead for the ω-prior class."
+}

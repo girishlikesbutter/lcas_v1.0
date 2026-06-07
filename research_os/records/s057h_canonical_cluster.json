@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057h_canonical_cluster",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does body-twin canonicalisation + clustering collapse the truth signal and boost the truth cluster's rank among s057g candidates?",
+  "hypothesis": "Truth and its body-twin collapse to one canonical (q, omega), so cluster sum-score boosts the truth cluster's rank above its raw 90th-percentile.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_candidates": 548,
+    "n_clusters": 325,
+    "truth_cluster_rank": "107/325",
+    "truth_cluster_sum_score": 178,
+    "top_cluster_sum_score": "800-930",
+    "top_cluster_qa_d_canon_deg": 175
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057h_canonical_cluster.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Canonicalising the 548 s057g candidates collapses them to 325 clusters but does NOT boost the truth cluster -- it ranks 107/325 (33rd %ile, WORSE than raw 90th %ile). The top clusters at qa_d_canon ~175deg are NOT body-twins of truth; they are genuinely different multi-solution (q_a, omega) alternates (sum-score 800-930 vs truth 178) that pass forward-prop validation. Multi-solution structure dominates seed 89. Reads truth cluster rank -- oracle-leak, N=1."
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "id": "compute_inertia",
+  "kind": "substrate_component",
+  "name": "compute_inertia_from_stl",
+  "path": "src/computation/inertia_calculator.py",
+  "tier": "substrate",
+  "interface": "(STL meshes + positions + masses, optional articulation) -> InertiaResult {total_mass, CoM, inertia_tensor, principal_moments/axes}; signed-tetrahedra + parallel-axis. Bridges to the propagator (inertia init).  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:a04d50ae4f02ef81",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/computation/inertia_calculator.py:compute_inertia_from_stl",
+  "ports": {
+    "input": [
+      "satellite-model"
+    ],
+    "output": {
+      "return": "inertia-result"
+    }
+  },
+  "default_params": {
+    "masses": null,
+    "articulation_angles": null
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:a04d50ae4f02ef81",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

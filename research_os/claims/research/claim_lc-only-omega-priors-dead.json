@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_lc-only-omega-priors-dead",
+  "kind": "claim_card",
+  "deck": "research",
+  "statement": "The entire LC-only omega-magnitude-prior class is structurally dead: peak-spacing gives 7.4% oracle MAPE, a 28-feature regression 16.4% LOO MAPE -- neither localizes |omega|. The class-level conclusion likely survives the fix, but the quantitative evidence (s003/s007/s008) ran on propagator 1.0.0 and is unreplicated under 2.0.0.",
+  "supporting_runs": [
+    "s007_omega_mag_peak_spacing_pilot",
+    "s008_lc_feature_regression_omega"
+  ],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "medium",
+    "gates_passed": [],
+    "oracle_clean": false
+  },
+  "scope": {
+    "N": 100,
+    "kind": "cohort"
+  },
+  "depends_on": [
+    "propagator@1.0.0",
+    "surrogate@v2",
+    "scorer@1.0.0"
+  ],
+  "status": "needs_replication",
+  "superseded_by": null,
+  "supersedes": null,
+  "links_to_writeups": [
+    "notebooks/inversion/survey/experiments/s008_lc_feature_regression_omega.md",
+    "memory/feedback_lc_spectral_omega_prior_dead.md"
+  ],
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

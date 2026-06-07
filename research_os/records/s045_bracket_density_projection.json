@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s045_bracket_density_projection",
+  "kind": "run_record",
+  "goal_node": "goal_ls-bracket",
+  "question": "Combining the s042 cohort scaling rule with s032 per-seed bracket coverage, what is the cohort cell-count cost of an |omega|-aware adaptive bracket, and does the current bracket cover the basin?",
+  "hypothesis": "The current uniform bracket cannot satisfy both ends of the cohort |omega| distribution; a per-seed adaptive bracket conditioned on an LS-peak prior is much cheaper than a cohort-shared grid.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "current_bracket_basin_coverage": "0/78 (c=1%/a=0.5)",
+    "per_seed_adaptive_loose_cells": 8462,
+    "per_seed_adaptive_tight_cells": 1734,
+    "shared_grid_cells_x_seeds": 23900,
+    "cohort_omega_range_dps": "0.106-1.476"
+  },
+  "artefacts": [
+    { "path": "results/s045_bracket_density_projection/projection.csv", "kind": "data" },
+    { "path": "results/s045_bracket_density_projection/summary.json", "kind": "data" },
+    { "path": "results/s045_bracket_density_projection/run.log", "kind": "log" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s045_bracket_density_projection.md"],
+  "parents": ["s032_cohort_fast", "s042_basin_radius_cohort"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "Pure-math projection on cached data: under the conservative c=1%/a=0.5 scaling rule the current s032 bracket covers basin on 0/78 OK seeds, because 5% is ~2x the median required basin width post-fix. Per-seed adaptive bracket conditioned on a +/-10-50% LS-peak prior costs 1.7-8.5k cohort cells, 1.4-14x cheaper than a 23.9k shared grid. Reads cohort truth |omega| values as input."
+}

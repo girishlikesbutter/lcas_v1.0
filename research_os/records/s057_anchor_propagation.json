@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057_anchor_propagation",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Do (q_a, q_b) finite-diff omega-vectors from a single small-|C_t| anchor pair concentrate near the truth-omega direction?",
+  "hypothesis": "Anchoring at a deep |C_t| constriction and filtering cross-epoch q_b by the |omega|-prior makes surviving omega-vectors concentrate near truth-omega-direction.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "concentration_over_baseline": 1.79,
+    "t_a": 411,
+    "C_a": 44,
+    "dt_epochs": 10,
+    "frac_within_10deg": 0.027,
+    "baseline_frac": 0.015,
+    "closest_pair_w_dir_err": 20.4,
+    "closest_pair_w_mag_err_pct": 28
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057_anchor_propagation.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "First proof-of-concept of the cloud-data anchor architecture on seed 89: anchor at the deepest constriction t_a=411 (|C_a|=44), all-pair finite-diff omega at dt=10, filter by |omega|-prior. Signal is real but weak -- loose +-25% prior gives 2.7% within 10deg of truth vs 1.5% baseline (1.79x); the closest-survivor pair implies omega 20.4deg off truth direction with |omega| +28%. Uses truth-omega direction + oracle +-0.5% bracket -- oracle-leak, N=1."
+}

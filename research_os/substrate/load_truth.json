@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "load_truth",
+  "kind": "substrate_component",
+  "name": "load_truth",
+  "path": "notebooks/inversion/survey/lib/traj_load.py",
+  "tier": "substrate",
+  "interface": "(seed) -> dict of all NPZ arrays (q0, \u03c90, times, sun/obs/sat positions, mag_hifi, k1/k2, obs_dist). The universal survey data loader.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:fcbe97b707e81660",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/traj_load.py:load_truth",
+  "ports": {
+    "input": [],
+    "output": [
+      "epoch-observation",
+      "attitude-trajectory"
+    ]
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:fcbe97b707e81660",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

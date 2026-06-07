@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s071_replicate_s062a",
+  "kind": "run_record",
+  "goal_node": "goal_jacobi-propagator",
+  "question": "Does the Jacobi closed-form omega(t) (omega_jacobi) cohort validation against DOP853 still pass all four gates on the regenerated post-fix m048 cohort (120 seeds)?",
+  "hypothesis": "Closed-form omega(t) is forward-model-agnostic (Euler is sign-symmetric in omega); the gates that passed pre-fix still pass, with only minor numerical drift.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [],
+  "N": 120,
+  "claim_scope": "cohort",
+  "metrics": {
+    "regime_split": "104A/16B",
+    "omega_rel_err_max": 1.35e-09,
+    "omega_rel_err_median": 2.44e-10,
+    "q_vs_truth_max": 7.13e-08,
+    "twoT_drift_max": 1.36e-14,
+    "L2_drift_max": 1.33e-14,
+    "speedup_omega_only": "108x"
+  },
+  "artefacts": [
+    { "path": "results/s062/summary.json", "kind": "data" },
+    { "path": "results/s062/validation_per_seed.npz", "kind": "checkpoint" },
+    { "path": "results/s062/per_seed.json", "kind": "data" },
+    { "path": "results/s062/inertia_principal_axes.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s071_replicate_s062a.md"],
+  "parents": ["s067_postfix_propagator_validation"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "Re-ran the s062a closed-form omega(t) validation on the post-fix 120-seed cohort. All four gates that passed pre-fix still pass (omega_rel_err_max 1.35e-9, 2T/L2 drift at machine precision). Numerical drift is 1-8x larger because both DOP853 and Jacobi now integrate the textbook -0.5 omega-q kinematic. Architectural claim survives; inertia-tensor regime split (104A/16B) unchanged. Validation reads cached truth trajectories as reference -> oracle_clean false."
+}

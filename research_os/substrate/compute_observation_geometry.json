@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "compute_observation_geometry",
+  "kind": "substrate_component",
+  "name": "compute_observation_geometry",
+  "path": "src/computation/observation_geometry.py",
+  "tier": "substrate",
+  "interface": "(epochs, satellite_id, observer_id, spice_handler, config, attitude_keyframes?) -> geometry-dict {k1, k2, observer_distances, sat/sun positions, sat_att_matrices}; pipeline step 1 (SPICE attitude kernels or SLERP keyframes).  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:ecbfa5971259f2c0",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/computation/observation_geometry.py:compute_observation_geometry",
+  "ports": {
+    "input": [
+      "epoch-observation"
+    ],
+    "output": {
+      "geometry_data": "attitude-trajectory"
+    }
+  },
+  "default_params": {
+    "attitude_keyframes": null
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:ecbfa5971259f2c0",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

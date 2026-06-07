@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "satellite-model",
+  "kind": "glossary_term",
+  "term": "satellite-model",
+  "definition": "The fully-assembled Satellite dataclass (Components/Facets/normals/areas/BRDF params) loaded from STL+YAML; flows into every forward computation block.",
+  "status": "provisional",
+  "coined_in": "research_os/backfill/W-D_tool_pipeline_scour.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [],
+  "created_at": "2026-06-07T00:00:00Z"
+}

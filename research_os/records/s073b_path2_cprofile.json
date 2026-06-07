@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s073b_path2_cprofile",
+  "kind": "run_record",
+  "goal_node": "goal_jacobi-propagator",
+  "question": "Which Path 2 optimisation axis is the real bottleneck — replacing the phi ODE with elliprj, or NumPy-vectorising the per-epoch reconstruction loop?",
+  "hypothesis": "The solve_ivp(phi_dot) call dominates Path 2 wall, so the elliprj replacement targeting it is the right next axis over vectorising the reconstruction loop.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "wall_ms_median": 16.4,
+    "solve_ivp_share_pct": 81,
+    "reconstruction_loop_share_pct": 11,
+    "n_dop853_steps": 107
+  },
+  "artefacts": [
+    { "path": "results/s073b/profile.txt", "kind": "log" },
+    { "path": "results/s073b/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s073b_path2_cprofile.md"],
+  "parents": ["s072_path2_closed_form_q"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "cProfile of propagate_jacobi_path2 on the seed-89 truth state (5 warmed runs, 500 epochs): median 16.4 ms wall, of which solve_ivp(phi_dot) is 81% and the per-epoch reconstruction loop only ~11%. Verdict: the scipy.special.elliprj replacement (removes the ODE, vectorisable across candidates and times) is the right next axis; vectorising the reconstruction loop has too low a ceiling. Profiled on truth state -> oracle_clean false."
+}

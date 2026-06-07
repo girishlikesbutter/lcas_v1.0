@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_body-twin",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_basin-polhode-twin",
+  "title": "Body-twin: canonical-hemisphere search-space halving",
+  "state": "closed",
+  "spent": {
+    "runs": 3,
+    "wall_s": 1144.3
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s043_twin_hifi_verify",
+    "s044_canonical_validation",
+    "s081_hifi_rho_bands_twin"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s081_hifi_rho_bands_twin",
+    "summary": "twin LC equivalence holds at hi-fi; ~2× dedup",
+    "at": "2026-05-20T00:00:00Z"
+  }
+}

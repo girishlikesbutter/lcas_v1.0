@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "id": "alignment_filter",
+  "kind": "substrate_component",
+  "name": "alignment_cost",
+  "path": "notebooks/inversion/survey/lib/filter_costs.py",
+  "tier": "substrate",
+  "interface": "(candidate surrogate-LC, bright truth-peak indices, window) -> filter [0,1]: fraction of truth bright peaks where the candidate shows a matching local-min bright value within \u00b1window. THE working impl (filter_costs.py:196); the cost_surfaces.py:alignment_cost of the same name is a NotImplementedError stub and must never be the entry_point.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:057d6f8fd0fe8154",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:alignment_cost",
+  "ports": {
+    "input": [
+      "light-curve",
+      "anchor-epoch"
+    ],
+    "output": {
+      "return": "filter"
+    }
+  },
+  "default_params": {
+    "window_epochs": 3,
+    "bright_mag_threshold": 11
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:057d6f8fd0fe8154",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

@@ -1,0 +1,3 @@
+# Intent queue is transient control-plane state (the executor consumes it).
+# Not canonical research state — don't track the contents.
+intent_*.json

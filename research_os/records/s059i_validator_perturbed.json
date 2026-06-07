@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s059i_validator_perturbed",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "How does q_a geodesic noise degrade the omega-grid + local-window surrogate-MSE cost surface's ability to rank truth-omega?",
+  "hypothesis": "The omega-grid cost surface stays discriminative for truth-omega up to the realistic cloud-quantization q_a noise (~10deg).",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [28],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "robust_up_to_qa_noise_deg": 7.5,
+    "bimodal_at_qa_noise_deg": 10,
+    "fail_at_qa_noise_deg": 15,
+    "bimodal_success_frac": "1/3",
+    "cloud_closest_to_truth_deg": 10.96,
+    "grid": "200dir x 6mag"
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s059i_validator_perturbed.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-08T00:00:00Z",
+  "narrative_md": "q_a-noise sensitivity sweep of the omega-grid cost surface on seed 28 (T_A=25): truth-omega stays in top-16 up to ~7.5deg q_a noise; at 10deg it is bimodal (1/3 trials rank 1, 2/3 rank ~165); at 15deg it fails (rank 128-422). The realistic SO(3) survival-cloud quantization puts the closest-to-truth member at 10.96deg -- exactly the bimodal cliff, so the proposed s059j architecture is borderline operational at current density (~33% success). Uses perturbed-truth q_a + truth-omega grid -- oracle-leak, N=1."
+}

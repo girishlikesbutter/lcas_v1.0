@@ -1,0 +1,7 @@
+# build + dependency artifacts (rebuildable — not canonical state)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/tsconfig.tsbuildinfo
+__pycache__/
+*.pyc

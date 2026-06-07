@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "spurious-survivor",
+  "kind": "glossary_term",
+  "term": "Spurious survivor",
+  "definition": "A candidate that scores well under SOME (usually unfaithful / short-window) score but is NEITHER truth NOR a degenerate solution — an artifact of using an unfaithful score as a Rank. Cure: use that score as a Filter instead, + over-determine.",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "synonyms_blocked": [
+    "phantom"
+  ],
+  "related_terms": [
+    "degenerate-solution",
+    "filter",
+    "rank"
+  ]
+}

@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Research OS — plot stream</title>
+<style>
+  body { background:#0d1117; color:#c9d1d9; font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; margin:0; padding:24px; }
+  h1 { font-size:15px; font-weight:600; color:#58a6ff; margin:0 0 4px; }
+  .sub { color:#8b949e; font-size:12px; margin-bottom:20px; }
+  .card { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:14px; margin:0 0 18px; max-width:1100px; }
+  .card img { width:100%; border-radius:6px; display:block; }
+  .cap { margin-top:10px; font-size:13px; }
+  .meta { color:#8b949e; font-size:11px; margin-top:4px; }
+  .tag { display:inline-block; background:#1f6feb22; color:#58a6ff; border:1px solid #1f6feb55; border-radius:5px; padding:1px 7px; font-size:11px; margin-right:6px; }
+  .empty { color:#8b949e; }
+</style>
+</head>
+<body>
+  <h1>Research OS — plot stream</h1>
+  <div class="sub">chronological · newest at bottom · auto-refresh · <span id="count">0</span> plots</div>
+  <div id="stream"><div class="empty">waiting for plots…</div></div>
+<script>
+let lastCount = 0;
+async function tick(){
+  try{
+    const r = await fetch('manifest.json?_='+Date.now());
+    const m = await r.json();
+    const items = (m.items||[]);            // chronological: oldest first, newest at bottom
+    document.getElementById('count').textContent = items.length;
+    const el = document.getElementById('stream');
+    if(!items.length){ el.innerHTML='<div class="empty">waiting for plots…</div>'; lastCount=0; return; }
+    el.innerHTML = items.map(it=>`
+      <div class="card">
+        <img src="${it.file}?_=${encodeURIComponent(it.ts)}">
+        <div class="cap">${it.caption||''}</div>
+        <div class="meta">${it.run?`<span class="tag">${it.run}</span>`:''}${it.ts||''}</div>
+      </div>`).join('');
+    if(items.length > lastCount){          // a new plot landed — follow it down if you're near the bottom
+      const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 320);
+      if(nearBottom || lastCount===0){ window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'}); }
+    }
+    lastCount = items.length;
+  }catch(e){ /* manifest not ready yet */ }
+}
+tick(); setInterval(tick, 1500);
+</script>
+</body>
+</html>

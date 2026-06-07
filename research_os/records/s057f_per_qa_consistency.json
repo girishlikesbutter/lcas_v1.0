@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057f_per_qa_consistency",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does a per-q_a multi-Delta-t omega-centroid consistency score uniquely single out truth-q_a?",
+  "hypothesis": "truth-q_a gives consistent omega across Delta (small across-Delta centroid spread); random q_a gives random omega, so consistency ranks truth-q_a high.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "truth_qa_rank_operational": "44/44",
+    "truth_qa_rank_oracle": "43/44",
+    "top_consistency_qa_dist_deg": 180,
+    "anchor_t_a": 411
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057f_per_qa_consistency.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Decisive structural failure: the per-q_a across-Delta omega-centroid consistency score ranks truth-q_a LAST (44/44 operational, 43/44 oracle). Top-consistency q_a's sit at ~180deg from truth (twin-region) -- a finite-diff geometric artefact: small-geodesic pairs amplify q_b discretisation noise to large axis perturbations, while large-geodesic pairs are numerically stable. The metric is structurally biased AGAINST truth. Reads truth-q_a ranking -- oracle-leak, N=1."
+}

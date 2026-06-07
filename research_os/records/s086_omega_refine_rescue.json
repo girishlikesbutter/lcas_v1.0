@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s086_omega_refine_rescue",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-accuracy-gate",
+  "question": "Does a 1-D |omega| refine rescue the s085 L1 failure on fast seed 119 — is the q0-error amplification driven by the |omega|-magnitude error (which the refine fixes) or the omega-direction error (which it does not)?",
+  "hypothesis": "Refining |omega| first (per the revised v3 stage order) rescues fast seeds; alternatively the failure is direction-driven and the refine cannot help.",
+  "status": "refuted",
+  "run_type": "cheap",
+  "seeds": [119, 100],
+  "N": 2,
+  "claim_scope": "N1",
+  "metrics": {
+    "q0_seed_err_baseline_119_deg": 12.90,
+    "q0_seed_err_oracle_mag_119_deg": 12.66,
+    "q0_seed_err_oracle_dir_119_deg": 4.03,
+    "refined_w_mag_err_119_pct": -15,
+    "oracle_mag_119_besthit": "169.62deg twin",
+    "wall_s": 366
+  },
+  "artefacts": [
+    { "path": "results/s086/summary.json", "kind": "data" },
+    { "path": "results/s086/seed119_refine_rescue.png", "kind": "plot" },
+    { "path": "results/s086/seed100_refine_rescue.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s086_omega_refine_rescue.md"],
+  "parents": ["s085_anchor_accuracy_gate", "s084_omega_refine_viability", "s087_omega_dir_threshold"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-21T00:00:00Z",
+  "narrative_md": "A 1-D |omega| refine cannot rescue the s085 L1 failure on fast seed 119: the failure is driven by the 1.5 deg omega-DIRECTION error, not the 0.5% |omega|-magnitude error. Error decomposition: median q0_seed_err 12.90 deg (both errors) -> 12.66 deg (magnitude removed, the refine ceiling) but 4.03 deg (direction removed). Oracle-perfect |omega| still fails (0/6 converge to truth; its one Band A-union-B hit is a 169.6 deg twin), and the refine is non-robust to the direction error (pulled to |omega| -15%, 122 deg off). The lever for fast tumblers is a tighter omega-direction grid (<1.5 deg), not a |omega| refine. Perturbs truth-q and seeds omega relative to truth -> oracle_clean false."
+}

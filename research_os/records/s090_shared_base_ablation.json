@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s090_shared_base_ablation",
+  "kind": "run_record",
+  "goal_node": "goal_third-anchor",
+  "question": "Does floating the shared base orientation q_a (even constrained to its brightness isophote) lower the fast-seed ω-dir noise floor?",
+  "hypothesis": "Freeing q_a so it can slide along its observed-brightness isophote sheds common-mode noise and lowers the fast-seed ω-dir floor.",
+  "status": "refuted",
+  "run_type": "probe",
+  "seeds": [119],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "pin_w_dir_deg": 1.33,
+    "free_w_dir_deg": 4.41,
+    "bri_w_dir_deg": 2.24,
+    "sigma_q_deg": 2.5,
+    "wall_s": 10
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s090/ablation.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s090_shared_base_ablation.md"],
+  "parents": ["s089_third_anchor_overdetermination"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "Tested s089's shared-base hypothesis by floating q_a in the joint solve. On seed 119 it never beats pinning — at σ_q=2.5° pinned gives ω-dir 1.33°, free-unconstrained 4.41° (square system, overfits), brightness-isophote-constrained 2.24°. The isophote pins only 1 of q_a's 3 rotational DOF; the other 2 get spent fitting endpoint noise. Shared-base hypothesis refuted; the fast-seed floor is set by anchor quality, not solver freedom. Perturbed-truth anchors → not blind."
+}

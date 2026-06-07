@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_ls-bracket",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_omega-from-lc",
+  "title": "Lomb–Scargle blind |ω| bracket (live tool)",
+  "state": "closed",
+  "spent": {
+    "runs": 4,
+    "wall_s": 1207.5
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s019_ls_bracket_omega_mag",
+    "s019b_omega_dir_basin_at_truth_mag",
+    "s045_bracket_density_projection",
+    "s046_s019_bracket_basin_coverage"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s099_blind_fast_invert_116",
+    "summary": "s019 bracket held-out 20/20 on seeds 100-119",
+    "at": "2026-05-26T00:00:00Z"
+  }
+}

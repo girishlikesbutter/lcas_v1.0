@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s034_lm_polish_seed89",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Does joint (q0, omega) LM polish on the top-50 surrogate-MSE survivors of seed 89 bridge the off-circle floor into the truth basin?",
+  "hypothesis": "LM polish bridges the residual ~8deg off-circle gap into surrogate Band A.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "best_predicted_rho": 0.37,
+    "rho_band": "A",
+    "best_q0_err": 0.86,
+    "w_dir_err": 0.11,
+    "w_mag_err": -0.02,
+    "n_surrogate_band_A": 24,
+    "wall_s": 324
+  },
+  "artefacts": [
+    { "path": "results/s034_lm_polish_seed089/polish_summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s034_lm_polish_seed89.md"],
+  "parents": ["s033_density_sensitivity", "s003_landscape_vs_omega", "s005_joint_local_descent", "s017_hifi_rho_band_s016c_prime", "s031_hifi_rerank_seed6"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-05T00:00:00Z",
+  "narrative_md": "Joint LM polish (scipy least_squares, method='lm', surrogate-MSE objective) on the top-50 surrogate-MSE survivors from s033's seed-89 pool. Decisive positive: best polished candidate predicted rho 0.37 (Band A), q0->truth 0.86deg, omega-dir 0.11deg, omega-mag -0.02% — basin hit. 24/50 polished into surrogate Band A in ~5 min. First end-to-end refutation of the 'framework structurally constrained' reading. Hi-fi confirmation pending (s035)."
+}

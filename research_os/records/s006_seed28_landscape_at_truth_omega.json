@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s006_seed28_landscape_at_truth_omega",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Are seed 28's s005 LM escapes landing at competing surrogate-MSE basins visible at Sobol resolution, or are they LM-stalls in a single, very narrow basin?",
+  "hypothesis": "Seed 28's landscape at truth-ω is single-basin (case A); the LM escapes are stall points, not competing minima.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [28],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "truth_full_mse": "5.85e-4 mag^2",
+    "twin_full_mse": "4.87 mag^2",
+    "n_sobol_below_truth": 0,
+    "n_sobol_below_100x_truth": 0,
+    "sobol_min_geo_to_truth_deg": 10.06,
+    "wall_s": 28.7
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s006_seed28_landscape_at_truth_omega.md"],
+  "parents": ["s002_surrogate_landscape_probe", "s005_joint_local_descent", "s004_alignment_landscape_vs_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "2046 Sobol-q0 + truth + twin at fixed truth-ω on seed 28: argmin = truth (5.85e-4 mag^2), n_sobol_below_truth = 0 even at K=100. The Sobol MSE distribution is unimodal on a high plateau (median 11.1 mag^2); s005's LM escapes (5-9 mag^2) sit inside this plateau, not below it. Case (A): seed 28's landscape is structurally honest at truth-ω with a sub-Sobol-resolution (~2°) basin. Sobol density alone cannot seed seed-28-class basins; every candidate needs LM polish, and the basin is below the 10° Sobol coverage radius."
+}

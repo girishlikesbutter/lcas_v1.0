@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s023_filter_composition",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "How hard does the alignment + geo filter intersection cut random candidates at the truth-100%-retention threshold, and are the filters orthogonal?",
+  "hypothesis": "The filter intersection rejects nearly all random candidates and the two filters test weakly-correlated physics.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "pearson_align_geo": 0.167,
+    "spearman_align_geo": 0.189,
+    "median_rejection_intersection": 1.0,
+    "mean_rejection_intersection": 0.991,
+    "n_zero_survivor_seeds": 88,
+    "wall_s": 10
+  },
+  "artefacts": [
+    { "path": "results/s023/composition.json", "kind": "data" },
+    { "path": "results/s023/scatter_align_vs_geo.png", "kind": "plot" },
+    { "path": "results/s023/cumulative_rejection.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s023_filter_composition.md"],
+  "parents": ["s021_truth_vs_random", "s022_known_good", "s027_cluster_topology"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-04T00:00:00Z",
+  "narrative_md": "Post-processing on s021: at per-seed truth-retention=100% threshold the filter intersection rejects 100% of random candidates on the median seed (99.1% cohort mean). Filters are weakly correlated (Pearson 0.167 / Spearman 0.189) so they test different physics and the intersection cuts harder than either alone. The cohort-tail (low-rot, zero-classifiable) is preserved by alignment alone."
+}

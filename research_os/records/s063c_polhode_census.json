@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s063c_polhode_census",
+  "kind": "run_record",
+  "goal_node": "goal_polhode-prior",
+  "question": "Where does the m048 cohort sit in polhode parameter space (k^2, T_pol, pol_diam), and how many seeds are near the separatrix?",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 120,
+  "claim_scope": "cohort",
+  "metrics": {
+    "k2_median": 0.135,
+    "k2_max": 1.0000,
+    "near_separatrix_seeds": 1,
+    "T_pol_median_s": 1594,
+    "T_pol_min_s": 360,
+    "pol_diam_w_median_dps": 0.006,
+    "regime_A_count": 104,
+    "regime_B_count": 16
+  },
+  "artefacts": [
+    { "path": "results/s063c/cohort_polhode_census.png", "kind": "plot", "caption": "6-panel cohort polhode census (k^2, T_pol, |omega|, pol_diam)" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s063c_polhode_census.md"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "Closed-form Jacobi census of the 120 m048 seeds: cohort sits far from the separatrix (median k^2=0.135, only seed 7 at k^2=1.0000), median polhode period 1594 s (range 360-29315 s, none < 60 s), regime split 104 A / 16 B (confirms s062a). pol_diam median 6e-3 dps -- bulk seeds are near-pure-axis rotators with ~0.8% magnitude oscillation. Key consequence: with median T_pol 1594 s vs ~3000-4000 s LC, constant-omega is NOT valid over a full LC for most seeds -- the s062b closed-form q(t) path is non-optional for full-LC s061 propagation. Reads cohort omega0 truth states."
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_cross-cloud-multistart-budget",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_blind-pipeline",
+  "title": "IA Cloud Cross multi-ωdir-start search cost on the finite-diff ω-aliasing seed",
+  "state": "revivable",
+  "spent": {
+    "runs": 1,
+    "wall_s": 0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s108_cross_cloud_multistart_cost_wall"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-04T00:00:00Z",
+  "last_measured": {
+    "run": "s108_cross_cloud_multistart_cost_wall",
+    "summary": "Filter reusable; IA Cloud Cross SEARCH ~100× over budget on ω-aliased 119",
+    "at": "2026-05-29T00:00:00Z"
+  }
+}

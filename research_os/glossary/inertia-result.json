@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "inertia-result",
+  "kind": "glossary_term",
+  "term": "inertia-result",
+  "definition": "The InertiaResult bundle: total mass, centre-of-mass, full inertia tensor, principal moments and principal axes about CoM, for a satellite (optionally at an articulated state).",
+  "status": "provisional",
+  "coined_in": "research_os/backfill/W-D_tool_pipeline_scour.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [],
+  "created_at": "2026-06-07T00:00:00Z"
+}

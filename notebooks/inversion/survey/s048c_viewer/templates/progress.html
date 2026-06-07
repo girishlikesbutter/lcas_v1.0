@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="card">
+  <h2>Compute job <code>{{ job_id }}</code></h2>
+  <p class="muted">seed {{ job.seed }} · cfg <code>{{ job.config_id }}</code> · started {{ job.started_at }}</p>
+  <progress id="bar" max="1" value="0" style="width:100%; height:24px"></progress>
+  <p id="status">queued</p>
+  <p id="message" class="muted"></p>
+  <p><a href="/" class="btn small">← back</a></p>
+</section>
+
+<script>
+const JOB_ID = "{{ job_id }}";
+const POLL_MS = 500;
+
+async function poll() {
+  const r = await fetch(`/progress/${JOB_ID}?json=1`);
+  if (!r.ok) {
+    document.getElementById('status').textContent = 'job not found';
+    return;
+  }
+  const j = await r.json();
+  document.getElementById('bar').value = j.progress;
+  document.getElementById('status').textContent = j.status + ' — ' + (j.progress * 100).toFixed(1) + '%';
+  document.getElementById('message').textContent = j.message;
+
+  if (j.status === 'done' && j.config_id) {
+    window.location = `/viewer/${j.config_id}`;
+    return;
+  }
+  if (j.status === 'error') return;
+  setTimeout(poll, POLL_MS);
+}
+poll();
+</script>
+{% endblock %}

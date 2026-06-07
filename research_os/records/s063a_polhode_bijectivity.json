@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s063a_polhode_bijectivity",
+  "kind": "run_record",
+  "goal_node": "goal_polhode-prior",
+  "question": "Is the Jacobi polhode-coordinate parameterization of body-frame omega a machine-precision bijection over a broad test population?",
+  "hypothesis": "Polhode coords (regime, k^2, amplitudes, tau_0, sgn) round-trip to omega_a exactly.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [],
+  "N": 200,
+  "claim_scope": "cohort",
+  "metrics": {
+    "reconstruct_err_max": 3.23e-14,
+    "polhode_curve_relerr_max": 1.33e-14,
+    "roundtrip_err_max": 3.23e-14,
+    "cases_passing": "200/200",
+    "wall_s": 0.02
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s063a_polhode_bijectivity.md"],
+  "parents": ["s062_jacobi"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_passed": ["conservation-smoke"],
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "The polhode-coords parameterization of body-frame omega is a clean machine-precision bijection: 200 test cases (120 cohort omega0 + 60 random + 12 corner + 8 sign-perm + 9 near-separatrix) all pass three gates -- max reconstruct err 3.23e-14, max polhode-curve 2T/L^2 rel err 1.33e-14, round-trip 3.23e-14 -- at 0.02 s total. Confirms the polhode basis is safe as a dynamics-admissible-by-construction sampling basis (s062d target). Uses the 120 cohort omega0 truth states (truth read as input)."
+}

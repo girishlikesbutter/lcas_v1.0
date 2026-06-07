@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "id": "primitive",
+  "kind": "glossary_term",
+  "term": "primitive",
+  "definition": "A base function — the atomic leaf of the composition tree, bottoming out in code (src/ or lib/). Girish's 'base functions'. Primitives are not individually carded; they live inside a Tool, which is a named, promoted composition of primitives. The hierarchy is recursive (a Pipeline is 'just functions' too): primitive / Tool / Pipeline are ONE typed-operation concept in three ROLES, distinguished by lifecycle and intent, not by kind.",
+  "status": "canon",
+  "promoted_on": "2026-06-07",
+  "synonyms_blocked": [],
+  "related_terms": ["tool", "pipeline", "artifact"],
+  "created_at": "2026-06-07T00:00:00Z"
+}

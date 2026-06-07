@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "id": "lightcurve_plot",
+  "kind": "substrate_component",
+  "name": "create_light_curve_plot",
+  "path": "src/visualization/lightcurve_plotter.py",
+  "tier": "substrate",
+  "interface": "(time_hours, epochs, magnitudes, phase_angles, utc_times, satellite_name, plot_mode, output_dir) -> PNG + CSV on disk; calls save_lightcurve_data internally.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:b09b8f4be42f1e35",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/visualization/lightcurve_plotter.py:create_light_curve_plot",
+  "ports": {
+    "input": [
+      "light-curve"
+    ],
+    "output": [
+      "lc-comparison-plot"
+    ]
+  },
+  "default_params": {
+    "no_plot": false,
+    "save": true,
+    "compare_tier2": false
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:b09b8f4be42f1e35",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "pipeline_blind-5step-invert",
+  "kind": "pipeline",
+  "title": "Blind 5-step inversion (IA-Cloud anchors -> cross -> window-polish)",
+  "hypothesis": "Blind (q0,\u03c9) inversion via the s100 5-step chain: ls_bracket |\u03c9| prior -> sample_so3_pool -> survive_at_epoch isophote clouds at anchors A,B -> 2deg decimation to reps -> finite_diff_omega+shoot cross (A-rep x B-rep BVP) -> coarse-K surrogate RMSE rank -> full-500 surrogate RMSE rank -> abc-window LM polish breaks the hard-shoot trap to Band A.",
+  "state": "open",
+  "serves": [
+    "goal_blind-pipeline"
+  ],
+  "composes": [
+    "load_truth",
+    "ls_bracket",
+    "sample_so3_pool",
+    "survive_at_epoch",
+    "twin_dedup",
+    "shoot",
+    "propagator_jacobi_path2",
+    "surrogate",
+    "scorer",
+    "render_hifi",
+    "rho_band_classify"
+  ],
+  "supersedes": null,
+  "superseded_by": null,
+  "last_measured": null,
+  "created_at": "2026-06-07T00:00:00Z"
+}

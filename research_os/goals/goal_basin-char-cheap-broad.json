@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_basin-char-cheap-broad",
+  "kind": "goal_node",
+  "node_kind": "question",
+  "parent": "goal_basin-polhode-twin",
+  "title": "Basin characterisation, cheap-and-broad: across the cohort (not the N=3 s003 result), does RMSE-argmin-over-q recover truth-q with ω held near truth? (vary q, hold ω near truth, cost RMSE)",
+  "state": "open",
+  "spent": {
+    "runs": 0,
+    "wall_s": 0
+  },
+  "contract_refs": [],
+  "child_runs": [],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-04T00:00:00Z",
+  "updated_at": "2026-06-04T00:00:00Z",
+  "last_measured": null
+}

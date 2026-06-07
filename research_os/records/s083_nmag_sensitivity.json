@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s083_nmag_sensitivity",
+  "kind": "run_record",
+  "goal_node": "goal_omega-mag-basin",
+  "question": "How wide is the |omega| good-fit basin (i.e. how fine must the |omega| grid be), and would the s082 'densify N_mag 5->15' prescription cover the LS-bracket?",
+  "hypothesis": "The |omega| basin is sharp enough that brute-force gridding is infeasible; |omega| must be refined in 1-D rather than treated as a joint-grid axis.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [116, 119, 103],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "truth_exact_rho_seed116": 0.20,
+    "truth_exact_rho_seed119": 0.36,
+    "truth_exact_rho_seed103": 0.33,
+    "bandB_halfwidth_seed116_pct": 2.0,
+    "bandB_halfwidth_seed119_pct": 0.5,
+    "layerB_min_rho_seed119": 45.65,
+    "phase_edge_deg": 9.6,
+    "wall_s": 64.3
+  },
+  "artefacts": [
+    { "path": "results/s083/summary.json", "kind": "data" },
+    { "path": "results/s083/seed_116.json", "kind": "data" },
+    { "path": "results/s083/seed_119.json", "kind": "data" },
+    { "path": "results/s083/seed_103.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s083_nmag_sensitivity.md"],
+  "parents": ["s082_joint_grid_pivot", "s084_omega_refine_viability", "s019_ls_bracket_omega_mag"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-21T00:00:00Z",
+  "narrative_md": "Measured the |omega| basin via 1-D sweeps with q+omega-dir held at truth. The basin is razor-thin: +-2% (slow 116) down to <+-0.5% (fast 119, SAM 103), so the s082 'densify N_mag 5->15' prescription is 10-100x too coarse — brute-force |omega| gridding is dead, |omega| must be refined in 1-D. Layer B (best Sobol-64 q + oracle |omega|) never reaches Band B, so q-coarseness is independently fatal. Band B edge is a constant ~9.6 deg of accumulated phase across seeds. Jacobi vs DOP853 agree to ~1e-6 deg. Holds q/omega-dir at truth -> oracle_clean false."
+}

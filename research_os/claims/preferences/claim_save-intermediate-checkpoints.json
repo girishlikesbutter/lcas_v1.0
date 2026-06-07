@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_save-intermediate-checkpoints",
+  "kind": "claim_card",
+  "deck": "preference",
+  "statement": "EVERY script saves q0, omega, errors and predicted hi-fi LCs to NPZ/JSON after each expensive stage. Design the save blocks BEFORE the computation code; re-score from cached checkpoints rather than re-running.",
+  "supporting_runs": [],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "high",
+    "gates_passed": [],
+    "oracle_clean": true
+  },
+  "scope": {
+    "N": 0,
+    "kind": "N1"
+  },
+  "depends_on": [],
+  "status": "live",
+  "superseded_by": null,
+  "supersedes": null,
+  "links_to_writeups": [
+    "memory/feedback_checkpoint_always.md",
+    "memory/feedback_save_results.md",
+    "memory/feedback_checkpoint_design_first.md"
+  ],
+  "confirmed_by": "girish",
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

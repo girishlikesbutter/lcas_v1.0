@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057e_multi_anchor",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does aggregating across multiple Delta-t=3 anchor pairs reduce the geometric-noise mode while preserving the truth signal?",
+  "hypothesis": "Cross-anchor stacking at dt=3 averages down per-pair geometric noise and improves concentration over the single-anchor result.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "aggregated_concentration": 1.61,
+    "single_anchor_concentration": 1.79,
+    "n_anchors": 10,
+    "total_hypotheses": 205,
+    "frac_within_10deg": 0.0244,
+    "per_anchor_survivors": 20
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057e_multi_anchor.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Decisive negative: aggregating across top-10 dt=3 anchor pairs gives 1.61x concentration -- slightly WORSE than the single-anchor 1.79x. The anchor-selection criterion (sum of closest-in-cloud distances) picked LARGE clouds, so each anchor contributed only ~20 surviving pairs. Per-pair geometric noise is the dominant limitation; multi-anchor stacking does not help. Uses truth-omega + truth anchors -- oracle-leak, N=1."
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s074_elliprj_path2",
+  "kind": "run_record",
+  "goal_node": "goal_jacobi-propagator",
+  "question": "Can the Path 2 phi ODE be replaced with a closed-form elliprj evaluation (incomplete elliptic integral of the third kind), keeping accuracy within the 1e-9 gate while meeting the Pool(24) <=5 ms/candidate budget?",
+  "hypothesis": "Replacing solve_ivp(phi_dot) with scipy.special.elliprj (Carlson R_J per DLMF 19.25.14) removes the ODE, retains 1e-9 q accuracy and machine-precision conservation, and brings Pool(24) per-candidate wall under 5 ms.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89, 28, 14],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "q_vs_dop853_worst": 7.97e-11,
+    "conservation_worst": 4.70e-14,
+    "wall_ms_single_seed89": 4.0,
+    "speedup_seed89": "4.0x",
+    "speedup_seed14": "23.5x",
+    "pool24_median_ms": 4.76
+  },
+  "artefacts": [
+    { "path": "results/s074/gate_validation.json", "kind": "data" },
+    { "path": "results/s074/wall_distribution_1000_candidates.json", "kind": "data" },
+    { "path": "results/s074/cprofile_post_elliprj.txt", "kind": "log" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s074_elliprj_path2.md"],
+  "parents": ["s072_path2_closed_form_q", "s073b_path2_cprofile"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-20T00:00:00Z",
+  "narrative_md": "Replaced solve_ivp(phi_dot) in propagate_jacobi_path2 with a closed-form elliprj+elliprf evaluation of Pi(n; am(tau)|m) (DLMF 19.25.14), now the default with the ode path retained as fallback. All four gates pass: worst q-vs-DOP853 7.97e-11, worst conservation 4.70e-14, Pool(24) median 4.76 ms (<=5 ms target). Single-process wall drops 16.4->4.0 ms on seed 89, up to 47x on fast tumblers. The hot path shifts to the per-epoch reconstruction loop. Validates vs cached truth -> oracle_clean false."
+}

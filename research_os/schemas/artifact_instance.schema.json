@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/artifact_instance.schema.json",
+  "title": "Artifact instance (a produced material on the laboratory shelf)",
+  "description": "ADR-0007 'artifact instances as first-class addressable objects'. A labelled jar on the shelf: ONE concrete material produced by a Tool run or pipeline step, made addressable. Where tool_run/pipeline_run records reflect the EVENT, an artifact_instance reflects the MATERIAL — typed by its glossary term (the port type-system), bound to its producer, and pointing at an on-disk blob. The 'recognised materials only' rule (Girish, 2026-06-07): an output is reified IFF the Tool's ports.output names it; nameless scratch returns stay in-memory. The card is closure-counted; the blob it points at (artifact_instances/data/<id>) is gitignored like a figure. Addressable so a later run can re-feed it ($artifact.<id>) instead of recomputing — the working-pantry payoff.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "artifact_type",
+    "cardinality",
+    "produced_by",
+    "path",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^ai_[a-z0-9]+(_[a-z0-9]+)*$",
+      "description": "Artifact-instance id: 'ai_' + the producing run's slug (its tr_/pr_ prefix stripped) + '_' + a per-run sequence number, lowercase underscore. Unique because the producing run id is unique; the sequence disambiguates multiple materials from one run. Stable forever; may be re-fed by a later run as $artifact.<id>.",
+      "examples": ["ai_so3_pool_dedup_20260607t193018_0", "ai_sample_so3_pool_20260607t174822_0"]
+    },
+    "kind": { "type": "string", "const": "artifact_instance" },
+    "artifact_type": {
+      "type": "string",
+      "description": "The TYPE of material, written as a glossary_term id (the glossary doubles as the port type-system). Referential: must resolve to a glossary_term. This is the value the producing Tool's ports.output mapped this return-key to.",
+      "examples": ["ia-cloud", "light-curve", "attitude-trajectory"]
+    },
+    "cardinality": {
+      "type": "string",
+      "enum": ["one", "set"],
+      "description": "'one' = a single material from a compose step (one-epoch / single object). 'set' = a collection from a map step lifted over a window (ADR-0007 §2: 'a cloud for the whole LC is the same Tool mapped over a window -> a set of IA Clouds')."
+    },
+    "produced_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run"],
+      "description": "Lineage: which run made this material, and (for a pipeline) which step.",
+      "properties": {
+        "run": {
+          "type": "string",
+          "description": "The producing run id. Referential: must resolve to a tool_run (tr_...) or a pipeline_run (pr_...).",
+          "examples": ["pr_so3_pool_dedup_20260607t193018", "tr_sample_so3_pool_20260607t174822"]
+        },
+        "step": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "The pipeline step id that produced this (matches a pipeline.steps[].id). Null for a bare tool_run (no DAG)."
+        }
+      }
+    },
+    "port": {
+      "type": "string",
+      "description": "Which output port produced this material — the return-dict key, the tuple-position name, or the single-return label, exactly as named in the Tool's ports.output map. The provenance of WHICH value this is.",
+      "examples": ["q_pool_wxyz", "q0_canon"]
+    },
+    "path": {
+      "type": "string",
+      "description": "Path to the material. For storage='blob' (default): repo-relative path to the gitignored on-disk blob reify wrote (artifact_instances/data/<id>.npz for arrays, .json for scalars/structured). For storage='reference': the path REFERENCES a file the producing Tool wrote in its own location (e.g. a SPICE kernel) — no copy; repo-relative when under the repo, else absolute. Either way this card is the addressable, committed handle.",
+      "examples": ["research_os/artifact_instances/data/ai_so3_pool_dedup_20260607t193018_0.npz", "data/spice_kernels/missions/intelsat_901.bsp"]
+    },
+    "storage": {
+      "type": "string",
+      "enum": ["blob", "reference"],
+      "default": "blob",
+      "description": "How the material is held (ADR-0007 Slice 1.5b). 'blob' (default, may be omitted): reify wrote a gitignored copy under artifact_instances/data/. 'reference': the material is a FILE the producing Tool wrote in its own location (a SPICE kernel, etc.); the card references it directly, no blob copy. load() returns the file PATH for a reference (you furnsh a kernel, you don't parse it into memory) and the in-memory value for a blob."
+    },
+    "cardinality_n": {
+      "type": ["integer", "null"],
+      "default": null,
+      "description": "For cardinality='set', how many elements the set holds (the map fan-out width). Null for 'one'."
+    },
+    "size_bytes": {
+      "type": ["integer", "null"],
+      "default": null,
+      "description": "On-disk size of the blob (for the dashboard; never the blob itself in the store)."
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {},
+      "description": "A small digest of the material for the dashboard (shape/dtype for arrays, keys for dicts, value for scalars). NEVER the full blob."
+    },
+    "caption": {
+      "type": "string",
+      "description": "One-line human label for the shelf, e.g. 'IA Cloud . from sample step'."
+    },
+    "commit": {
+      "type": "string",
+      "description": "git SHA the producing run executed at (reproducibility)."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the material was reified (ISO-8601)."
+    },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

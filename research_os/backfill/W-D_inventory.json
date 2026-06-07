@@ -1,0 +1,3149 @@
+{
+  "synth": {
+    "clusters": [
+      {
+        "job": "Propagate a (q0,\u03c9) state forward to an attitude trajectory.",
+        "canon": {
+          "id": "propagator",
+          "name": "attitude_propagator",
+          "path": "src/dynamics/attitude_propagator.py",
+          "entry_point": "src/dynamics/attitude_propagator.py:propagate_attitude",
+          "interface": "(q0, \u03c90, times, mode) -> attitude-trajectory; unified dispatcher routing to closed-form principal-axis (constant-\u03c9) or DOP853 Euler-dynamics (tumbling).",
+          "ports_in": [
+            "q0-omega-state",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "attitude-trajectory"
+          ],
+          "default_params": {
+            "mode": "principal_axis",
+            "inertia_tensor": null,
+            "rtol": 1e-10,
+            "atol": 1e-12
+          }
+        },
+        "variants": [
+          {
+            "id": "propagator-jacobi-path2",
+            "entry_point": "notebooks/inversion/survey/lib/jacobi_propagator.py:propagate_jacobi_path2",
+            "why": "DIFFERENT METHOD: fully closed-form q(t) via 3-1-3 precession+nutation + elliprj (s072/s074), ~5x faster than ODE Euler. THE production propagator of the live survey (used by 53 experiment files incl. shoot). Not a param of propagate_attitude \u2014 a separate analytical implementation. Should be variant_of propagator."
+          }
+        ],
+        "collapses": [
+          {
+            "entry_point": "src/dynamics/attitude_propagator.py:propagate_principal_axis",
+            "into_param": "mode='principal_axis'"
+          },
+          {
+            "entry_point": "src/dynamics/attitude_propagator.py:propagate_euler",
+            "into_param": "mode='tumbling'"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/jacobi_propagator.py:propagate_jacobi",
+            "into_param": "variant_of propagator-jacobi-path2: hybrid closed-form-\u03c9 + numeric-q ODE; pre-path2 production fallback, superseded by path2 (which is fully analytical). Collapse into path2 card note, not a separate Tool."
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Closed-form torque-free \u03c9(t) kernel. Borderline primitive (5 direct importers, all internal-to-lib) but a coherent named operation and the analytical complement to the propagator card. Flag as low-priority Tool; could fold under propagator-jacobi-path2 as its kernel.",
+        "canon": {
+          "id": "omega-jacobi",
+          "name": "omega_jacobi",
+          "path": "notebooks/inversion/survey/lib/jacobi_propagator.py",
+          "entry_point": "notebooks/inversion/survey/lib/jacobi_propagator.py:omega_jacobi",
+          "interface": "(times, omega0, inertia) -> (omega_hist (N,3), info{regime,m,tau_0}); closed-form \u03c9(t) via Jacobi elliptic functions, the analytical kernel under propagate_jacobi_path2/propagate_jacobi/polhode_period.",
+          "ports_in": [
+            "q0-omega-state"
+          ],
+          "ports_out": [
+            "attitude-trajectory"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": true,
+        "confidence": "med"
+      },
+      {
+        "job": "Predict apparent magnitude from body-frame geometry via the v2 residual surrogate.",
+        "canon": {
+          "id": "surrogate",
+          "name": "surrogate_model",
+          "path": "notebooks/inversion/survey/lib/surrogate_eval.py",
+          "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:predict",
+          "interface": "(k1_body, k2_body, obs_dist_km, sp_angle_deg, ad_angle_deg) -> light-curve (predicted apparent magnitude (N,)) via v2 residual ensemble; ~50000x hi-fi speedup, bridge-independent.",
+          "ports_in": [
+            "attitude-trajectory",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "light-curve"
+          ],
+          "default_params": {
+            "sp_angle_deg": 0,
+            "ad_angle_deg": 15,
+            "version": "v2"
+          }
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:get_model",
+            "into_param": "lazy singleton loader backing predict; private helper, fold into card functions list not a separate Tool"
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Score a predicted light curve against a target (MSE / \u03c1-band / NLL family). Drift: existing scorer card pins path=cost_surfaces.py (the shim); the working impls are in surrogate_eval.py.",
+        "canon": {
+          "id": "scorer",
+          "name": "cost_surfaces",
+          "path": "notebooks/inversion/survey/lib/surrogate_eval.py",
+          "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:full_lc_mse",
+          "interface": "(predicted-LC, target-LC) -> scoring; canonical implementations live in surrogate_eval.py (full_lc_mse / bright_mse / rho / nll_residual / nll_cost). cost_surfaces.py is a thin re-export shim \u2014 the scorer card should point entry_point at the surrogate_eval.py source, not the wrapper.",
+          "ports_in": [
+            "light-curve",
+            "windowed-lc"
+          ],
+          "ports_out": [
+            "scoring",
+            "rho-band"
+          ],
+          "default_params": {
+            "bright_threshold": 11,
+            "sigma_mag": 0.05,
+            "rescale": true
+          }
+        },
+        "variants": [
+          {
+            "id": "scorer-rho",
+            "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:rho",
+            "why": "Same job, but emits the dimensionless rho-band metric (\u221aMSE/0.05) not raw MSE. Distinct OUTPUT artifact (rho-band vs scoring). Not re-exported by cost_surfaces.py \u2014 only lives in surrogate_eval.py. Add as a port/function of the scorer card; collapse-or-variant is a fork (see forks)."
+          },
+          {
+            "id": "scorer-nll",
+            "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:nll_cost",
+            "why": "DIFFERENT METHOD: RF25 Eq.3 NLL (flux-space, optional rescale) vs masked mag-space MSE. Opt-in, NOT production default (s078). Genuinely different objective shape; variant_of scorer."
+          }
+        ],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/cost_surfaces.py:surrogate_full_lc_mse",
+            "into_param": "thin re-export alias of surrogate_eval.full_lc_mse \u2014 NOT a separate Tool"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/cost_surfaces.py:surrogate_bright_mse",
+            "into_param": "thin re-export alias of surrogate_eval.bright_mse"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/cost_surfaces.py:surrogate_nll_residual",
+            "into_param": "thin re-export alias of surrogate_eval.nll_residual"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/cost_surfaces.py:surrogate_nll_cost",
+            "into_param": "thin re-export alias of surrogate_eval.nll_cost"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:bright_mse",
+            "into_param": "bright_threshold=11.0 \u2014 a parameterised restriction of full_lc_mse to bright epochs; collapse into scorer default_params as the bright-subset mode"
+          }
+        ],
+        "in_use": true,
+        "confidence": "med"
+      },
+      {
+        "job": "Geometric bright-peak / spec-event alignment filter. in_use:false \u2014 load_static_geometry/alignment_cost/geo_cost last used s049 era (pre-s050); zero post-s050 experiment uses them.",
+        "canon": {
+          "id": "alignment-filter",
+          "name": "alignment_cost",
+          "path": "notebooks/inversion/survey/lib/filter_costs.py",
+          "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:alignment_cost",
+          "interface": "(candidate surrogate-LC, bright truth-peak indices, window) -> filter [0,1]: fraction of truth bright peaks where the candidate shows a matching local-min bright value within \u00b1window. THE working impl (filter_costs.py:196); the cost_surfaces.py:alignment_cost of the same name is a NotImplementedError stub and must never be the entry_point.",
+          "ports_in": [
+            "light-curve",
+            "anchor-epoch"
+          ],
+          "ports_out": [
+            "filter"
+          ],
+          "default_params": {
+            "window_epochs": 3,
+            "bright_mag_threshold": 11
+          }
+        },
+        "variants": [
+          {
+            "id": "geo-filter",
+            "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:geo_cost",
+            "why": "DIFFERENT METHOD/SIGNAL: scores body-frame PAB vs tier-allowed face normals at spec events (geometry-only, no surrogate magnitude) vs alignment's brightness-peak match. Distinct job within the same filter-scoring cluster. variant_of alignment-filter (or its own canon \u2014 borderline)."
+          }
+        ],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/cost_surfaces.py:alignment_cost",
+            "into_param": "DEAD stub (raises NotImplementedError) \u2014 NOT a Tool; reconcile on scorer card as NOT-YET-PORTED placeholder shadowing the working filter_costs.py impl"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/cost_surfaces.py:lofi_peak_match",
+            "into_param": "DEAD stub (raises NotImplementedError) \u2014 distinct unported concept (prominence-weighted peak count); not the same op as alignment_cost; do not card until implemented"
+          }
+        ],
+        "in_use": false,
+        "confidence": "med"
+      },
+      {
+        "job": "End-to-end filter evaluation. Borderline Tool-vs-Pipeline (it composes 4 ops and is value-neutral). in_use:false (filter family dormant post-s050). Low confidence: could be a small Pipeline instead.",
+        "canon": {
+          "id": "filter-evaluate-candidate",
+          "name": "evaluate_candidate",
+          "path": "notebooks/inversion/survey/lib/filter_costs.py",
+          "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:evaluate_candidate",
+          "interface": "(q0, \u03c90, seed_data, inertia, face_normals, tier_face_idx, geom params) -> {score_alignment, score_geo, mag_pred}; composes propagate_candidate + surrogate.predict + alignment_cost + geo_cost in one call.",
+          "ports_in": [
+            "q0-omega-state",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "filter",
+            "light-curve"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:propagate_candidate",
+            "into_param": "thin adapter over propagate_attitude + body-frame projection; primitive, fold into this card"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:precompute_seed_filter_data",
+            "into_param": "per-seed setup primitive feeding evaluate_candidate; pre-stage, not a per-candidate Tool"
+          }
+        ],
+        "in_use": false,
+        "confidence": "low"
+      },
+      {
+        "job": "Generate a hi-fi (full physics) light curve from a (q0,\u03c9) state.",
+        "canon": {
+          "id": "render-hifi",
+          "name": "render_hifi",
+          "path": "notebooks/inversion/survey/lib/hifi_render.py",
+          "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:render_hifi",
+          "interface": "(q0_wxyz, omega0_rad, ctx) -> hifi-lightcurve (N,): propagates attitude, computes shadows, runs generate_lightcurves. The survey's hi-fi forward evaluation at non-truth states (36 importers).",
+          "ports_in": [
+            "q0-omega-state",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "hifi-lightcurve"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:build_context",
+            "into_param": "per-seed setup (loads satellite+inertia+geometry, module-cached); separable but a setup pre-stage of render-hifi, not a distinct research op \u2014 list as a sibling function on the same card"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:rho_from_hifi",
+            "into_param": "primitive scorer \u221aMSE/0.05 on hi-fi LCs; maps to rho-band, fold into scorer/this card not a separate Tool"
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Core src-layer hi-fi LC renderer. in_use:true via render_hifi (the survey wrapper). The standalone src/ generator is the canonical forward-model render block.",
+        "canon": {
+          "id": "generate-lightcurves",
+          "name": "generate_lightcurves",
+          "path": "src/computation/lightcurve_generator.py",
+          "entry_point": "src/computation/lightcurve_generator.py:generate_lightcurves",
+          "interface": "(lit-status-dict, k1/k2 vectors, observer distances, satellite, epochs, articulation matrices) -> (magnitude, flux, mag_no_shadow, flux_no_shadow, distances, animation_data). The primary hi-fi render entry point (pipeline step 5); render_hifi wraps it.",
+          "ports_in": [
+            "attitude-trajectory",
+            "satellite-model"
+          ],
+          "ports_out": [
+            "hifi-lightcurve"
+          ],
+          "default_params": {
+            "generate_no_shadow": false,
+            "animate": false
+          }
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Compute per-facet shadow lit-status via batched ray tracing. in_use via the src forward pipeline + render_hifi.",
+        "canon": {
+          "id": "compute-shadows",
+          "name": "compute_shadows",
+          "path": "src/computation/shadow_engine.py",
+          "entry_point": "src/computation/shadow_engine.py:compute_shadows",
+          "interface": "(satellite, sun-vectors k1, articulation matrices/angles) -> lit-status-dict[component -> (N, num_facets) bool]; orchestrates mesh creation + batched RayMeshIntersector (pipeline step 3).",
+          "ports_in": [
+            "satellite-model",
+            "attitude-trajectory"
+          ],
+          "ports_out": [
+            "lit-status"
+          ],
+          "default_params": {
+            "articulation_offset": 0
+          }
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "src/computation/shadow_engine.py:create_no_shadow_lit_status",
+            "into_param": "all-ones bypass; a no-shadow mode of compute_shadows, not a Tool"
+          },
+          {
+            "entry_point": "src/computation/shadow_engine.py:get_lit_status",
+            "into_param": "lower-level ray-trace-only split (assumes meshes built); always called from compute_shadows; primitive"
+          },
+          {
+            "entry_point": "src/computation/shadow_engine.py:ShadowEngine.compute_facet_shadows_multi_mesh_vectorized",
+            "into_param": "core vectorized worker; primitive under compute_shadows"
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "SPICE-backed observation-geometry engine (pipeline step 1). in_use in the src forward-model build of every truth trajectory.",
+        "canon": {
+          "id": "compute-observation-geometry",
+          "name": "compute_observation_geometry",
+          "path": "src/computation/observation_geometry.py",
+          "entry_point": "src/computation/observation_geometry.py:compute_observation_geometry",
+          "interface": "(epochs, satellite_id, observer_id, spice_handler, config, attitude_keyframes?) -> geometry-dict {k1, k2, observer_distances, sat/sun positions, sat_att_matrices}; pipeline step 1 (SPICE attitude kernels or SLERP keyframes).",
+          "ports_in": [
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "attitude-trajectory"
+          ],
+          "default_params": {
+            "attitude_keyframes": null
+          }
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Survey-layer forward projection (q0,\u03c9)->body-frame (27 importers, s059\u2013s086 + s112/s113 slow-tumbler branch). Composes the propagator card; a survey extension, not a duplicate. Could be seen as a thin Pipeline over propagator \u2014 flag low if so.",
+        "canon": {
+          "id": "propagate-to-body-frame",
+          "name": "propagate_to_body_frame",
+          "path": "notebooks/inversion/survey/lib/forward.py",
+          "entry_point": "notebooks/inversion/survey/lib/forward.py:propagate_to_body_frame",
+          "interface": "(q0_wxyz, omega0_rad, observation_times, sun/obs/sat positions, inertia, mode) -> (k1_body, k2_body, quaternions); wraps src.dynamics.attitude_propagator then projects J2000 vectors into body frame. The sole survey-layer (q0,\u03c9)->body-frame entry.",
+          "ports_in": [
+            "q0-omega-state",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "attitude-trajectory"
+          ],
+          "default_params": {
+            "mode": "tumbling"
+          }
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": true,
+        "confidence": "med"
+      },
+      {
+        "job": "Haar SO(3) pool generator (IA-cloud substrate). in_use 22 files; standing param n_samples=1M (12M wasteful per s100).",
+        "canon": {
+          "id": "sample-so3-pool",
+          "name": "sample_so3_pool",
+          "path": "notebooks/inversion/survey/lib/c_t_pipeline.py",
+          "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:sample_so3_pool",
+          "interface": "(n_samples, sample_seed) -> {R_cache (N,3,3), q_pool_wxyz, q_pool_xyzw, rotvec_pool}; the candidate attitude pool that every C_t / cross-cloud experiment draws from.",
+          "ports_in": [],
+          "ports_out": [
+            "ia-cloud"
+          ],
+          "default_params": {
+            "sample_seed": 42,
+            "n_samples": 1000000
+          }
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Per-epoch isophote survival filter (C_t cloud generation, step 3 of s100). in_use 15 files.",
+        "canon": {
+          "id": "survive-at-epoch",
+          "name": "survive_at_epoch",
+          "path": "notebooks/inversion/survey/lib/c_t_pipeline.py",
+          "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:survive_at_epoch",
+          "interface": "(model, k1_body, k2_body, obs_dist_ep, sp_deg, ad_deg, measured_mag, tolerance_mag) -> (pred (N,), keep (N,) bool); per-epoch isophote survival predicate over the whole pool via surrogate.predict.",
+          "ports_in": [
+            "ia-cloud",
+            "single-wind-lc-window"
+          ],
+          "ports_out": [
+            "filter",
+            "scoring"
+          ],
+          "default_params": {
+            "sp_deg": 0,
+            "ad_deg": 15
+          }
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:project_directions",
+            "into_param": "single-einsum inner-loop helper that rotates J2000 vectors into body frame for the pool; primitive under survive-at-epoch"
+          },
+          {
+            "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:compute_j2000_units",
+            "into_param": "3-line normalisation prep (42 importers but trivial); primitive, shared geometry-prep helper"
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Single-anchor two-point attitude BVP (the cross). in_use 46 files; multianchor variants dormant (s088\u2013s090 only).",
+        "canon": {
+          "id": "shoot",
+          "name": "shoot",
+          "path": "notebooks/inversion/survey/lib/shoot.py",
+          "entry_point": "notebooks/inversion/survey/lib/shoot.py:shoot",
+          "interface": "(q_a, q_b, dt, inertia, omega_init, method) -> {omega, geo_err_deg, jac_cond, connected}; LM-solve for \u03c9_a s.t. torque-free q_a->q_b in dt. jac_cond is the separatrix/degenerate-solution diagnostic.",
+          "ports_in": [
+            "anchor-epoch",
+            "q0-omega-state"
+          ],
+          "ports_out": [
+            "q0-omega-state",
+            "hard-shoot-trap"
+          ],
+          "default_params": {
+            "method": "elliprj",
+            "xtol": 1e-12,
+            "ftol": 1e-12
+          }
+        },
+        "variants": [
+          {
+            "id": "shoot-multianchor",
+            "entry_point": "notebooks/inversion/survey/lib/shoot.py:shoot_multianchor",
+            "why": "DIFFERENT geometry: over-determined joint LM fit of one \u03c9_a to K>=2 (q_k, dt_k) anchors (s088/s089 winding-alias fix). variant_of shoot. in_use only s088\u2013s090 (dormant)."
+          },
+          {
+            "id": "shoot-multianchor-freebase",
+            "entry_point": "notebooks/inversion/survey/lib/shoot.py:shoot_multianchor_freebase",
+            "why": "DIFFERENT unknowns: 6-DOF (\u03c9_a + base rotvec correction) with optional brightness-isophote residual (s090); base slides along isophote. variant_of shoot-multianchor. Dormant."
+          }
+        ],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/shoot.py:finite_diff_omega",
+            "into_param": "constant-\u03c9 finite-diff \u03c9_a initialiser for shoot's LM (6-30\u00b0 dir error, s057c); primitive initialiser, the finite-diff-omega-aliasing failure mode"
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Hi-fi \u03c1-band classify. 41 importers but two-liner primitive; register as a thin Tool OR fold into scorer card. Overlaps scorer-rho (surrogate-space) \u2014 same metric shape, different input (hi-fi vs surrogate). Flag fork.",
+        "canon": {
+          "id": "rho-band-classify",
+          "name": "rho_from_hifi",
+          "path": "notebooks/inversion/survey/lib/hifi_render.py",
+          "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:rho_from_hifi",
+          "interface": "(pred, truth) -> \u03c1 = \u221aMSE/0.05; with rho_band() -> A/B/C/D. The canonical survey fitness scalar/band on hi-fi LCs.",
+          "ports_in": [
+            "hifi-lightcurve"
+          ],
+          "ports_out": [
+            "rho-band"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:rho_band",
+            "into_param": "band-classifier helper on the rho scalar; fold into this card"
+          }
+        ],
+        "in_use": true,
+        "confidence": "med"
+      },
+      {
+        "job": "IS-901 twin-dedup. in_use 54 files (twin/Q_180X) / 11 (canonical_batch).",
+        "canon": {
+          "id": "twin-dedup",
+          "name": "canonical_batch",
+          "path": "notebooks/inversion/survey/lib/twin.py",
+          "entry_point": "notebooks/inversion/survey/lib/twin.py:canonical_batch",
+          "interface": "(q0_arr (N,4), omega_arr (N,3)) -> canonical-hemisphere representatives with sign-normalised quaternions; the free 2-to-1 search-space halving (s043/s044).",
+          "ports_in": [
+            "ia-cloud"
+          ],
+          "ports_out": [
+            "ia-cloud"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/twin.py:canonical",
+            "into_param": "scalar single-state form of canonical_batch; same job, collapse \u2014 batch is the practically useful form (canonical_batch 11 files, twin/Q_180X 54 files)"
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "Universal truth-trajectory loader. in_use 98 files (every experiment).",
+        "canon": {
+          "id": "load-truth",
+          "name": "load_truth",
+          "path": "notebooks/inversion/survey/lib/traj_load.py",
+          "entry_point": "notebooks/inversion/survey/lib/traj_load.py:load_truth",
+          "interface": "(seed) -> dict of all NPZ arrays (q0, \u03c90, times, sun/obs/sat positions, mag_hifi, k1/k2, obs_dist). The universal survey data loader.",
+          "ports_in": [],
+          "ports_out": [
+            "epoch-observation",
+            "attitude-trajectory"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "notebooks/inversion/survey/lib/traj_load.py:truth_state",
+            "into_param": "thin projection wrapper to most-used fields; collapse, same job"
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "LC-feature extraction. lc_features in_use:false in the LIVE inversion path (regression-only, 7 files); ls_bracket IS load-bearing (in_use:true). Split note: ls_bracket should be its own in_use:true card; lc_features dormant.",
+        "canon": {
+          "id": "lc-feature-extractor",
+          "name": "lc_features",
+          "path": "notebooks/inversion/survey/lib/lc_features.py",
+          "entry_point": "notebooks/inversion/survey/lib/lc_features.py:lc_features",
+          "interface": "(times, mag) -> (28,) feature vector + FEATURE_NAMES. The canonical 28-feature extractor (lifted from s008); used by regression experiments s055a etc.",
+          "ports_in": [
+            "light-curve"
+          ],
+          "ports_out": [
+            "lc-feature-vector"
+          ],
+          "default_params": {}
+        },
+        "variants": [
+          {
+            "id": "ls-bracket",
+            "entry_point": "notebooks/inversion/survey/lib/lc_features.py:ls_bracket",
+            "why": "DIFFERENT output/use: emits a geomspaced |\u03c9| grid (multi-omegadir-start) from LS peaks as the blind |\u03c9| prior, not a feature vector. Distinct job (prior-generation vs feature-extraction); its own canon really, grouped here by file. in_use s082 + s100 (load-bearing |\u03c9| prior)."
+          }
+        ],
+        "collapses": [],
+        "in_use": false,
+        "confidence": "med"
+      },
+      {
+        "job": "Satellite inertia from STL. in_use via shoot.py:m048_inertia (the cached m048 tensor, 46 files) which is the de-facto consumer; compute_inertia_from_stl is the upstream generator of that tensor.",
+        "canon": {
+          "id": "compute-inertia",
+          "name": "compute_inertia_from_stl",
+          "path": "src/computation/inertia_calculator.py",
+          "entry_point": "src/computation/inertia_calculator.py:compute_inertia_from_stl",
+          "interface": "(STL meshes + positions + masses, optional articulation) -> InertiaResult {total_mass, CoM, inertia_tensor, principal_moments/axes}; signed-tetrahedra + parallel-axis. Bridges to the propagator (inertia init).",
+          "ports_in": [
+            "satellite-model"
+          ],
+          "ports_out": [
+            "inertia-result"
+          ],
+          "default_params": {
+            "masses": null,
+            "articulation_angles": null
+          }
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "src/computation/inertia_calculator.py:compute_inertia_from_config",
+            "into_param": "config-driven convenience wrapper (loads STL via config, default AD=15deg/others=0deg); same job, collapse"
+          },
+          {
+            "entry_point": "src/computation/inertia_calculator.py:compute_component_inertia",
+            "into_param": "per-component signed-tetrahedra sub-step; primitive"
+          },
+          {
+            "entry_point": "src/computation/inertia_calculator.py:translate_inertia",
+            "into_param": "parallel-axis math helper; primitive"
+          },
+          {
+            "entry_point": "src/computation/inertia_calculator.py:apply_articulation_to_mesh",
+            "into_param": "Rodrigues mesh rotation for articulated inertia; primitive"
+          }
+        ],
+        "in_use": true,
+        "confidence": "med"
+      },
+      {
+        "job": "Satellite model loader. in_use via build_context (cached at module level) and the src forward pipeline.",
+        "canon": {
+          "id": "stl-load-satellite",
+          "name": "create_satellite_from_stl_config",
+          "path": "src/io/stl_loader.py",
+          "entry_point": "src/io/stl_loader.py:STLLoader.create_satellite_from_stl_config",
+          "interface": "(RSO_Config, config_manager) -> Satellite dataclass (Components/Facets/BRDF). The de-facto model-loader; produces the satellite-model every computation block consumes.",
+          "ports_in": [
+            "satellite-model"
+          ],
+          "ports_out": [
+            "satellite-model"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "src/io/stl_loader.py:STLLoader.load_component_from_stl",
+            "into_param": "per-component loader; internal primitive called only by create_satellite_from_stl_config"
+          }
+        ],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "SPICE ephemeris access. in_use by observation_geometry for all position/attitude queries in the truth-trajectory build.",
+        "canon": {
+          "id": "spice-handler",
+          "name": "SpiceHandler",
+          "path": "src/spice/spice_handler.py",
+          "entry_point": "src/spice/spice_handler.py:SpiceHandler",
+          "interface": "class: load_metakernel, utc_to_et/et_to_utc, get_body_position, get_target_orientation, get_frame_name_from_id. The ephemeris-access block; the class is the unit, no single method is the Tool.",
+          "ports_in": [
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "attitude-trajectory",
+            "epoch-observation"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": true,
+        "confidence": "high"
+      },
+      {
+        "job": "SPICE kernel generation (3 distinct ops in one file). in_use:false in the inversion survey (one-time setup tools, not in the s100\u2013s114 path); register but low priority.",
+        "canon": {
+          "id": "spice-kernel-generate",
+          "name": "create_ephemeris_from_tle",
+          "path": "src/spice/spice_kernel_generator.py",
+          "entry_point": "src/spice/spice_kernel_generator.py:create_ephemeris_from_tle",
+          "interface": "(mkspk setup file) -> SPK ephemeris kernel via subprocess. The TLE->SPK generation step.",
+          "ports_in": [
+            "spice-setup-file"
+          ],
+          "ports_out": [
+            "spk-kernel"
+          ],
+          "default_params": {
+            "output_dir": null
+          }
+        },
+        "variants": [
+          {
+            "id": "spice-observer-kernel",
+            "entry_point": "src/spice/spice_kernel_generator.py:create_observer_kernel",
+            "why": "DIFFERENT tool/op: pinpoint (not mkspk) -> observer/ground-station SPK. Same kernel-generation cluster, distinct operation. variant_of spice-kernel-generate."
+          },
+          {
+            "id": "spice-orientation-kernel",
+            "entry_point": "src/spice/spice_kernel_generator.py:create_orientation_kernel",
+            "why": "DIFFERENT op: prediCkt -> CK (attitude) + SCLK (clock) pair. Distinct outputs (ck-kernel + sclk-kernel). variant_of spice-kernel-generate."
+          }
+        ],
+        "collapses": [],
+        "in_use": false,
+        "confidence": "med"
+      },
+      {
+        "job": "Articulation angle generation. in_use:false in the inversion survey (m048 uses fixed SP=0/AD=15 deg); part of the src forward pipeline for tracked-panel models.",
+        "canon": {
+          "id": "articulation-angles-from-behaviors",
+          "name": "calculate_angles_from_behaviors",
+          "path": "src/articulation/articulation_engine.py",
+          "entry_point": "src/articulation/articulation_engine.py:calculate_angles_from_behaviors",
+          "interface": "(satellite, k1_vectors, articulation_engine, offset) -> Dict[component, angles(N,) deg]; the behavior-driven angle generator.",
+          "ports_in": [
+            "attitude-trajectory"
+          ],
+          "ports_out": [
+            "component-angles"
+          ],
+          "default_params": {
+            "articulation_offset": 0
+          }
+        },
+        "variants": [
+          {
+            "id": "angle-interpolator",
+            "entry_point": "src/interpolation/quaternion_interpolator.py:create_angle_interpolator",
+            "why": "DIFFERENT input path: explicit keyframe times/values/transitions -> interpolated angles, vs behavior-driven. Same output artifact (component-angles), genuinely different method (manual control vs physics behavior). variant_of articulation-angles-from-behaviors."
+          }
+        ],
+        "collapses": [
+          {
+            "entry_point": "src/utils/geometry_utils.py:calculate_sun_pointing_rotation",
+            "into_param": "single-epoch single-panel math behind SunTrackingBehavior; primitive"
+          },
+          {
+            "entry_point": "src/interpolation/quaternion_interpolator.py:create_multi_order_interpolator",
+            "into_param": "more-general keyframe-dict variant returning a closure; no confirmed callers (possible dead/notebook-only); collapse into angle-interpolator note"
+          }
+        ],
+        "in_use": false,
+        "confidence": "med"
+      },
+      {
+        "job": "Angle->matrix builder. in_use:false in inversion survey; load-bearing in the src forward pipeline for articulated models.",
+        "canon": {
+          "id": "rotation-matrices-from-angles",
+          "name": "compute_rotation_matrices_from_angles",
+          "path": "src/articulation/articulation_engine.py",
+          "entry_point": "src/articulation/articulation_engine.py:compute_rotation_matrices_from_angles",
+          "interface": "(component-angles dict, satellite) -> Dict[component, rotation_matrices(N,4,4)]; the angle->matrix block consumed by shadow_engine.",
+          "ports_in": [
+            "component-angles"
+          ],
+          "ports_out": [
+            "component-rotation-matrices"
+          ],
+          "default_params": {
+            "articulation_engine": null
+          }
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "src/utils/geometry_utils.py:build_rotation_matrix",
+            "into_param": "per-facet Rodrigues 4x4 math; primitive"
+          }
+        ],
+        "in_use": false,
+        "confidence": "med"
+      },
+      {
+        "job": "Attitude SLERP. in_use:false in inversion survey (m048 uses SPICE/propagated attitude, not keyframe SLERP); part of the src custom-attitude path.",
+        "canon": {
+          "id": "interpolate-attitudes",
+          "name": "interpolate_attitudes_only",
+          "path": "src/interpolation/attitude_interpolator.py",
+          "entry_point": "src/interpolation/attitude_interpolator.py:interpolate_attitudes_only",
+          "interface": "(attitude_keyframes, epochs, spice_handler) -> (N,3,3) rotation matrices; high-level SLERP wrapper (handles UTC->ET + matrix<->quat), used by observation_geometry via attitude_keyframes.",
+          "ports_in": [
+            "anchor-epoch",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "attitude-trajectory"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "src/interpolation/quaternion_interpolator.py:create_quaternion_interpolator",
+            "into_param": "returns a closure not an array; the kernel under interpolate_attitudes_only; collapse (slerp is the scalar primitive beneath)"
+          }
+        ],
+        "in_use": false,
+        "confidence": "med"
+      },
+      {
+        "job": "Multi-scheme LC resolver. Backs the lc-compare skill/plotter. in_use:false in batch experiments (a diagnostic/viz utility, not in the s100\u2013s114 batch path); register low priority.",
+        "canon": {
+          "id": "lc-resolve",
+          "name": "resolve_lc",
+          "path": "notebooks/inversion/survey/lib/lc_compare.py",
+          "entry_point": "notebooks/inversion/survey/lib/lc_compare.py:resolve_lc",
+          "interface": "(spec string, ctx_cache, cache_dir) -> magnitude (N,); resolves four spec schemes including fresh hi-fi propagation via render_hifi.",
+          "ports_in": [
+            "q0-omega-state",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "light-curve",
+            "hifi-lightcurve"
+          ],
+          "default_params": {
+            "cache_dir": null
+          }
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": false,
+        "confidence": "low"
+      },
+      {
+        "job": "LC comparison plotter (viz). Backs the lc-compare skill. in_use:false in batch experiments (write-up viz tool). Register low priority.",
+        "canon": {
+          "id": "lc-compare-plot",
+          "name": "make_plot",
+          "path": "notebooks/inversion/survey/lib/lc_compare.py",
+          "entry_point": "notebooks/inversion/survey/lib/lc_compare.py:make_plot",
+          "interface": "(ref_label, ref_lc, [(label, lc)...], output, rho_noise_sigma) -> PNG (overlay + N residual subplots, each labelled RMS+rho). The standard survey residual-panel visualizer.",
+          "ports_in": [
+            "light-curve"
+          ],
+          "ports_out": [
+            "lc-comparison-plot"
+          ],
+          "default_params": {
+            "rho_noise_sigma": 0.05
+          }
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": false,
+        "confidence": "low"
+      },
+      {
+        "job": "3D attitude animation viz. in_use:false in batch experiments (backs the attitude-anim skill). Register low priority.",
+        "canon": {
+          "id": "create-3d-animation",
+          "name": "create_interactive_3d_animation",
+          "path": "src/visualization/plotly_animation_generator.py",
+          "entry_point": "src/visualization/plotly_animation_generator.py:create_interactive_3d_animation",
+          "interface": "(animation_data, magnitudes, time_hours, geometry_data, satellite_name) -> Plotly HTML animation on disk; color_mode lit_status|flux.",
+          "ports_in": [
+            "attitude-trajectory",
+            "hifi-lightcurve"
+          ],
+          "ports_out": [
+            "attitude-animation"
+          ],
+          "default_params": {
+            "color_mode": "lit_status",
+            "frame_duration_ms": 100
+          }
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": false,
+        "confidence": "low"
+      },
+      {
+        "job": "Standalone src LC plotter/exporter. in_use:false in inversion survey (the survey uses lc-compare make_plot); part of the src demo pipeline.",
+        "canon": {
+          "id": "lightcurve-plot",
+          "name": "create_light_curve_plot",
+          "path": "src/visualization/lightcurve_plotter.py",
+          "entry_point": "src/visualization/lightcurve_plotter.py:create_light_curve_plot",
+          "interface": "(time_hours, epochs, magnitudes, phase_angles, utc_times, satellite_name, plot_mode, output_dir) -> PNG + CSV on disk; calls save_lightcurve_data internally.",
+          "ports_in": [
+            "light-curve"
+          ],
+          "ports_out": [
+            "lc-comparison-plot"
+          ],
+          "default_params": {
+            "no_plot": false,
+            "save": true,
+            "compare_tier2": false
+          }
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "src/io/data_writer.py:save_lightcurve_data",
+            "into_param": "CSV sink called internally with matched timestamp; primitive/sink"
+          }
+        ],
+        "in_use": false,
+        "confidence": "low"
+      },
+      {
+        "job": "src-layer inversion API (DE + L-BFGS-B + Fisher/MCMC). in_use:false in the survey (the survey uses its own shoot/cross/polish chain, NOT src/inversion). Straddles Tool/Pipeline \u2014 see forks. This is a parallel, NOT-the-live-path implementation.",
+        "canon": {
+          "id": "invert-lightcurve",
+          "name": "invert_lightcurve",
+          "path": "src/inversion/results.py",
+          "entry_point": "src/inversion/results.py:invert_lightcurve",
+          "interface": "(observed_lightcurve, satellite, geometry, mode, uncertainty_mode, n_starts) -> InversionResult (q0/\u03c90 estimate + uncertainty); composes ObjectiveFunction + multi_start_optimize + propagate_attitude + uncertainty.",
+          "ports_in": [
+            "light-curve",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "q0-omega-state"
+          ],
+          "default_params": {
+            "mode": "principal_axis",
+            "uncertainty_mode": "quick",
+            "n_starts": 3,
+            "omega_max_deg_per_s": 30,
+            "compute_shadows": true
+          }
+        },
+        "variants": [
+          {
+            "id": "invert-lightcurve-multifidelity",
+            "entry_point": "src/inversion/results.py:invert_lightcurve_multifidelity",
+            "why": "DIFFERENT method: two-stage coarse (no shadows) + fine (shadows) inversion for faster convergence. A BET (coarse-then-fine is faster & equally accurate). variant_of invert-lightcurve; leans Pipeline (see forks)."
+          }
+        ],
+        "collapses": [],
+        "in_use": false,
+        "confidence": "low"
+      },
+      {
+        "job": "src-layer attitude optimizer. in_use:false in the survey (parallel to the survey's shoot/LM chain). Register but mark not-live-path.",
+        "canon": {
+          "id": "multi-start-optimize",
+          "name": "multi_start_optimize",
+          "path": "src/inversion/optimizers.py",
+          "entry_point": "src/inversion/optimizers.py:multi_start_optimize",
+          "interface": "(ObjectiveFunction, bounds, n_starts) -> List[OptimizationResult] sorted by cost; N independent global+local starts. The standard single-fidelity optimizer orchestrator.",
+          "ports_in": [
+            "scoring"
+          ],
+          "ports_out": [
+            "candidate-set"
+          ],
+          "default_params": {
+            "n_starts": 5,
+            "use_local_refinement": true,
+            "workers": 1
+          }
+        },
+        "variants": [
+          {
+            "id": "global-optimize",
+            "entry_point": "src/inversion/optimizers.py:global_optimize",
+            "why": "DIFFERENT method: Differential Evolution global search only (no local). A composable stage of multi_start_optimize. variant_of multi-start-optimize."
+          },
+          {
+            "id": "local-refine",
+            "entry_point": "src/inversion/optimizers.py:local_refine",
+            "why": "DIFFERENT method: L-BFGS-B local refinement only (axis-angle<->quat round-trip). The other composable stage. variant_of multi-start-optimize."
+          }
+        ],
+        "collapses": [
+          {
+            "entry_point": "src/inversion/constraints.py:get_bounds",
+            "into_param": "ConstraintMode->bounds config helper; primitive (mild dup with optimizers.get_default_bounds)"
+          }
+        ],
+        "in_use": false,
+        "confidence": "low"
+      },
+      {
+        "job": "src-layer inversion objective. Distinct from the survey scorer (this is the optimization-time forward evaluator in src/inversion). in_use:false in the survey path. Register as the cost block of the src invert-lightcurve family.",
+        "canon": {
+          "id": "objective-function",
+          "name": "ObjectiveFunction.evaluate",
+          "path": "src/inversion/objective_function.py",
+          "entry_point": "src/inversion/objective_function.py:ObjectiveFunction.evaluate",
+          "interface": "(params[6] = q0-omega-state) -> chi-squared scalar; wraps full forward model (propagate + shadow + LC generate) as a single optimizer cost.",
+          "ports_in": [
+            "q0-omega-state"
+          ],
+          "ports_out": [
+            "scoring"
+          ],
+          "default_params": {}
+        },
+        "variants": [],
+        "collapses": [],
+        "in_use": false,
+        "confidence": "med"
+      },
+      {
+        "job": "src-layer uncertainty estimation. in_use:false in the survey (the survey reports geodesic/|\u03c9| errors + \u03c1-bands, not Fisher/MCMC covariance). Register as the uncertainty block of the src invert family.",
+        "canon": {
+          "id": "compute-fisher-uncertainty",
+          "name": "compute_fisher_uncertainty",
+          "path": "src/inversion/uncertainty.py",
+          "entry_point": "src/inversion/uncertainty.py:compute_fisher_uncertainty",
+          "interface": "(ObjectiveFunction at optimum, optimal_params) -> covariance + std_devs via finite-difference Hessian. The 'quick' uncertainty mode of invert_lightcurve.",
+          "ports_in": [
+            "candidate-set",
+            "scoring"
+          ],
+          "ports_out": [
+            "parameter-uncertainty"
+          ],
+          "default_params": {
+            "step_size": 1e-05
+          }
+        },
+        "variants": [
+          {
+            "id": "compute-mcmc-uncertainty",
+            "entry_point": "src/inversion/uncertainty.py:compute_mcmc_uncertainty",
+            "why": "DIFFERENT method: full MCMC posterior via emcee ensemble sampler vs Hessian approximation. variant_of compute-fisher-uncertainty (the 'full' uncertainty mode). Requires emcee optional dep."
+          }
+        ],
+        "collapses": [],
+        "in_use": false,
+        "confidence": "med"
+      },
+      {
+        "job": "src-layer PAB glint filter. in_use:false in the survey (the survey's geo_cost/alignment_cost are the analogous filters; this is the src-side cousin). Note: _count_false_alarms flagged as possible dead code. Distinct from survey filter family \u2014 DO NOT merge.",
+        "canon": {
+          "id": "glint-filter",
+          "name": "GlintFilter.evaluate",
+          "path": "src/inversion/glint_filter.py",
+          "entry_point": "src/inversion/glint_filter.py:GlintFilter.evaluate",
+          "interface": "(q0, \u03c90, times, inertia, mode) -> {precision, recall, f1}; PAB-alignment check vs observed glint epochs, ~3x faster than lo-fi LC, ~770x faster than hi-fi.",
+          "ports_in": [
+            "q0-omega-state",
+            "epoch-observation"
+          ],
+          "ports_out": [
+            "filter"
+          ],
+          "default_params": {
+            "mode": "tumbling"
+          }
+        },
+        "variants": [],
+        "collapses": [
+          {
+            "entry_point": "src/inversion/glint_filter.py:extract_glint_epochs",
+            "into_param": "peak-detection helper for GlintFilter construction; primitive (min_prominence=0.3)"
+          },
+          {
+            "entry_point": "src/inversion/glint_filter.py:compute_pab_j2000",
+            "into_param": "PAB geometry math helper; primitive"
+          }
+        ],
+        "in_use": false,
+        "confidence": "low"
+      }
+    ],
+    "pipelines": [
+      {
+        "id": "pipeline_blind-5step-invert",
+        "hypothesis": "Blind (q0,\u03c9) inversion via the s100 5-step chain: ls_bracket |\u03c9| prior -> sample_so3_pool -> survive_at_epoch isophote clouds at anchors A,B -> 2deg decimation to reps -> finite_diff_omega+shoot cross (A-rep x B-rep BVP) -> coarse-K surrogate RMSE rank -> full-500 surrogate RMSE rank -> abc-window LM polish breaks the hard-shoot trap to Band A.",
+        "composes": [
+          "load-truth",
+          "ls-bracket",
+          "sample-so3-pool",
+          "survive-at-epoch",
+          "twin-dedup",
+          "shoot",
+          "propagator-jacobi-path2",
+          "surrogate",
+          "scorer",
+          "render-hifi",
+          "rho-band-classify"
+        ],
+        "serves": "goal_blind-pipeline",
+        "already_carded": false
+      },
+      {
+        "id": "pipeline_densify",
+        "hypothesis": "Densifying the \u03c9-direction grid (N_DIRS 200->800) + full-LC polish + multi-magnitude-start lands Band A inversions on slow tumblers without oracle injection.",
+        "composes": [
+          "propagator",
+          "surrogate",
+          "scorer"
+        ],
+        "serves": "goal_cloud-architectures",
+        "already_carded": true
+      },
+      {
+        "id": "pipeline_joint-grid-pivot",
+        "hypothesis": "A dense joint (q0,\u03c9) grid scored by full-LC Jacobi+surrogate MSE surfaces the truth-nearest cell in a polishable top-K, as a blind pipeline.",
+        "composes": [
+          "propagator",
+          "surrogate",
+          "scorer",
+          "ls-bracket",
+          "sample-so3-pool",
+          "twin-dedup"
+        ],
+        "serves": "goal_blind-pipeline",
+        "already_carded": true
+      },
+      {
+        "id": "pipeline_cross-cloud",
+        "hypothesis": "Connecting per-epoch IA Cloud anchors via a two-point boundary-value \u03c9-solve, then filtering the survivors, recovers (q0,\u03c9) blind.",
+        "composes": [
+          "propagator",
+          "scorer",
+          "sample-so3-pool",
+          "survive-at-epoch",
+          "shoot",
+          "twin-dedup"
+        ],
+        "serves": "goal_cross-cloud-bridging",
+        "already_carded": true
+      },
+      {
+        "id": "pipeline_single-wind-lc-window-polish",
+        "hypothesis": "Free-\u03c9 LM minimisation of photometry over a forward single-wind LC window, seeded from the pair-shoot, breaks the hard-shoot trap (Band D -> Band A).",
+        "composes": [
+          "propagator",
+          "scorer",
+          "shoot",
+          "surrogate",
+          "propagator-jacobi-path2"
+        ],
+        "serves": "goal_windowed-photometry-polish",
+        "already_carded": true
+      }
+    ],
+    "glossary_gaps": [
+      {
+        "term_id": "q0-omega-state",
+        "definition": "The 6-DOF initial state pair (q0_wxyz unit quaternion + omega0 angular-velocity vector) that seeds attitude propagation; the thing inversion recovers.",
+        "used_as_port_by": "propagator, propagate-to-body-frame, shoot, render-hifi, twin-dedup, glint-filter, objective-function, invert-lightcurve(out), lc-resolve"
+      },
+      {
+        "term_id": "attitude-trajectory",
+        "definition": "The propagated history: (N,4) quaternion series (+ N,3 omega history and/or per-epoch body-frame k1/k2 vectors) over the observation epochs.",
+        "used_as_port_by": "propagator, omega-jacobi, propagate-to-body-frame, compute-observation-geometry, generate-lightcurves(in), compute-shadows(in), spice-handler, interpolate-attitudes, create-3d-animation"
+      },
+      {
+        "term_id": "epoch-observation",
+        "definition": "The per-seed geometry/observation bundle from the truth NPZ: epoch ET array + J2000 sun/observer/satellite positions + observer distances + mag_hifi.",
+        "used_as_port_by": "load-truth, propagator(in), compute-observation-geometry(in), render-hifi, build_context, spice-handler, glint-filter, invert-lightcurve(in), survive-at-epoch(geometry)"
+      },
+      {
+        "term_id": "light-curve",
+        "definition": "A (t, magnitude) time-series of apparent brightness \u2014 the generic LC artifact, including surrogate-predicted curves; the observable inversion fits.",
+        "used_as_port_by": "surrogate(out), scorer(in), lc-feature-extractor(in), invert-lightcurve(in), lc-resolve(out), lc-compare-plot(in), lightcurve-plot(in), alignment-filter(in)"
+      },
+      {
+        "term_id": "hifi-lightcurve",
+        "definition": "A full-physics (shadow + Ashikhmin-Shirley BRDF) magnitude curve from the hi-fi renderer, distinct from a surrogate prediction; the \u03c1-band ground truth.",
+        "used_as_port_by": "render-hifi(out), generate-lightcurves(out), rho-band-classify(in), lc-resolve(out), create-3d-animation(in)"
+      },
+      {
+        "term_id": "candidate-set",
+        "definition": "A set/ranked list of (q0,\u03c9) candidate states surviving the cross+filter, before final ranking/polish (e.g. an OptimizationResult list).",
+        "used_as_port_by": "multi-start-optimize(out), global-optimize, local-refine, compute-fisher-uncertainty(in)"
+      },
+      {
+        "term_id": "anchor-epoch",
+        "definition": "An integer epoch index (or set of indices) selected as a cross/filter anchor \u2014 e.g. the sharpness-scan anchor A,B or the bright-peak/spec-event indices.",
+        "used_as_port_by": "shoot(in), shoot-multianchor, alignment-filter(in: bright_peak_idx), geo-filter(in: spec_event_idx), interpolate-attitudes(in)"
+      },
+      {
+        "term_id": "satellite-model",
+        "definition": "The fully-assembled Satellite dataclass (Components/Facets/normals/areas/BRDF params) loaded from STL+YAML; flows into every forward computation block.",
+        "used_as_port_by": "stl-load-satellite, compute-shadows(in), generate-lightcurves(in), compute-inertia(in)"
+      },
+      {
+        "term_id": "lit-status",
+        "definition": "Per-facet boolean shadow mask Dict[component -> (N_epochs, num_facets) bool] produced by the shadow engine, consumed by the LC renderer.",
+        "used_as_port_by": "compute-shadows(out), generate-lightcurves(in)"
+      },
+      {
+        "term_id": "inertia-result",
+        "definition": "The InertiaResult bundle: total mass, centre-of-mass, full inertia tensor, principal moments and principal axes about CoM, for a satellite (optionally at an articulated state).",
+        "used_as_port_by": "compute-inertia(out); the inertia_tensor input of propagator/shoot/render-hifi"
+      },
+      {
+        "term_id": "component-angles",
+        "definition": "Dict[component -> (N,) articulation angles in degrees] for a solar-panel/antenna over the epochs, from a behavior or keyframe interpolator.",
+        "used_as_port_by": "articulation-angles-from-behaviors(out), angle-interpolator(out), rotation-matrices-from-angles(in)"
+      },
+      {
+        "term_id": "component-rotation-matrices",
+        "definition": "Dict[component -> (N,4,4) homogeneous rotation matrices] applying the articulation angles, consumed by the shadow engine and LC renderer.",
+        "used_as_port_by": "rotation-matrices-from-angles(out); compute-shadows(in: explicit_component_matrices), generate-lightcurves(in)"
+      },
+      {
+        "term_id": "parameter-uncertainty",
+        "definition": "The covariance matrix + per-parameter std-devs (and/or MCMC posterior samples) characterising the (q0,\u03c9) estimate's uncertainty.",
+        "used_as_port_by": "compute-fisher-uncertainty(out), compute-mcmc-uncertainty(out)"
+      },
+      {
+        "term_id": "lc-feature-vector",
+        "definition": "A fixed-length (28-dim) descriptor of an LC: LS-periodogram peaks, power-band ratios, statistical moments, ACF lags, glint count/spacing \u2014 LC-only, no geometry.",
+        "used_as_port_by": "lc-feature-extractor(out)"
+      },
+      {
+        "term_id": "spk-kernel",
+        "definition": "A SPICE SPK ephemeris kernel file (position/velocity over time) generated from a TLE/pinpoint setup file.",
+        "used_as_port_by": "spice-kernel-generate(out), spice-observer-kernel(out)"
+      },
+      {
+        "term_id": "ck-kernel",
+        "definition": "A SPICE CK attitude (orientation-over-time) kernel file generated from a prediCkt spec.",
+        "used_as_port_by": "spice-orientation-kernel(out)"
+      },
+      {
+        "term_id": "sclk-kernel",
+        "definition": "A SPICE SCLK spacecraft-clock kernel file, generated alongside a CK kernel.",
+        "used_as_port_by": "spice-orientation-kernel(out)"
+      },
+      {
+        "term_id": "spice-setup-file",
+        "definition": "An mkspk/pinpoint/prediCkt configuration file that drives SPICE kernel generation.",
+        "used_as_port_by": "spice-kernel-generate(in), spice-observer-kernel(in), spice-orientation-kernel(in)"
+      },
+      {
+        "term_id": "lc-comparison-plot",
+        "definition": "A rendered figure artifact (PNG/HTML) overlaying LCs with residual panels \u2014 a viz output, not a numeric artifact.",
+        "used_as_port_by": "lc-compare-plot(out), lightcurve-plot(out)"
+      },
+      {
+        "term_id": "attitude-animation",
+        "definition": "An interactive 3D HTML animation of the satellite attitude + sun/observer/PAB vectors evolving over the epochs.",
+        "used_as_port_by": "create-3d-animation(out)"
+      }
+    ],
+    "existing_card_drift": [
+      {
+        "card": "propagator",
+        "issue": "entry_point field is currently null/absent in the card; ADR-0007 requires the canonical run-button seam. The card's `functions[]` lists propagate_attitude/propagate_principal_axis/propagate_euler but no `entry_point`, `ports`, `default_params`, `canon`. It also does not acknowledge the survey's de-facto production propagator (propagate_jacobi_path2), which is the one actually used by 53 experiment files.",
+        "fix": "Set entry_point='src/dynamics/attitude_propagator.py:propagate_attitude'; ports={input:['q0-omega-state','epoch-observation'], output:['attitude-trajectory']}; default_params={mode:'principal_axis', inertia_tensor:null, rtol:1e-10, atol:1e-12}; canon=true. Register a SEPARATE variant card 'propagator-jacobi-path2' (path=lib/jacobi_propagator.py, entry_point=:propagate_jacobi_path2, variant_of='propagator', canon=false) and note propagate_jacobi collapses into it as the hybrid fallback. New glossary terms q0-omega-state, attitude-trajectory must be coined before the ports validate."
+      },
+      {
+        "card": "surrogate",
+        "issue": "No entry_point/ports/default_params/canon fields (ADR-0007). The card's functions[] correctly lists the surrogate_eval.py functions, but full_lc_mse/bright_mse/rho/nll_* are SCORING functions that conceptually belong to the scorer card, not the surrogate predict block \u2014 they are co-located in the file but are a different job.",
+        "fix": "Set entry_point='notebooks/inversion/survey/lib/surrogate_eval.py:predict'; ports={input:['attitude-trajectory','epoch-observation'], output:['light-curve']}; default_params={sp_angle_deg:0.0, ad_angle_deg:15.0, version:'v2'}; canon=true. Keep predict+get_model as the surrogate's functions; the scoring functions (full_lc_mse/bright_mse/rho/nll_*) are the scorer card's entry_points (they live in this file but are scorer ops) \u2014 cross-reference, don't duplicate. New glossary term 'light-curve' needed for the output port."
+      },
+      {
+        "card": "scorer",
+        "issue": "(1) path/entry_point points at cost_surfaces.py which is a thin RE-EXPORT shim \u2014 every working impl is in surrogate_eval.py (full_lc_mse:66, bright_mse:74, rho:86, nll_residual:118, nll_cost:167). (2) alignment_cost + lofi_peak_match are listed as NOT YET PORTED (raise NotImplementedError) \u2014 but the WORKING alignment impl exists at filter_costs.py:196, a different file/job (filter-scoring, not MSE scoring). (3) No entry_point/ports/default_params/canon.",
+        "fix": "Repoint entry_point='notebooks/inversion/survey/lib/surrogate_eval.py:full_lc_mse' (the live LM objective); ports={input:['light-curve','windowed-lc'], output:['scoring','rho-band']}; default_params={bright_threshold:11.0, sigma_mag:0.05, rescale:true}; canon=true. Keep the cost_surfaces.py:surrogate_* functions documented as ALIASES (collapse, not separate cards). RESOLVE the two stubs: alignment_cost and lofi_peak_match should NOT remain as scorer functions \u2014 alignment_cost's working impl is a SEPARATE filter Tool (alignment-filter, filter_costs.py:196, filter-scoring cluster); lofi_peak_match is a genuinely unimplemented distinct concept (prominence-weighted peak match) \u2014 leave it flagged 'uncovered/unimplemented', do not card. Add rho (surrogate_eval.py:rho) and nll_cost as scorer variants/functions; nll is variant_of (different objective)."
+      }
+    ],
+    "forks": [
+      {
+        "question": "Two competing inversion stacks exist: the SURVEY chain (lib/shoot.py shoot + lib/jacobi_propagator.py + lib/surrogate_eval.py, the live s100\u2013s114 path, 46+ importers) and the SRC stack (src/inversion/: invert_lightcurve + multi_start_optimize + ObjectiveFunction + glint_filter + uncertainty). They solve the same job with different methods. Which is canon, and do we card the src stack at all in this pass?",
+        "options": [
+          "Card only the survey chain as canon; mark all src/inversion Tools in_use:false and defer",
+          "Card both: survey chain as canon-live, src/inversion as a parallel variant family (variant_of), all in_use:false except where shared",
+          "Card the survey chain now; do NOT register src/inversion this pass (it is not the live laboratory)"
+        ],
+        "recommendation": "Card the survey chain as the live/in_use Tools; register the src/inversion Tools but mark in_use:false (parallel, not-the-live-path). Don't make them variant_of the survey Tools \u2014 they are a genuinely separate architecture (DE+L-BFGS-B+Fisher/MCMC vs cloud-cross+LM-window-polish), not param variants.",
+        "why": "The usage report shows zero src/inversion imports in the s100\u2013s114 experiments; the live laboratory is the survey lib. But the src stack is real, coherent, and may be revived \u2014 recording it in_use:false (cheap) preserves it without polluting the live registry. Forcing variant_of edges between two whole architectures would misrepresent them as one family."
+      },
+      {
+        "question": "invert_lightcurve / invert_lightcurve_multifidelity straddle Tool and Pipeline (ADR-0007): they have a clear hypothesis shape (multifidelity BETS coarse-then-fine is faster) yet are exposed as reusable __all__ callables. Tool or Pipeline?",
+        "options": [
+          "Both are Tools (value-neutral reusable capabilities), multifidelity variant_of invert_lightcurve",
+          "invert_lightcurve is a Tool; invert_lightcurve_multifidelity is a Pipeline (the coarse-then-fine bet)",
+          "Both are Pipelines (each is an inversion approach with a hypothesis)"
+        ],
+        "recommendation": "Card invert_lightcurve as a Tool (canon) and invert_lightcurve_multifidelity as variant_of it for now, in_use:false. If the src stack is ever revived, promote multifidelity to a Pipeline with the coarse-then-fine hypothesis.",
+        "why": "At rest, both are value-neutral library APIs (no experiment attached, no goal served). The multifidelity hypothesis only becomes a BET when an experiment tests it \u2014 none do today. Keep them as Tools until a run_record.tests edge appears; the variant_of edge already captures the method difference."
+      },
+      {
+        "question": "The \u03c1-band \u221aMSE/0.05 metric is implemented THREE times: surrogate_eval.py:rho (surrogate space), hifi_render.py:rho_from_hifi (hi-fi space), and the \u03c1-band classifier. Same formula, different input artifact. Collapse to one Tool or keep separate?",
+        "options": [
+          "One scorer Tool with an input-space param (surrogate|hifi) \u2014 collapse all three",
+          "Two cards: scorer-rho (surrogate-space, on the scorer card) + rho-band-classify (hi-fi, on the hifi-render card)",
+          "Keep rho as a scorer function and rho_from_hifi as a primitive of render-hifi"
+        ],
+        "recommendation": "Keep two: rho on the scorer card (surrogate-space, scoring/rho-band output) and rho_from_hifi+rho_band as the canonical hi-fi \u03c1-band classifier (rho-band-classify, in_use:true, 41 importers). They differ by input artifact (light-curve vs hifi-lightcurve) which is a real port-type difference, not a param.",
+        "why": "The hi-fi vs surrogate distinction is load-bearing in this project (surrogate is a search proxy; hi-fi is ground truth \u2014 the whole 'surrogate-first, hi-fi-last' discipline). Collapsing them behind a param would erase the port-type signal that tells a reader which is the trusted band. The formula being identical is incidental."
+      },
+      {
+        "question": "shoot_multianchor / shoot_multianchor_freebase (s088\u2013s090) are genuinely different BVP methods (over-determined / 6-DOF freebase) but DORMANT (used only in the s088\u2013s090 ablation, not the s100\u2013s114 live path). Register as in_use variants of shoot, or in_use:false?",
+        "options": [
+          "Register as variant_of shoot, in_use:false (dormant but real method)",
+          "Register as in_use:true variant_of shoot (they ARE the multianchor capability)",
+          "Defer \u2014 don't card multianchor this pass"
+        ],
+        "recommendation": "Register both as variant_of shoot with in_use:false. They are distinct, documented methods (winding-alias fix, isophote-sliding base) but the usage report (3 importers, all s088\u2013s090) shows they are not in the current pipeline.",
+        "why": "ADR-0007 wants an HONEST registry: these are real methods worth a card so they're findable, but flagging in_use:false correctly signals 'not load-bearing today'. The shoot single-anchor form (46 importers) is unambiguously canon."
+      },
+      {
+        "question": "ls_bracket and lc_features both live in lc_features.py but have opposite in_use status: ls_bracket is load-bearing (the blind |\u03c9| prior, used by s082+s100), lc_features is regression-only (s055a era, NOT in the live inversion). Card them together or split?",
+        "options": [
+          "One lc-feature-extraction cluster, lc_features canon + ls_bracket variant",
+          "Split: ls-bracket its own in_use:true Tool (emits multi-omegadir-start prior); lc-feature-extractor separate, in_use:false",
+          "Card only ls_bracket (live); defer lc_features"
+        ],
+        "recommendation": "Split into two cards: ls-bracket (in_use:true, output port=multi-omegadir-start, the blind |\u03c9| prior block) and lc-feature-extractor (in_use:false, output=lc-feature-vector, regression-only). Co-location in one file is incidental; they have different jobs, outputs, and live-status.",
+        "why": "They are NOT variants of one job \u2014 one extracts a descriptor for regression, the other generates an |\u03c9| search grid. Merging them would force a wrong canon/variant relationship and mis-flag ls_bracket (live) as dormant alongside lc_features. The port types differ (lc-feature-vector vs multi-omegadir-start)."
+      },
+      {
+        "question": "geo_cost (PAB-vs-face geometry filter) vs alignment_cost (brightness-peak match) \u2014 both in filter_costs.py, both DORMANT (last used s049). Is geo-filter a variant_of alignment-filter, or its own canon?",
+        "options": [
+          "geo-filter variant_of alignment-filter (same filter-scoring cluster)",
+          "geo-filter its own canon Tool (different signal entirely: geometry vs photometry)",
+          "Defer both \u2014 the filter family is dead post-s050"
+        ],
+        "recommendation": "Make alignment-filter canon and geo-filter variant_of it, both in_use:false. They share the filter-scoring job (cheap pre-filter returning [0,1] coverage of anchor events) but use different signals; the variant_of edge captures that honestly without inflating the registry.",
+        "why": "The shared job (anchor-event coverage filter) is real and is what a researcher names ('the filter block'). The signal difference (geometry vs photometry) is exactly what variant_of is for. Both dormant = in_use:false; revive together if the filter pre-stage returns."
+      }
+    ],
+    "summary": "Deduped 97 candidates into ~37 canon Tool clusters across the src forward-model layer and the survey inversion lib, with the rest collapsing as param-modes/aliases/primitives. LIVE laboratory (in_use:true) = the survey chain: load-truth (98 files), surrogate.predict (72), propagate_jacobi_path2 (53), shoot+finite_diff_omega (46), build_context/render_hifi/rho_from_hifi (67/36/41), sample_so3_pool+survive_at_epoch (22/15), twin canonical_batch (54), ls_bracket (live |\u03c9| prior), plus the src forward-render Tools (generate_lightcurves, compute_shadows, compute_observation_geometry, compute_inertia, stl-load, spice-handler) that build the truth trajectories. PARALLEL/dormant (in_use:false) = the entire src/inversion stack (invert_lightcurve, multi_start_optimize, ObjectiveFunction, glint_filter, Fisher/MCMC), the s088\u2013s090 multianchor shoots, the filter-cost family (alignment/geo, dead post-s050), lc_features regression, SPICE-kernel generation, and viz Tools. KEY drift on existing cards: propagator needs entry_point=propagate_attitude + a separate propagator-jacobi-path2 variant (the actual production propagator); surrogate/scorer cards both point through cost_surfaces.py which is a re-export SHIM \u2014 the working scorer impls live in surrogate_eval.py, and the two NOT-YET-PORTED stubs (alignment_cost/lofi_peak_match) should be resolved as a separate filter Tool + an unimplemented-defer respectively. The live blind-inversion s100 5-step chain is identified as an UNCARDED pipeline (pipeline_blind-5step-invert). 20 new glossary terms needed (q0-omega-state, attitude-trajectory, epoch-observation, light-curve, hifi-lightcurve, candidate-set, anchor-epoch, satellite-model, lit-status, inertia-result, component-angles/-rotation-matrices, parameter-uncertainty, lc-feature-vector, spk/ck/sclk-kernel, spice-setup-file, lc-comparison-plot, attitude-animation). 6 genuine human forks raised: survey-vs-src architecture canon, invert_lightcurve Tool-vs-Pipeline, the triple \u03c1-metric collapse, multianchor variant status, ls_bracket/lc_features split, and geo-vs-alignment filter variant."
+  },
+  "raw_candidates": [
+    {
+      "name": "propagate-attitude",
+      "entry_point": "src/dynamics/attitude_propagator.py:propagate_attitude",
+      "signature": "propagate_attitude(q0, omega0, times, mode, inertia_tensor=None, rtol=1e-10, atol=1e-12)",
+      "role": "q0-omega-state + times -> attitude-trajectory; unified dispatcher that routes to principal-axis closed-form or Euler-dynamics ODE integration",
+      "job_cluster": "attitude-propagation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "This IS the existing propagator Tool card (src/dynamics/attitude_propagator.py). Confirmed: the card entry_point should be propagate_attitude (the unified dispatcher), not either sub-function. History: sign-flip bug fixed 2026-05-12 (s066). Validated against SPICE pxform in s067. The card currently exists; flag drift only: ensure card lists both mode variants and the inertia_tensor param. New artifact term needed: 'q0-omega-state' (initial quaternion + omega vector, 6-DOF), 'attitude-trajectory' (N x 4 quaternions + N x 3 omega history).",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "propagate-principal-axis",
+      "entry_point": "src/dynamics/attitude_propagator.py:propagate_principal_axis",
+      "signature": "propagate_principal_axis(q0, omega, times)",
+      "role": "q0-omega-state + times -> attitude-trajectory (closed-form, constant omega)",
+      "job_cluster": "attitude-propagation",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "Primitive sub-mode of propagate-attitude. Same job_cluster; would be a duplicate if registered separately. Re-exported from dynamics/__init__.py but only as convenience \u2014 callers should use propagate_attitude(mode='principal_axis'). Skip as separate Tool card.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "propagate-euler",
+      "entry_point": "src/dynamics/attitude_propagator.py:propagate_euler",
+      "signature": "propagate_euler(q0, omega0, inertia_tensor, times, rtol=1e-10, atol=1e-12)",
+      "role": "q0-omega-state + inertia-tensor + times -> attitude-trajectory (DOP853 ODE, tumbling)",
+      "job_cluster": "attitude-propagation",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "Primitive sub-mode of propagate-attitude. Same job_cluster as propagate-principal-axis. Internal helper; callers use propagate_attitude(mode='tumbling'). Skip as separate Tool card.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "objective-function-evaluate",
+      "entry_point": "src/inversion/objective_function.py:ObjectiveFunction.evaluate",
+      "signature": "evaluate(self, params: NDArray) -> float",
+      "role": "q0-omega-state params[6] -> chi-squared scalar; wraps full forward model (propagate + shadow + LC generate) into a single cost evaluation for optimizers",
+      "job_cluster": "lc-inversion-cost",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "scoring"
+      ],
+      "notes": "The ObjectiveFunction class is the de-facto scorer for inversion. Distinct from the existing scorer card (survey/lib/cost_surfaces.py / filter_costs.py) which scores candidate clouds via LC comparison \u2014 this scorer is the optimization-time forward-model evaluator in the inversion loop. Not a duplicate of the existing scorer card. New artifact term likely needed: 'inversion-cost' or 'chi-squared-score'. Class also exposes _compute_body_frame_vectors and _generate_predicted_lightcurve as private helpers (primitives, skip).",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "global-optimize",
+      "entry_point": "src/inversion/optimizers.py:global_optimize",
+      "signature": "global_optimize(objective, bounds=None, seed=None, x0=None, maxiter=1000, tol=0.01, workers=1, polish=False, show_progress=True, progress_interval=10)",
+      "role": "ObjectiveFunction + bounds -> OptimizationResult; runs Differential Evolution global search over q0-omega-state parameter space",
+      "job_cluster": "attitude-optimizer",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "scoring"
+      ],
+      "output_artifacts": [
+        "candidate-set"
+      ],
+      "notes": "Supports parallel workers via Manager-based shared counter. x0 seeding for multi-fidelity handoff (coarse->fine). No existing card for this. New artifact term likely needed: 'candidate-set' (OptimizationResult or ranked params list).",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "local-refine",
+      "entry_point": "src/inversion/optimizers.py:local_refine",
+      "signature": "local_refine(objective, x0, bounds=None, maxiter=1000, ftol=1e-8, gtol=1e-5, show_progress=True, initial_cost=None)",
+      "role": "OptimizationResult seed + ObjectiveFunction -> OptimizationResult; L-BFGS-B local refinement with axis-angle quaternion normalization round-trip",
+      "job_cluster": "attitude-optimizer",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "candidate-set",
+        "scoring"
+      ],
+      "output_artifacts": [
+        "candidate-set"
+      ],
+      "notes": "Same job_cluster as global-optimize; these are two distinct operations (global vs local) but both live in the attitude-optimizer cluster. Not a duplicate \u2014 they chain together. The quaternion normalization round-trip (axis-angle->quat->axis-angle) inside wrapped_objective is a key correctness detail.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "multi-start-optimize",
+      "entry_point": "src/inversion/optimizers.py:multi_start_optimize",
+      "signature": "multi_start_optimize(objective, bounds=None, n_starts=5, seed=None, global_maxiter=500, local_maxiter=500, use_local_refinement=True, show_progress=True, workers=1)",
+      "role": "ObjectiveFunction -> List[OptimizationResult] sorted by cost; runs N independent global+local optimization starts for robustness against local minima",
+      "job_cluster": "attitude-optimizer",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "scoring"
+      ],
+      "output_artifacts": [
+        "candidate-set"
+      ],
+      "notes": "Composes global_optimize + local_refine. This is the standard entry point for single-fidelity inversion. Distinct enough to card separately as the multi-start orchestrator. Same job_cluster as global-optimize and local-refine \u2014 could be considered a pipeline fragment but it is value-neutral (no hypothesis). Drift check: this is what invert_lightcurve calls internally.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "invert-lightcurve",
+      "entry_point": "src/inversion/results.py:invert_lightcurve",
+      "signature": "invert_lightcurve(observed_lightcurve, satellite, observation_times, sun_positions_j2000, observer_positions_j2000, satellite_positions_j2000, observer_distances, mode='principal_axis', uncertainty_mode='quick', inertia_tensor=None, measurement_uncertainties=None, compute_shadows=True, n_starts=3, constraint_mode=None, omega_max_deg_per_s=30.0, seed=None, mcmc_n_samples=1000, mcmc_burn_in=100, articulation_matrices=None, workers=1)",
+      "role": "windowed-lc + epoch-observations -> InversionResult; full inversion pipeline: multi-start DE + L-BFGS-B + uncertainty estimation -> q0/omega0 estimate",
+      "job_cluster": "lc-inversion-pipeline",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "q0-omega-state"
+      ],
+      "notes": "This is the primary public API for single-fidelity inversion. Composes: ObjectiveFunction + multi_start_optimize + propagate_attitude + compute_fisher_uncertainty or compute_mcmc_uncertainty. It has a clear hypothesis shape (recover q0/omega0 from LC) but is listed in __all__ as a Tool-level callable, not tied to a specific experiment \u2014 so it straddles Tool and Pipeline. Flag for ADR review: if invert_lightcurve is treated as a Pipeline it needs a hypothesis card; if it is a Tool it should be value-neutral. New artifact term needed: 'q0-omega-state' as output.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "invert-lightcurve-multifidelity",
+      "entry_point": "src/inversion/results.py:invert_lightcurve_multifidelity",
+      "signature": "invert_lightcurve_multifidelity(observed_lightcurve, satellite, observation_times, sun_positions_j2000, observer_positions_j2000, satellite_positions_j2000, observer_distances, mode='principal_axis', uncertainty_mode='quick', inertia_tensor=None, measurement_uncertainties=None, n_starts_coarse=20, n_seeds_to_refine=20, constraint_mode=None, omega_max_deg_per_s=30.0, seed=None, mcmc_n_samples=1000, mcmc_burn_in=100, articulation_matrices=None, workers=1)",
+      "role": "windowed-lc + epoch-observations -> InversionResult; two-stage coarse (no shadows) + fine (shadows) inversion for faster convergence",
+      "job_cluster": "lc-inversion-pipeline",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "q0-omega-state"
+      ],
+      "notes": "Variant of invert_lightcurve using multi-fidelity (coarse=no-shadows, fine=shadows). Same job_cluster as invert_lightcurve \u2014 these are two variants. variant_of: invert-lightcurve. The multi-fidelity approach is a BET (hypothesis: coarse exploration + fine correction is faster and equally accurate) so this leans Pipeline, but is also a reusable capability. Flag same ADR question as invert_lightcurve.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "glint-filter-evaluate",
+      "entry_point": "src/inversion/glint_filter.py:GlintFilter.evaluate",
+      "signature": "evaluate(self, q0, omega0, times, inertia_tensor, mode='tumbling') -> dict",
+      "role": "q0-omega-state + glint-epochs -> glint-alignment-score dict (precision/recall/f1); fast geometric pre-filter checking if candidate trajectory explains observed brightness peaks",
+      "job_cluster": "glint-filter",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "filter"
+      ],
+      "notes": "The GlintFilter class is ~3x faster than lo-fi LC eval and ~770x faster than hi-fi per module docstring. Implements precision/recall/F1 scoring against observed glint epochs. The quick_reject method is a convenience wrapper over evaluate (primitive, skip). The _count_false_alarms private method is unused in the main evaluate path and appears dead/vestigial \u2014 it has a different implementation of the same inner loop but is never called from quick_reject or evaluate. Flag: potential dead code in _count_false_alarms. New artifact terms likely needed: 'glint-alignment-score', 'glint-epoch'. The existing glossary has 'glint' concepts (hard-shoot-trap, finite-diff-omega-aliasing) but nothing matching this PAB-alignment filter concept.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "extract-glint-epochs",
+      "entry_point": "src/inversion/glint_filter.py:extract_glint_epochs",
+      "signature": "extract_glint_epochs(observed_magnitudes, min_prominence=0.3)",
+      "role": "windowed-lc -> glint-epoch indices + prominences; peak detection on observed LC to find brightness spike epochs for glint filter initialization",
+      "job_cluster": "glint-filter",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "filter"
+      ],
+      "notes": "Helper for constructing a GlintFilter. Small enough to be a primitive but it is the de-facto entry point for glint epoch extraction from an LC. Same job_cluster as glint-filter-evaluate. Could be folded into GlintFilter constructor. Skip as standalone Tool card; note as primitive helper.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "compute-pab-j2000",
+      "entry_point": "src/inversion/glint_filter.py:compute_pab_j2000",
+      "signature": "compute_pab_j2000(sun_pos, obs_pos, sat_pos)",
+      "role": "J2000 position arrays -> Phase Angle Bisector unit vectors; geometry primitive for glint filter construction",
+      "job_cluster": "glint-filter",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "filter"
+      ],
+      "notes": "Pure geometry helper. Primitive, not a Tool. Same job_cluster as glint-filter-evaluate. Skip.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "compute-fisher-uncertainty",
+      "entry_point": "src/inversion/uncertainty.py:compute_fisher_uncertainty",
+      "signature": "compute_fisher_uncertainty(objective, optimal_params, step_size=1e-5, show_progress=True)",
+      "role": "ObjectiveFunction at optimum + optimal-params -> covariance matrix + std_devs; Fisher Information / Hessian-based quick uncertainty estimation",
+      "job_cluster": "uncertainty-estimation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "candidate-set",
+        "scoring"
+      ],
+      "output_artifacts": [
+        "scoring"
+      ],
+      "notes": "One of two uncertainty modes in invert_lightcurve. Uses finite-difference Hessian (_compute_hessian is a private helper/primitive). No existing card. New artifact term likely needed: 'parameter-uncertainty' or 'covariance-matrix'.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "compute-mcmc-uncertainty",
+      "entry_point": "src/inversion/uncertainty.py:compute_mcmc_uncertainty",
+      "signature": "compute_mcmc_uncertainty(objective, optimal_params, n_samples=1000, n_walkers=None, burn_in=100, bounds=None, initial_scatter=0.01)",
+      "role": "ObjectiveFunction + optimal-params -> posterior samples + covariance + convergence diagnostics; full MCMC posterior characterization via emcee ensemble sampler",
+      "job_cluster": "uncertainty-estimation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "candidate-set",
+        "scoring"
+      ],
+      "output_artifacts": [
+        "scoring"
+      ],
+      "notes": "Variant of compute-fisher-uncertainty using full MCMC instead of Hessian approximation. Same job_cluster; these are two variants of the uncertainty block. variant_of: compute-fisher-uncertainty. Requires emcee optional dependency. No existing card.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "get-bounds",
+      "entry_point": "src/inversion/constraints.py:get_bounds",
+      "signature": "get_bounds(mode: ConstraintMode, omega_max=0.5236)",
+      "role": "ConstraintMode enum -> parameter bounds list; returns FREE or PHYSICS_INFORMED bounds for optimizer",
+      "job_cluster": "attitude-optimizer",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Small utility/config function. Primitive, not a Tool. Parallel function get_default_bounds in optimizers.py (same logic but no ConstraintMode enum, just omega_max_deg_per_s) \u2014 mild duplication smell between get_bounds (constraints.py) and get_default_bounds (optimizers.py). Both in attitude-optimizer cluster.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "axis-angle-to-quaternion",
+      "entry_point": "src/inversion/quaternion_utils.py:axis_angle_to_quaternion",
+      "signature": "axis_angle_to_quaternion(axis_angle: NDArray) -> NDArray",
+      "role": "axis-angle vector (3) -> quaternion (4, wxyz); rotation parameterization conversion for optimizer param vector",
+      "job_cluster": "quaternion-utils",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Primitive. Part of the axis-angle <-> quaternion round-trip used in local_refine to enforce unit-quaternion constraint. normalize_quaternion, quaternion_to_axis_angle, quaternion_multiply are all primitives in the same cluster. All 4 are re-exported from inversion/__init__.py. Note: _quaternion_multiply in attitude_propagator.py is a private duplicate of quaternion_multiply in quaternion_utils.py \u2014 exact same Hamilton product logic. Dead-code / DRY smell: attitude_propagator.py could import from quaternion_utils instead.",
+      "area": "src-dynamics-inversion"
+    },
+    {
+      "name": "generate-lightcurves",
+      "entry_point": "src/computation/lightcurve_generator.py:generate_lightcurves",
+      "signature": "generate_lightcurves(facet_lit_status_dict, k1_vectors_array, k2_vectors_array, observer_distances, satellite, epochs, brdf_calculator=None, pre_computed_matrices=None, generate_no_shadow=False, animate=False, show_progress=True)",
+      "role": "(lit-status-dict, k1/k2-vectors, distances, satellite, epochs, articulation-matrices) -> (magnitude-array, flux-array, mag-no-shadow, flux-no-shadow, distances, animation-data)",
+      "job_cluster": "lc-render",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "artifact",
+        "attitude-trajectory"
+      ],
+      "output_artifacts": [
+        "hifi-lightcurve"
+      ],
+      "notes": "This is the primary hi-fi render entry point for the forward model. Takes pre-computed lit-status (from shadow engine) and articulation matrices and produces magnitude/flux arrays over N epochs. Drives the main pipeline step 5 in CLAUDE.md. No existing card \u2014 new. The 'generate_no_shadow' flag produces two curves in one call; could be seen as two jobs but is intentionally coupled. 'brdf_calculator' param is accepted but ignored (legacy API compat). New artifact types needed: hifi-lightcurve (shadowed magnitude+flux array over time).",
+      "area": "src-computation"
+    },
+    {
+      "name": "compute-shadows",
+      "entry_point": "src/computation/shadow_engine.py:compute_shadows",
+      "signature": "compute_shadows(satellite, k1_vectors, explicit_component_angles=None, explicit_component_matrices=None, articulation_offset=0.0, show_progress=True)",
+      "role": "(satellite-geometry, sun-vectors, articulation-matrices) -> lit-status-dict[component -> (N, num_facets) bool]",
+      "job_cluster": "shadow-raytrace",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "artifact",
+        "attitude-trajectory"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "High-level shadow computation entry point. Orchestrates mesh creation + ray tracing in one call. Used in the main pipeline as step 3. Dispatches to explicit-matrix path (optimized, static mesh reuse) or explicit-angles path or single no-articulation mesh. New artifact types needed: lit-status (Dict[str, NDArray[bool]] of shape (N, num_facets)) for input/output port. No existing card. Distinct from 'get_lit_status' which is a lower-level split step.",
+      "area": "src-computation"
+    },
+    {
+      "name": "create-no-shadow-lit-status",
+      "entry_point": "src/computation/shadow_engine.py:create_no_shadow_lit_status",
+      "signature": "create_no_shadow_lit_status(satellite, num_epochs)",
+      "role": "(satellite, num_epochs) -> lit-status-dict with all facets True \u2014 bypass shadow tracing",
+      "job_cluster": "shadow-raytrace",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Trivial bypass variant of compute_shadows. Not a distinct research operation \u2014 just an all-ones initializer. Primitive/helper relative to compute-shadows.",
+      "area": "src-computation"
+    },
+    {
+      "name": "compute-observation-geometry",
+      "entry_point": "src/computation/observation_geometry.py:compute_observation_geometry",
+      "signature": "compute_observation_geometry(epochs, satellite_id, observer_id, spice_handler, config, attitude_keyframes=None)",
+      "role": "(epoch-array, SPICE ids, config) -> geometry-dict {k1_vectors, k2_vectors, observer_distances, sat_positions, sun_positions, sat_att_matrices}",
+      "job_cluster": "geometry-query",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "Pipeline step 1 \u2014 the SPICE-backed geometry engine. Produces k1/k2 body-frame vectors and attitude matrices for all epochs. Supports two modes: SPICE attitude kernels (default) or SLERP from custom keyframes (attitude_keyframes != None). New artifact types needed: epoch-observation (input: epoch ET array + SPICE IDs), attitude-trajectory (output: dict of N-length arrays for k1, k2, distances, positions, att-matrices). No existing card.",
+      "area": "src-computation"
+    },
+    {
+      "name": "extract-facet-arrays",
+      "entry_point": "src/computation/facet_data_extractor.py:extract_facet_arrays",
+      "signature": "extract_facet_arrays(satellite)",
+      "role": "(satellite) -> FacetArrays \u2014 packs all facet normals/areas/vertices/BRDF params into flat contiguous numpy arrays",
+      "job_cluster": "facet-preprocess",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Pre-processing step for vectorized LC generation. Returns a FacetArrays dataclass (normals, areas, centers, vertices, r_d, r_s, n_phong, component_slices). Used internally by generate_lightcurves and shadow_engine. Primitive helper \u2014 a researcher would not say 'run the extract-facet-arrays block'; it's infrastructure for the lc-render job.",
+      "area": "src-computation"
+    },
+    {
+      "name": "apply-articulation-to-arrays",
+      "entry_point": "src/computation/facet_data_extractor.py:apply_articulation_to_arrays",
+      "signature": "apply_articulation_to_arrays(facet_arrays, component_matrices, epoch_idx, satellite)",
+      "role": "(facet-arrays, rotation-matrices, epoch-idx) -> (transformed_normals, transformed_centers) for single epoch",
+      "job_cluster": "facet-preprocess",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Called inside the generate_lightcurves epoch loop. Primitive transform helper. Not a standalone research operation.",
+      "area": "src-computation"
+    },
+    {
+      "name": "apply-articulation-to-vertices",
+      "entry_point": "src/computation/facet_data_extractor.py:apply_articulation_to_vertices",
+      "signature": "apply_articulation_to_vertices(facet_arrays, component_matrices, epoch_idx, satellite)",
+      "role": "(facet-arrays, rotation-matrices, epoch-idx) -> flattened transformed vertices (M*3, 3) for animation",
+      "job_cluster": "facet-preprocess",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Used only in the animate=True branch of generate_lightcurves. Primitive \u2014 shares transform logic with apply_articulation_to_arrays via _get_component_transform helper.",
+      "area": "src-computation"
+    },
+    {
+      "name": "extract-facet-arrays-with-transform",
+      "entry_point": "src/computation/facet_data_extractor.py:extract_facet_arrays_with_transform",
+      "signature": "extract_facet_arrays_with_transform(satellite, component_matrices, epoch_idx)",
+      "role": "(satellite, articulation-matrices, epoch-idx) -> FacetArrays with normals/centers already transformed \u2014 single-epoch convenience",
+      "job_cluster": "facet-preprocess",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Convenience wrapper around extract_facet_arrays + apply_articulation_to_arrays. Not called in the main hot path (generate_lightcurves extracts once and applies per-epoch). Could be dead-code in the main pipeline; exported in __init__.py. Variant smell vs extract_facet_arrays.",
+      "area": "src-computation"
+    },
+    {
+      "name": "compute-shadows-vectorized-multi-mesh",
+      "entry_point": "src/computation/shadow_engine.py:ShadowEngine.compute_facet_shadows_multi_mesh_vectorized",
+      "signature": "compute_facet_shadows_multi_mesh_vectorized(self, satellite, shadow_meshes, sun_vectors_body, show_progress=True)",
+      "role": "(satellite, per-epoch meshes, sun-vectors) -> lit-status-dict; batched ray-mesh intersection over N epochs",
+      "job_cluster": "shadow-raytrace",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Core vectorized ray-tracing worker called by compute_facet_shadows_multi_mesh (which is a thin pass-through). Implements the ~10-50x speedup via batched RayMeshIntersector. Primitive relative to compute_shadows \u2014 the high-level function is the Tool candidate.",
+      "area": "src-computation"
+    },
+    {
+      "name": "calculate-brdf-vectorized",
+      "entry_point": "src/computation/brdf.py:calculate_brdf_vectorized",
+      "signature": "calculate_brdf_vectorized(n_dot_k1, n_dot_k2, h_dot_k1, n_dot_h, r_d, r_s, n_phong)",
+      "role": "vectorized Ashikhmin-Shirley BRDF over M facets -> rho array (M,)",
+      "job_cluster": "brdf-eval",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "rho-band"
+      ],
+      "notes": "Pure math kernel; ~50-200x speedup vs scalar BRDFCalculator.calculate_brdf. Called inside _compute_per_facet_flux in lightcurve_generator. Primitive \u2014 no researcher would 'run the calculate_brdf_vectorized block' independently.",
+      "area": "src-computation"
+    },
+    {
+      "name": "calculate-flux-vectorized",
+      "entry_point": "src/computation/brdf.py:calculate_flux_vectorized",
+      "signature": "calculate_flux_vectorized(normals, areas, r_d, r_s, n_phong, sun_direction, observer_direction, lit_mask)",
+      "role": "(facet geometry + BRDF params + lit mask) -> total flux scalar for one epoch",
+      "job_cluster": "brdf-eval",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact",
+        "rho-band"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Exported in __init__.py but NOT called by generate_lightcurves (which uses _compute_per_facet_flux instead to retain per-facet data for animation). Possible dead-code or legacy pathway. Variant smell vs _compute_per_facet_flux \u2014 same computation but returns a scalar sum rather than per-facet array. Flag for reconciliation.",
+      "area": "src-computation"
+    },
+    {
+      "name": "convert-flux-to-magnitude",
+      "entry_point": "src/computation/brdf.py:convert_flux_to_magnitude",
+      "signature": "convert_flux_to_magnitude(flux_value, observer_distance_km, mode='normal')",
+      "role": "(flux or log-flux, observer-distance-km) -> apparent magnitude scalar",
+      "job_cluster": "brdf-eval",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "scoring"
+      ],
+      "notes": "Tiny utility used in generate_lightcurves (mode='surrogate') and exported publicly. Two modes: 'normal' (linear flux) and 'surrogate' (log10 flux). Primitive math helper \u2014 not a standalone tool block.",
+      "area": "src-computation"
+    },
+    {
+      "name": "compute-inertia-from-stl",
+      "entry_point": "src/computation/inertia_calculator.py:compute_inertia_from_stl",
+      "signature": "compute_inertia_from_stl(stl_components, masses=None, articulation_angles=None, articulation_capabilities=None, component_names=None)",
+      "role": "(list of STL meshes + positions + masses, optional articulation) -> InertiaResult {total_mass, CoM, inertia_tensor, principal_moments, principal_axes}",
+      "job_cluster": "inertia-computation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Primary inertia calculation entry point. Computes full satellite inertia tensor (about CoM) from multi-component STL geometry using signed-tetrahedra method + parallel-axis theorem. Supports articulated states (solar panel angles). New artifact types needed: inertia-result (InertiaResult dataclass). No existing card. Orthogonal to the LC pipeline \u2014 used for dynamics/attitude propagator initialization, bridges to the propagator Tool card.",
+      "area": "src-computation"
+    },
+    {
+      "name": "compute-inertia-from-config",
+      "entry_point": "src/computation/inertia_calculator.py:compute_inertia_from_config",
+      "signature": "compute_inertia_from_config(config, config_manager, masses, articulation_angles=None)",
+      "role": "(RSO_Config, config_manager, mass-dict) -> InertiaResult \u2014 config-driven convenience wrapper over compute_inertia_from_stl",
+      "job_cluster": "inertia-computation",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Thin orchestrator: loads STL via load_components_from_config, builds ArticulationCapabilitySpec from config, applies default angles (AD prefix -> 15deg, others -> 0deg), then calls compute_inertia_from_stl. Variant of compute-inertia-from-stl with config-driven inputs. Not independently novel \u2014 collapses into same inertia-computation job. Could be registered as a convenience variant but compute_inertia_from_stl is the canonical.",
+      "area": "src-computation"
+    },
+    {
+      "name": "compute-component-inertia",
+      "entry_point": "src/computation/inertia_calculator.py:compute_component_inertia",
+      "signature": "compute_component_inertia(mesh, mass)",
+      "role": "(trimesh, mass) -> (inertia_tensor 3x3 about CoM, center_of_mass 3-vec) for a single component",
+      "job_cluster": "inertia-computation",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Called per-component inside compute_inertia_from_stl. Primitive sub-step implementing the signed-tetrahedra volume integrals. Not a standalone researcher operation.",
+      "area": "src-computation"
+    },
+    {
+      "name": "apply-articulation-to-mesh",
+      "entry_point": "src/computation/inertia_calculator.py:apply_articulation_to_mesh",
+      "signature": "apply_articulation_to_mesh(mesh, position, angle, rotation_center, rotation_axis)",
+      "role": "(trimesh + position + articulation spec) -> (rotated_mesh, updated_position) for inertia at an articulated state",
+      "job_cluster": "inertia-computation",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Rodrigues-formula rotation applied to mesh vertices + component position. Used inside compute_inertia_from_stl when articulation_angles provided. Primitive helper. Exported in __init__.py. Note: separate from ShadowEngine articulation methods which work on FacetArrays or component matrices \u2014 same conceptual job but different geometry representations (trimesh vs FacetArrays).",
+      "area": "src-computation"
+    },
+    {
+      "name": "translate-inertia",
+      "entry_point": "src/computation/inertia_calculator.py:translate_inertia",
+      "signature": "translate_inertia(I_cm, mass, displacement)",
+      "role": "(I_cm 3x3, mass, displacement-vec) -> I_body 3x3 via parallel-axis theorem",
+      "job_cluster": "inertia-computation",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Pure math helper implementing forward parallel-axis theorem. Called inside compute_inertia_from_stl. Primitive.",
+      "area": "src-computation"
+    },
+    {
+      "name": "get-lit-status",
+      "entry_point": "src/computation/shadow_engine.py:get_lit_status",
+      "signature": "get_lit_status(satellite, pre_computed_k1_vectors, shadow_meshes, show_progress=True)",
+      "role": "(satellite, sun-vectors, pre-built meshes) -> lit-status-dict \u2014 ray-trace step only (no mesh creation)",
+      "job_cluster": "shadow-raytrace",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Lower-level split of compute_shadows: assumes meshes already built. Dispatches to compute_facet_shadows_multi_mesh (multi-mesh/articulated) or compute_facet_shadows_single_mesh (static). In practice always called from compute_shadows. Not a separate Tool \u2014 primitive dispatch helper.",
+      "area": "src-computation"
+    },
+    {
+      "name": "brdf-manager-update-satellite",
+      "entry_point": "src/computation/brdf.py:BRDFManager.update_satellite_brdf_parameters",
+      "signature": "update_satellite_brdf_parameters(self, satellite)",
+      "role": "(satellite) -> None \u2014 assigns BRDF material params from config mappings to all component facets in-place",
+      "job_cluster": "brdf-eval",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Config-driven BRDF material assignment. Called via BRDFCalculator.update_satellite_brdf_with_manager. Primitive setup step in pipeline. Not a standalone operation.",
+      "area": "src-computation"
+    },
+    {
+      "name": "calculate-angles-from-behaviors",
+      "entry_point": "src/articulation/articulation_engine.py:calculate_angles_from_behaviors",
+      "signature": "def calculate_angles_from_behaviors(satellite: Satellite, k1_vectors: NDArray[np.float64], articulation_engine: ArticulationEngine, articulation_offset: float = 0.0) -> Dict[str, NDArray[np.float64]]",
+      "role": "k1_vectors (N,3) + ArticulationEngine with registered behaviors \u2192 Dict[component_name, angles_array(N,)] in degrees",
+      "job_cluster": "articulation-angle-compute",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "attitude-trajectory",
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "component-angles"
+      ],
+      "notes": "De-facto 'angle generator' step in the articulation pipeline. Works epoch-by-epoch calling behavior.calculate_rotation_angle. New artifact type 'component-angles' likely needed (Dict[str, NDArray] of degrees). Variant: create_angle_interpolator covers same slot for explicit/manual angles \u2014 same output type.",
+      "area": "src-support"
+    },
+    {
+      "name": "compute-rotation-matrices-from-angles",
+      "entry_point": "src/articulation/articulation_engine.py:compute_rotation_matrices_from_angles",
+      "signature": "def compute_rotation_matrices_from_angles(component_angles: Dict[str, NDArray[np.float64]], satellite: Satellite, articulation_engine: Optional[ArticulationEngine] = None) -> Dict[str, NDArray[np.float64]]",
+      "role": "component-angles dict + Satellite model \u2192 Dict[component_name, rotation_matrices(N,4,4)]",
+      "job_cluster": "articulation-matrix-build",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "component-angles"
+      ],
+      "output_artifacts": [
+        "component-rotation-matrices"
+      ],
+      "notes": "Clean composable block: researcher would say 'run the angle-to-matrix block'. New artifact types 'component-angles' and 'component-rotation-matrices' (Dict[str, NDArray(N,4,4)]) needed. Called by shadow_engine.py with pre-computed matrices \u2014 direct dependency. No duplicate seen.",
+      "area": "src-support"
+    },
+    {
+      "name": "create-angle-interpolator",
+      "entry_point": "src/interpolation/quaternion_interpolator.py:create_angle_interpolator",
+      "signature": "def create_angle_interpolator(keyframe_times_utc: List[str], keyframe_values: List[float], transitions: List[str], epochs: np.ndarray, utc_to_et: Callable[[str], float], step_params: Optional[List[float]] = None) -> np.ndarray",
+      "role": "keyframe times/values/transitions + epoch array \u2192 NDArray(N,) of interpolated angles in degrees",
+      "job_cluster": "articulation-angle-compute",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "component-angles"
+      ],
+      "notes": "Alternate input path to same 'component-angles' artifact as calculate_angles_from_behaviors. Both end up in compute_rotation_matrices_from_angles. Not a duplicate \u2014 this is the explicit/manual control path vs the behavior-driven path. New term 'component-angles' needed.",
+      "area": "src-support"
+    },
+    {
+      "name": "create-multi-order-interpolator",
+      "entry_point": "src/interpolation/quaternion_interpolator.py:create_multi_order_interpolator",
+      "signature": "def create_multi_order_interpolator(keyframes: Dict[str, Any], spice_handler: Optional[Any] = None) -> Callable",
+      "role": "keyframe dict with per-segment method specs \u2192 interpolator closure that maps ET time(s) \u2192 float value(s)",
+      "job_cluster": "articulation-angle-compute",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "component-angles"
+      ],
+      "notes": "More general version of create_angle_interpolator \u2014 takes a keyframe dict instead of flat lists. Returns a closure, not an array (lazily evaluated). Variant of create_angle_interpolator. Likely a primitive/helper; create_angle_interpolator is the documented public API. No downstream callers confirmed \u2014 possible dead code or notebook-only.",
+      "area": "src-support"
+    },
+    {
+      "name": "create-quaternion-interpolator",
+      "entry_point": "src/interpolation/quaternion_interpolator.py:create_quaternion_interpolator",
+      "signature": "def create_quaternion_interpolator(sample_times: Union[List, np.ndarray], sample_quats: Union[List, np.ndarray], time_format: str = 'et', spice_handler: Optional[Any] = None) -> Callable",
+      "role": "sample times + quaternions \u2192 SLERP interpolator closure mapping ET time(s) \u2192 quaternion(s)",
+      "job_cluster": "attitude-slerp",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "epoch-observation",
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "Called by interpolate_attitudes_only. Core attitude interpolation primitive elevated to a Tool because researchers explicitly invoke 'SLERP the attitude' as a named step. New artifact type 'attitude-trajectory' likely needed (array of quaternions or 3x3 matrices).",
+      "area": "src-support"
+    },
+    {
+      "name": "interpolate-attitudes-only",
+      "entry_point": "src/interpolation/attitude_interpolator.py:interpolate_attitudes_only",
+      "signature": "def interpolate_attitudes_only(attitude_keyframes: Dict[str, Any], epochs: np.ndarray, spice_handler: Any) -> np.ndarray",
+      "role": "sparse attitude keyframes (quat or matrix) + epoch array \u2192 NDArray(N,3,3) rotation matrices at all epochs",
+      "job_cluster": "attitude-slerp",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "anchor-epoch",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "High-level wrapper over create_quaternion_interpolator. Handles UTC\u2192ET conversion and matrix\u2194quaternion format. Used in observation_geometry.py via attitude_keyframes argument. Same job cluster as create_quaternion_interpolator but different scope (returns array vs closure). New term 'attitude-trajectory' (NDArray(N,3,3)) likely needed.",
+      "area": "src-support"
+    },
+    {
+      "name": "stl-loader-create-satellite",
+      "entry_point": "src/io/stl_loader.py:STLLoader.create_satellite_from_stl_config",
+      "signature": "def create_satellite_from_stl_config(config: RSO_Config, config_manager) -> Satellite",
+      "role": "RSO_Config + RSO_ConfigManager \u2192 fully assembled Satellite dataclass with all Component/Facet/BRDF data loaded from STL files",
+      "job_cluster": "satellite-model-load",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "The de-facto 'model loader' block \u2014 researcher would say 'load the satellite model'. Produces the Satellite object that all downstream tools consume. No duplicate. New artifact type 'satellite-model' (Satellite dataclass) strongly warranted \u2014 flows into every computation block.",
+      "area": "src-support"
+    },
+    {
+      "name": "stl-loader-load-component",
+      "entry_point": "src/io/stl_loader.py:STLLoader.load_component_from_stl",
+      "signature": "def load_component_from_stl(stl_path: Path, component_name: str, component_id: str, position: np.ndarray, orientation: List[float], brdf_params: Optional[BRDFParameters] = None) -> Component",
+      "role": "STL file path + position/orientation/BRDF params \u2192 Component dataclass with facets",
+      "job_cluster": "satellite-model-load",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Internal primitive; called only by create_satellite_from_stl_config. Not individually invoked by researchers. Skip as Tool.",
+      "area": "src-support"
+    },
+    {
+      "name": "save-lightcurve-data",
+      "entry_point": "src/io/data_writer.py:save_lightcurve_data",
+      "signature": "def save_lightcurve_data(output_dir: Path, epochs: NDArray[np.float64], time_hours: NDArray[np.float64], magnitudes: NDArray[np.float64], phase_angles: NDArray[np.float64], observer_distances: NDArray[np.float64], utc_times: List[str], compare_shadows: bool = False, use_shadows: bool = True, num_points: int = 300, magnitudes_no_shadow: Optional[NDArray[np.float64]] = None, timestamp: Optional[str] = None) -> Path",
+      "role": "light-curve arrays + metadata \u2192 CSV file written to disk, returns Path",
+      "job_cluster": "lc-export",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Utility/sink \u2014 not a research computation, just CSV serialization. Also called internally by create_light_curve_plot. Primitive/helper, not a Tool candidate.",
+      "area": "src-support"
+    },
+    {
+      "name": "spice-handler",
+      "entry_point": "src/spice/spice_handler.py:SpiceHandler",
+      "signature": "class SpiceHandler: load_metakernel, utc_to_et, et_to_utc, get_body_position, get_target_orientation, get_frame_name_from_id, ...",
+      "role": "SPICE kernel wrapper class: loads kernels, converts times (UTC\u2194ET), queries body positions and frame rotation matrices",
+      "job_cluster": "spice-ephemeris",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory",
+        "epoch-observation"
+      ],
+      "notes": "SpiceHandler as a class is the 'ephemeris access' block. No single function is a Tool on its own; the class is the unit. Most critical methods: get_body_position (produces position vectors), get_target_orientation (produces attitude rotation matrix). Used by observation_geometry.py for all position/attitude queries. No duplicate. New artifact type 'epoch-observation' (ET scalar or NDArray) likely needed.",
+      "area": "src-support"
+    },
+    {
+      "name": "create-ephemeris-from-tle",
+      "entry_point": "src/spice/spice_kernel_generator.py:create_ephemeris_from_tle",
+      "signature": "def create_ephemeris_from_tle(setup_file: Path, output_dir: Optional[Path] = None) -> Path",
+      "role": "mkspk setup file \u2192 SPK ephemeris kernel file written to disk via subprocess",
+      "job_cluster": "spice-kernel-generation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Kernel generation tool \u2014 invoked as a named step 'generate TLE ephemeris kernel'. New artifact type 'spk-kernel' warranted. Three kernel-generation functions in same file; they are distinct operations (TLE ephemeris, ground station, orientation). No existing card overlap.",
+      "area": "src-support"
+    },
+    {
+      "name": "create-observer-kernel",
+      "entry_point": "src/spice/spice_kernel_generator.py:create_observer_kernel",
+      "signature": "def create_observer_kernel(setup_file: Path, output_spk: Path, pck_file: Optional[Path] = None) -> Path",
+      "role": "pinpoint definition file \u2192 observer/ground-station SPK kernel file",
+      "job_cluster": "spice-kernel-generation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Companion to create_ephemeris_from_tle, same job cluster. Distinct operation (pinpoint, not mkspk). New artifact type 'spk-kernel' fits both.",
+      "area": "src-support"
+    },
+    {
+      "name": "create-orientation-kernel",
+      "entry_point": "src/spice/spice_kernel_generator.py:create_orientation_kernel",
+      "signature": "def create_orientation_kernel(setup_file: Path, metakernel: Path, output_ck: Path, output_sclk: Optional[Path] = None, tolerance_degrees: float = 1.0) -> Tuple[Path, Path]",
+      "role": "prediCkt spec file + metakernel \u2192 CK (attitude) + SCLK (clock) kernel files",
+      "job_cluster": "spice-kernel-generation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Third kernel-generation op in same cluster. Produces CK+SCLK pair \u2014 new artifact types 'ck-kernel' and 'sclk-kernel' likely needed. Researchers invoke this as a distinct step: 'build the orientation kernel'.",
+      "area": "src-support"
+    },
+    {
+      "name": "create-light-curve-plot",
+      "entry_point": "src/visualization/lightcurve_plotter.py:create_light_curve_plot",
+      "signature": "def create_light_curve_plot(time_hours: np.ndarray, epochs: np.ndarray, magnitudes: np.ndarray, phase_angles: np.ndarray, utc_times: List[str], satellite_name: str, plot_mode: str, output_dir: Path, magnitudes_no_shadow: Optional[np.ndarray] = None, observer_distances: Optional[np.ndarray] = None, no_plot: bool = False, save: bool = True, compare_tier2: bool = False) -> float",
+      "role": "light-curve arrays + metadata \u2192 PNG plot + CSV file on disk, returns elapsed seconds",
+      "job_cluster": "lc-render",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "De-facto 'plot and export' block. Calls save_lightcurve_data internally with matched timestamp \u2014 tight coupling. Existing pipeline card pipeline_single-wind-lc-window-polish also renders; check for overlap but this is the standalone plot tool, not a pipeline step. Externally nameable: 'run the LC plotter on these magnitudes'.",
+      "area": "src-support"
+    },
+    {
+      "name": "create-interactive-3d-animation",
+      "entry_point": "src/visualization/plotly_animation_generator.py:create_interactive_3d_animation",
+      "signature": "def create_interactive_3d_animation(animation_data: List[Dict], magnitudes: np.ndarray, time_hours: np.ndarray, geometry_data: Dict, satellite_name: str = 'Satellite', output_dir: Path = Path('.'), show_j2000_frame: bool = True, show_body_frame: bool = True, show_sun_vector: bool = True, show_observer_vector: bool = True, frame_duration_ms: int = 100, j2000_opacity: float = 0.3, body_opacity: float = 0.9, save: bool = True, color_mode: str = 'lit_status', output_path: Optional[Path] = None) -> Optional[Path]",
+      "role": "per-epoch animation_data (facet vertices, lit_status, flux) + magnitudes \u2192 interactive Plotly HTML animation saved to disk",
+      "job_cluster": "attitude-viz",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "attitude-trajectory"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Large public function; clearly researcher-nameable ('run the 3D animation block'). Two color_mode options: 'lit_status' (discrete) and 'flux' (continuous warm gradient). Internal helpers _prepare_mesh_topology, _precompute_frame_data, _generate_animation_frames etc. are all primitives. No existing card overlap.",
+      "area": "src-support"
+    },
+    {
+      "name": "slerp",
+      "entry_point": "src/interpolation/quaternion_interpolator.py:slerp",
+      "signature": "def slerp(q1: Union[np.ndarray, quaternion.quaternion], q2: Union[np.ndarray, quaternion.quaternion], t: float) -> np.ndarray",
+      "role": "two quaternions + interpolation parameter t \u2192 interpolated quaternion as [w,x,y,z] array",
+      "job_cluster": "attitude-slerp",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "q0-omega-state"
+      ],
+      "notes": "Pure math primitive, scalar single-pair SLERP. Used internally by create_quaternion_interpolator. Not researcher-nameable on its own. Skip as Tool.",
+      "area": "src-support"
+    },
+    {
+      "name": "build-rotation-matrix",
+      "entry_point": "src/utils/geometry_utils.py:build_rotation_matrix",
+      "signature": "def build_rotation_matrix(angle_deg: float, rotation_axis: np.ndarray) -> np.ndarray",
+      "role": "angle + rotation axis \u2192 4x4 homogeneous rotation matrix via Rodrigues formula",
+      "job_cluster": "articulation-matrix-build",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "component-angles"
+      ],
+      "output_artifacts": [
+        "component-rotation-matrices"
+      ],
+      "notes": "Pure math primitive. Called per-facet inside compute_rotation_matrices_from_angles. Not researcher-nameable standalone. Skip as Tool.",
+      "area": "src-support"
+    },
+    {
+      "name": "calculate-sun-pointing-rotation",
+      "entry_point": "src/utils/geometry_utils.py:calculate_sun_pointing_rotation",
+      "signature": "def calculate_sun_pointing_rotation(sun_vector: np.ndarray, panel_axis: np.ndarray, panel_normal: np.ndarray) -> float",
+      "role": "sun direction + panel axis + panel normal in body frame \u2192 signed rotation angle in degrees to align panel toward sun",
+      "job_cluster": "articulation-angle-compute",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "attitude-trajectory"
+      ],
+      "output_artifacts": [
+        "component-angles"
+      ],
+      "notes": "Core math behind SunTrackingBehavior.calculate_rotation_angle; single-epoch, single-panel primitive. Not independently nameable as a Tool \u2014 always called via the behavior. Skip.",
+      "area": "src-support"
+    },
+    {
+      "name": "rso-config-manager-load-config",
+      "entry_point": "src/config/rso_config_manager.py:RSO_ConfigManager.load_config",
+      "signature": "def load_config(self, config_path: Union[str, Path]) -> RSO_Config",
+      "role": "YAML config file path \u2192 fully populated RSO_Config dataclass",
+      "job_cluster": "config-load",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "artifact"
+      ],
+      "output_artifacts": [
+        "artifact"
+      ],
+      "notes": "Config loader, not a research operation. Primitive/infrastructure. Not researcher-nameable as a computation block.",
+      "area": "src-support"
+    },
+    {
+      "name": "setup-matplotlib-backend",
+      "entry_point": "src/visualization/plot_styling.py:setup_matplotlib_backend",
+      "signature": "def setup_matplotlib_backend(animate_flag: bool) -> None",
+      "role": "animate flag \u2192 sets matplotlib backend ('Agg' for animation, default otherwise)",
+      "job_cluster": "lc-render",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Environment configuration helper. Cosmetic/infrastructure. Skip as Tool.",
+      "area": "src-support"
+    },
+    {
+      "name": "propagate-to-body-frame",
+      "entry_point": "notebooks/inversion/survey/lib/forward.py:propagate_to_body_frame",
+      "signature": "propagate_to_body_frame(q0_wxyz, omega0_rad, observation_times, sun_pos, obs_pos, sat_pos, inertia_tensor, mode='tumbling') -> tuple[ndarray, ndarray, ndarray]",
+      "role": "(q0, \u03c90) + SPICE geometry \u2192 (k1_body, k2_body, quaternions): propagates attitude via src.dynamics.attitude_propagator then projects J2000 sun/observer vectors into body frame",
+      "job_cluster": "attitude-propagation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "Sole forward entry point for (q0,\u03c9)\u2192body-frame in the survey. Mirrors m048_generate_trajectories_v2.py:157-173 exactly. Wraps existing 'propagator' tool card (src/dynamics/attitude_propagator.py) with the body-frame projection step \u2014 is the survey-layer extension of that card, not a duplicate. Needed new artifact type 'q0-omega-state' (state) and 'attitude-trajectory' (q_hist + k1/k2 bundle).",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "quat-geodesic-deg",
+      "entry_point": "notebooks/inversion/survey/lib/forward.py:quat_geodesic_deg",
+      "signature": "quat_geodesic_deg(q1_wxyz, q2_wxyz) -> float",
+      "role": "Single-pair SO(3) geodesic angle in degrees; antipodal-aware",
+      "job_cluster": "so3-metric",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Tiny helper; also exists as geodesic_angle (radians) in shoot.py. Duplication across files \u2014 shoot.py:geodesic_angle is the same operation in radians. Primitive, skip.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "quat-geodesic-deg-batch",
+      "entry_point": "notebooks/inversion/survey/lib/forward.py:quat_geodesic_deg_batch",
+      "signature": "quat_geodesic_deg_batch(q_grid, q_ref_wxyz) -> ndarray",
+      "role": "Batched SO(3) geodesic angle (deg) from each row of q_grid to a reference quaternion",
+      "job_cluster": "so3-metric",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Batched variant of quat_geodesic_deg. Near-duplicate logic exists in c_t_pipeline.py:nearest_in_pool_to_truth (which also computes dot/arccos). Primitive.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "sample-so3-pool",
+      "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:sample_so3_pool",
+      "signature": "sample_so3_pool(n_samples, sample_seed=42) -> dict",
+      "role": "Uniform Haar-measure SO(3) sample \u2192 dict{R_cache (N,3,3), q_pool_wxyz (N,4), q_pool_xyzw (N,4), rotvec_pool (N,3)}",
+      "job_cluster": "cloud-generation",
+      "is_tool_candidate": true,
+      "input_artifacts": [],
+      "output_artifacts": [
+        "ia-cloud"
+      ],
+      "notes": "Generates the candidate attitude pool (IA-cloud substrate). The ia-cloud glossary term is a direct fit for the pool dict output. Called by every C_t and cross-cloud experiment. The existing pipeline_cross-cloud card likely calls this; verify no duplicate card exists.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "compute-j2000-units",
+      "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:compute_j2000_units",
+      "signature": "compute_j2000_units(sun_pos, obs_pos, sat_pos) -> tuple[ndarray, ndarray]",
+      "role": "(N,3) J2000 positions \u2192 (sun_unit, obs_unit) per-epoch normalised direction vectors",
+      "job_cluster": "geometry-prep",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Three-line vector normalisation; standard pattern repeated in forward.py:propagate_to_body_frame and hifi_render.py context. Primitive.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "project-directions",
+      "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:project_directions",
+      "signature": "project_directions(R_cache, sun_unit_ep, obs_unit_ep) -> tuple[ndarray, ndarray]",
+      "role": "Batch-rotate one epoch's J2000 sun/obs unit vectors into body frame for all N pool candidates via einsum",
+      "job_cluster": "cloud-generation",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "ia-cloud"
+      ],
+      "output_artifacts": [],
+      "notes": "Inner loop helper for C_t cloud projection. Single einsum step; too small to stand alone. Primitive.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "survive-at-epoch",
+      "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:survive_at_epoch",
+      "signature": "survive_at_epoch(model, k1_body, k2_body, obs_dist_ep, sp_deg, ad_deg, measured_mag, tolerance_mag) -> tuple[ndarray, ndarray]",
+      "role": "Per-epoch candidate filter: calls surrogate.predict_magnitude on all N pool candidates \u2192 (pred (N,), keep (N,) bool mask)",
+      "job_cluster": "cloud-filter",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "ia-cloud",
+        "single-wind-lc-window"
+      ],
+      "output_artifacts": [
+        "filter",
+        "scoring"
+      ],
+      "notes": "The operative C_t filter step \u2014 the 'survive' predicate at one epoch. Equivalent to what the scorer card's filter_costs.py:196 does but via the surrogate model path. Distinct from the scorer card (which uses cost surfaces, not threshold-magnitude). Needs both existing 'filter' and 'scoring' glossary port types.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "nearest-in-pool-to-truth",
+      "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:nearest_in_pool_to_truth",
+      "signature": "nearest_in_pool_to_truth(q_pool_wxyz, q_truth_wxyz) -> tuple[float, int]",
+      "role": "Geodesic distance (deg) and pool index of closest candidate to a single truth quaternion",
+      "job_cluster": "so3-metric",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Diagnostic helper; single-truth scalar. Batched version exists as nearest_in_pool_to_truths. Primitive.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "nearest-in-pool-to-truths",
+      "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:nearest_in_pool_to_truths",
+      "signature": "nearest_in_pool_to_truths(q_pool_wxyz, q_truths_wxyz) -> tuple[ndarray, ndarray]",
+      "role": "Batched: for every truth quaternion, return (closest_deg (n_ep,), closest_idx (n_ep,)) from the pool",
+      "job_cluster": "so3-metric",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Diagnostic/eval helper. Batched counterpart to nearest_in_pool_to_truth. Primitive.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "temporal-unwrap-rotvec",
+      "entry_point": "notebooks/inversion/survey/lib/c_t_pipeline.py:temporal_unwrap_rotvec",
+      "signature": "temporal_unwrap_rotvec(rotvec_seq) -> ndarray",
+      "role": "Sequentially pick rotvec rep at each step to minimise 3D jump, unwrapping past |r|=\u03c0 without teleporting",
+      "job_cluster": "rotvec-continuity",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Visualisation/continuity helper. Depends on alt_rotvec_rep and anchor_rotvec_to (both primitives in same file). Primitive group.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "shoot",
+      "entry_point": "notebooks/inversion/survey/lib/shoot.py:shoot",
+      "signature": "shoot(q_a, q_b, dt, inertia, omega_init, method='elliprj', xtol=1e-12, ftol=1e-12) -> dict",
+      "role": "Single-anchor two-point attitude BVP: LM-solve for \u03c9_a s.t. torque-free trajectory q_a\u2192q_b in time dt; returns {omega, geo_err_deg, jac_cond, connected, ...}",
+      "job_cluster": "hard-shoot-trap",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "anchor-epoch",
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "hard-shoot-trap"
+      ],
+      "notes": "Core shoot operation. The 'hard-shoot-trap' glossary term is a direct match. Calls propagate_jacobi_path2 internally; is the inversion-layer complement to the propagator tool card. jac_cond output is the separatrix/degenerate-solution diagnostic (maps to 'degenerate-solution' glossary term). No drift vs existing cards.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "shoot-multianchor",
+      "entry_point": "notebooks/inversion/survey/lib/shoot.py:shoot_multianchor",
+      "signature": "shoot_multianchor(q_a, anchors, inertia, omega_init, method='elliprj', xtol=1e-12, ftol=1e-12) -> dict",
+      "role": "Over-determined BVP: single \u03c9_a joint LM-fit to K>=2 (q_k, dt_k) target anchors; averages q-cloud noise and pins trajectory winding",
+      "job_cluster": "hard-shoot-trap",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "anchor-epoch",
+        "ia-cloud"
+      ],
+      "output_artifacts": [
+        "hard-shoot-trap"
+      ],
+      "notes": "Multi-anchor extension of shoot. Motivated by s088/s089 (winding-alias fix via joint constraint). Variant of 'shoot' with over-determined geometry (K anchors, same 3 unknowns). Should be variant_of shoot. anchor-epoch is a new artifact type needed here.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "shoot-multianchor-freebase",
+      "entry_point": "notebooks/inversion/survey/lib/shoot.py:shoot_multianchor_freebase",
+      "signature": "shoot_multianchor_freebase(q_a_init, anchors, inertia, omega_init, base_resid=None, w_geo=1.0, method='elliprj', xtol=1e-12, ftol=1e-12) -> dict",
+      "role": "Over-determined BVP with floating base orientation: 6 unknowns (\u03c9_a + rotvec correction r) vs 3K geodesic + optional brightness isophote residual",
+      "job_cluster": "hard-shoot-trap",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "anchor-epoch",
+        "ia-cloud",
+        "isophotic"
+      ],
+      "output_artifacts": [
+        "hard-shoot-trap"
+      ],
+      "notes": "s090 extension of shoot_multianchor. Floating q_a lets the base slide along the brightness isophote (optional base_resid param). Variant of shoot_multianchor. The 'isophotic' glossary term matches the optional base_resid constraint port.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "finite-diff-omega",
+      "entry_point": "notebooks/inversion/survey/lib/shoot.py:finite_diff_omega",
+      "signature": "finite_diff_omega(q_a, q_b, dt) -> NDArray",
+      "role": "Constant-\u03c9 finite-diff estimate of body-frame \u03c9_a from (q_a, q_b, dt); used as LM initialiser for shoot",
+      "job_cluster": "hard-shoot-trap",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Initialiser helper for shoot; documented as 6-30\u00b0 direction error (s057c). Primitive. The 'finite-diff-omega-aliasing' glossary term references this concept.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "polhode-period",
+      "entry_point": "notebooks/inversion/survey/lib/shoot.py:polhode_period",
+      "signature": "polhode_period(omega0, inertia) -> float",
+      "role": "Compute polhode period T_pol (s) = 4K(m)/|tau_dot| for a given \u03c90 and inertia tensor",
+      "job_cluster": "basin-characterisation",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "Single scalar diagnostic; calls omega_jacobi. Referenced in basin-characterisation glossary concept. Primitive \u2014 not a standalone operation a researcher would 'run as a block'.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "omega-jacobi",
+      "entry_point": "notebooks/inversion/survey/lib/jacobi_propagator.py:omega_jacobi",
+      "signature": "omega_jacobi(times, omega0, inertia) -> tuple[NDArray, dict]",
+      "role": "Closed-form torque-free \u03c9(t) in body frame via Jacobi elliptic functions; returns (omega_hist (N,3), info dict with regime/m/tau_0)",
+      "job_cluster": "attitude-propagation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "Lower-level closed-form \u03c9-only propagator. Used internally by propagate_jacobi, propagate_jacobi_path2, and polhode_period. The propagator tool card (src/dynamics/attitude_propagator.py) is the canonical propagator; omega_jacobi is the survey-local analytical complement. No duplicate card yet.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "propagate-jacobi",
+      "entry_point": "notebooks/inversion/survey/lib/jacobi_propagator.py:propagate_jacobi",
+      "signature": "propagate_jacobi(q0, omega0, inertia, times, q_rtol=1e-12, q_atol=1e-14) -> tuple[NDArray, NDArray]",
+      "role": "Hybrid propagator: closed-form \u03c9(t) + DOP853 on quaternion ODE \u2192 (q_hist (N,4), omega_hist (N,3))",
+      "job_cluster": "attitude-propagation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "Post-s062b production propagator for the survey before propagate_jacobi_path2 was fully validated. Uses closed-form \u03c9 but numerical q ODE (unlike path2 which is fully analytical). Partial overlap with propagator tool card but this is the Jacobi-specific survey implementation. Variant of propagate-jacobi-path2.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "propagate-jacobi-path2",
+      "entry_point": "notebooks/inversion/survey/lib/jacobi_propagator.py:propagate_jacobi_path2",
+      "signature": "propagate_jacobi_path2(q0, omega0, inertia, times, phi_rtol=1e-13, phi_atol=1e-15, method='elliprj') -> tuple[NDArray, NDArray]",
+      "role": "Fully closed-form q(t) propagator via 3-1-3 precession+nutation decomposition and elliprj for phi(t); (q_hist (N,4), omega_hist (N,3)) \u2014 the survey production path used by shoot",
+      "job_cluster": "attitude-propagation",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "The authoritative closed-form propagator (s072/s074). ~5x faster than hybrid path. Called directly by shoot, shoot_multianchor, shoot_multianchor_freebase. Overlap with the existing 'propagator' tool card (src/dynamics/attitude_propagator.py) \u2014 that card wraps the numeric Euler ODE; this is the analytical complement. Should be a separate card or a 'variant_of' propagator. The legacy '_propagate_jacobi_path2_incomplete' function in the same file is explicitly dead/historical code \u2014 skip.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "load-truth",
+      "entry_point": "notebooks/inversion/survey/lib/traj_load.py:load_truth",
+      "signature": "load_truth(seed: int) -> dict",
+      "role": "Load post-fix truth NPZ for one m048 seed \u2192 dict of all NPZ arrays (q0, \u03c90, times, positions, mag_hifi, etc.)",
+      "job_cluster": "traj-load",
+      "is_tool_candidate": true,
+      "input_artifacts": [],
+      "output_artifacts": [
+        "epoch-observation",
+        "attitude-trajectory"
+      ],
+      "notes": "The canonical trajectory loader for the survey. All downstream tools (hifi_render, c_t_pipeline, cost_surfaces) depend on this. truth_state() is a thin wrapper around it \u2014 minor variant, not a separate tool. epoch-observation is a new artifact type needed (the geometry bundle from NPZ).",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "truth-state",
+      "entry_point": "notebooks/inversion/survey/lib/traj_load.py:truth_state",
+      "signature": "truth_state(seed: int) -> dict",
+      "role": "Compact accessor: calls load_truth and projects to the most-used fields (q0, \u03c90, times, mags, k1/k2, obs_dist)",
+      "job_cluster": "traj-load",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [
+        "epoch-observation"
+      ],
+      "notes": "Thin projection wrapper around load_truth; same job cluster. Does not add a new operation. Primitive/helper.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "twin-dedup",
+      "entry_point": "notebooks/inversion/survey/lib/twin.py:canonical",
+      "signature": "canonical(q0, omega) -> tuple[ndarray, ndarray]",
+      "role": "Apply IS-901 X-axis twin symmetry dedup: returns canonical-hemisphere representative of (q0, \u03c9) with sign-normalised quaternion; idempotent",
+      "job_cluster": "twin-dedup",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state"
+      ],
+      "output_artifacts": [
+        "q0-omega-state"
+      ],
+      "notes": "The core twin-dedup operation (s043/s044 verified). IS-901 X-axis 180\u00b0 symmetry makes search space exactly 2-to-1; this is the free halving. The glossary has 'spurious-survivor' which is related but distinct. No drift vs existing cards. Scalar form; batch form is canonical_batch.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "twin-dedup-batch",
+      "entry_point": "notebooks/inversion/survey/lib/twin.py:canonical_batch",
+      "signature": "canonical_batch(q0_arr, omega_arr) -> tuple[ndarray, ndarray]",
+      "role": "Vectorised canonical mapping over (N,4) and (N,3) arrays: applies twin symmetry dedup to full candidate sets",
+      "job_cluster": "twin-dedup",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "ia-cloud"
+      ],
+      "output_artifacts": [
+        "ia-cloud"
+      ],
+      "notes": "Batch version of canonical(); the practically useful form for survey operations on clouds of candidates. Variant_of twin-dedup (scalar). is_canonical_batch is its supporting primitive.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "build-context",
+      "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:build_context",
+      "signature": "build_context(seed: int) -> dict",
+      "role": "Build per-seed render context: loads satellite+inertia (module-cached) + truth geometry from NPZ + articulation matrices; returns ctx dict for render_hifi",
+      "job_cluster": "hifi-render",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "epoch-observation"
+      ],
+      "notes": "Necessary setup step before render_hifi; the satellite/BRDF/inertia are cached at module level so this is cheap on second call. Separable enough from render_hifi to merit its own entry (researchers call build_context once, render_hifi many times). New artifact type 'epoch-observation' covers the ctx dict output.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "render-hifi",
+      "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:render_hifi",
+      "signature": "render_hifi(q0_wxyz, omega0_rad, ctx) -> ndarray",
+      "role": "(q0, \u03c90) + seed context \u2192 hi-fi LC magnitudes (N,): propagates attitude, computes shadows, runs generate_lightcurves",
+      "job_cluster": "hifi-render",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "hifi-lightcurve"
+      ],
+      "notes": "End-to-end hi-fi render: the survey's primary forward evaluation at non-truth (q0,\u03c9). Smoke-tested to reproduce cached mag_hifi to machine precision (s043 context). Needs new artifact type 'hifi-lightcurve'. No drift vs existing cards \u2014 the surrogate tool card handles lo-fi; this is the hi-fi complement.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "rho-from-hifi",
+      "entry_point": "notebooks/inversion/survey/lib/hifi_render.py:rho_from_hifi",
+      "signature": "rho_from_hifi(pred, truth) -> float",
+      "role": "\u03c1 = sqrt(MSE) / 0.05 between predicted and truth hi-fi LCs; the canonical survey fitness scalar",
+      "job_cluster": "hifi-render",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "hifi-lightcurve"
+      ],
+      "output_artifacts": [
+        "rho-band"
+      ],
+      "notes": "Primitive scorer; maps to the 'rho-band' glossary concept. Two-liner. rho_band() (band classifier) is an even simpler helper. Both primitives \u2014 not standalone tools.",
+      "area": "survey-lib-forward"
+    },
+    {
+      "name": "surrogate-predict",
+      "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:predict",
+      "signature": "predict(k1_body: np.ndarray, k2_body: np.ndarray, obs_dist_km: np.ndarray, sp_angle_deg: float = 0.0, ad_angle_deg: float = 15.0) -> np.ndarray",
+      "role": "(k1_body, k2_body, obs_dist_km, articulation angles) -> (N,) predicted apparent magnitude via the v2 residual-ensemble surrogate",
+      "job_cluster": "surrogate-eval",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "attitude-trajectory",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "windowed-lc"
+      ],
+      "notes": "This IS the working surrogate predict entry point. Reconcile with existing 'surrogate' card (survey/lib/surrogate_eval.py area) \u2014 this is the canonical function. cost_surfaces.py wraps this via thin re-exports. filter_costs.py imports it as `surrogate_predict`. No drift detected; card should list this as the entry_point.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "surrogate-full-lc-mse",
+      "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:full_lc_mse",
+      "signature": "full_lc_mse(predicted: np.ndarray, target: np.ndarray) -> float",
+      "role": "(predicted LC, target LC) -> scalar MSE over all valid finite epochs (mag^2)",
+      "job_cluster": "lc-scoring",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "scoring"
+      ],
+      "notes": "Canonical implementation. cost_surfaces.py has surrogate_full_lc_mse which is a thin re-export delegation to this function \u2014 that wrapper is a duplicate/alias and should NOT get its own card. Existing 'scorer' card (cost_surfaces.py) notes this is already ported.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "surrogate-bright-mse",
+      "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:bright_mse",
+      "signature": "bright_mse(predicted: np.ndarray, target: np.ndarray, bright_threshold: float = 11.0) -> float",
+      "role": "(predicted LC, target LC, threshold) -> MSE restricted to bright-subset epochs (target < threshold)",
+      "job_cluster": "lc-scoring",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "scoring"
+      ],
+      "notes": "Companion to full_lc_mse. cost_surfaces.py re-exports it as surrogate_bright_mse \u2014 that wrapper is a duplicate/alias. Existing 'scorer' card should list this as the bright-MSE entry_point, not the cost_surfaces.py wrapper.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "rho-scorer",
+      "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:rho",
+      "signature": "rho(predicted: np.ndarray, target: np.ndarray) -> float",
+      "role": "(predicted LC, target LC) -> \u03c1 = sqrt(MSE) / 0.05, the canonical dimensionless fitness band metric",
+      "job_cluster": "lc-scoring",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "rho-band"
+      ],
+      "notes": "Directly produces the rho-band artifact. Not re-exported in cost_surfaces.py; only lives here. Should be on the scorer card as a key port. No duplicate detected.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "nll-residual",
+      "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:nll_residual",
+      "signature": "nll_residual(predicted: np.ndarray, target: np.ndarray, sigma_mag: float = 0.05, rescale: bool = True) -> np.ndarray",
+      "role": "(predicted LC, target LC) -> (N,) RF25 Eq.3 NLL residual vector in flux space (opt-in; s078)",
+      "job_cluster": "lc-scoring",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "scoring"
+      ],
+      "notes": "RF25-inspired; opt-in, NOT the production default. cost_surfaces.py re-exports as surrogate_nll_residual \u2014 wrapper is a duplicate alias. New term needed: 'nll-residual-vector' as output artifact type. Scope note in file: with fixed 0.05 mag floor the genuine lever is the rescale flag, not sigma weighting. Tagged s078.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "nll-cost",
+      "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:nll_cost",
+      "signature": "nll_cost(predicted: np.ndarray, target: np.ndarray, sigma_mag: float = 0.05, rescale: bool = True) -> float",
+      "role": "(predicted LC, target LC) -> scalar mean NLL (RF25 Eq.3) for ranking candidates",
+      "job_cluster": "lc-scoring",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "scoring"
+      ],
+      "notes": "Scalar companion to nll_residual. cost_surfaces.py re-exports as surrogate_nll_cost \u2014 wrapper is a duplicate alias. Tagged s078.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "alignment-filter",
+      "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:alignment_cost",
+      "signature": "alignment_cost(candidate_mag_pred: np.ndarray, bright_peak_idx: np.ndarray, window_epochs: int = 3, bright_mag_threshold: float = 11.0) -> float",
+      "role": "(candidate surrogate LC, bright truth peak indices) -> fraction of truth bright peaks where candidate has a matching local-min bright value within \u00b1window",
+      "job_cluster": "filter-scoring",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc",
+        "anchor-epoch"
+      ],
+      "output_artifacts": [
+        "filter"
+      ],
+      "notes": "This is the WORKING implementation per ADR-0007 note: 'working impl is filter_costs.py:196'. Confirms the line number exactly. cost_surfaces.py also defines alignment_cost but it raises NotImplementedError and is a stub \u2014 that version is dead code / NOT YET PORTED. The two functions share the same name across modules \u2014 critical drift: cost_surfaces.alignment_cost is an explicit stub that should never be called. The filter_costs.py version is the live implementation. New artifact term needed: 'anchor-epoch' for bright_peak_idx array.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "geo-filter",
+      "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:geo_cost",
+      "signature": "geo_cost(candidate_pab_body: np.ndarray, spec_event_idx: np.ndarray, spec_tier: np.ndarray, face_normals: np.ndarray, tier_face_idx: list, geo_threshold_deg: float = 5.0) -> float",
+      "role": "(candidate body-frame PAB trajectory, spec-event indices, tier table) -> fraction of spec events where a tier-allowed face is within angular threshold of body-frame PAB",
+      "job_cluster": "filter-scoring",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "attitude-trajectory",
+        "anchor-epoch"
+      ],
+      "output_artifacts": [
+        "filter"
+      ],
+      "notes": "No equivalent in cost_surfaces.py \u2014 unique to filter_costs.py. Requires precomputed spec_event_idx and spec_tier from precompute_seed_filter_data. No duplicate. New artifact terms needed: 'attitude-trajectory' for pab_body, 'spec-event' as an anchor-epoch variant.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "filter-candidate-evaluator",
+      "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:evaluate_candidate",
+      "signature": "evaluate_candidate(q0_wxyz, omega0_rad, seed_data, inertia_tensor, face_normals, tier_face_idx, *, sp_angle_deg, ad_angle_deg, align_window_epochs, align_bright_mag, geo_threshold_deg) -> dict",
+      "role": "(q0, omega0, seed geometry cache, geometry params) -> dict{score_alignment, score_geo, mag_pred} \u2014 convenience wrapper: propagate + surrogate predict + both filter scores in one call",
+      "job_cluster": "filter-scoring",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "filter",
+        "windowed-lc"
+      ],
+      "notes": "Composes propagate_candidate + surrogate_predict + alignment_cost + geo_cost. This is the end-to-end filter evaluation entry point a researcher would call. No duplicate. Depends on precompute_seed_filter_data output being cached in seed_data.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "propagate-candidate",
+      "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:propagate_candidate",
+      "signature": "propagate_candidate(q0_wxyz: np.ndarray, omega0_rad: np.ndarray, seed_data: dict, inertia_tensor: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]",
+      "role": "(q0, omega0, precomputed seed geometry, inertia tensor) -> (k1_body, k2_body, pab_body) body-frame direction arrays for surrogate and geo scoring",
+      "job_cluster": "propagation",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "attitude-trajectory"
+      ],
+      "notes": "Thin adapter around src/dynamics/attitude_propagator.propagate_attitude + rotation application. The propagator Tool card already covers propagate_attitude; this is a survey-local helper that extracts body-frame sun/obs/pab from the quaternion output. Likely a primitive rather than a Tool in its own right \u2014 evaluate_candidate is the Tool-level entry point that calls it.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "seed-filter-data-precomputer",
+      "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:precompute_seed_filter_data",
+      "signature": "precompute_seed_filter_data(truth: dict, tier_table: dict, spec_threshold_deg: float = 5.0, bright_mag_threshold: float = 11.0) -> dict",
+      "role": "(truth NPZ dict, tier table) -> precomputed per-seed filter inputs: bright_peak_idx, spec_event_idx, spec_tier, pab_j2000, etc. \u2014 called once per seed before any candidate evaluation",
+      "job_cluster": "filter-scoring",
+      "is_tool_candidate": false,
+      "input_artifacts": [
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "anchor-epoch"
+      ],
+      "notes": "Initialization helper, not a per-candidate operation. A researcher would not say 'run precompute_seed_filter_data on a candidate'. It is a setup primitive that feeds evaluate_candidate. Potentially could be a pre-stage on a filter pipeline card.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "lc-feature-extractor",
+      "entry_point": "notebooks/inversion/survey/lib/lc_features.py:lc_features",
+      "signature": "lc_features(t: np.ndarray, mag: np.ndarray) -> tuple[np.ndarray, list[str]]",
+      "role": "(observation times, magnitude series) -> (28,) fixed-length feature vector + FEATURE_NAMES \u2014 28 LC-only features: LS peaks, power bands, stat moments, ACF lags, glint count/spacing",
+      "job_cluster": "lc-feature-extraction",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "candidate-set"
+      ],
+      "notes": "The canonical 28-feature extractor. Lifted verbatim from experiments/s008 to prevent copy-paste drift. Used by s055a and downstream regression experiments. No duplicate detected in area. New artifact term needed for output: something like 'lc-feature-vector' \u2014 'candidate-set' is a poor fit. Flag: no existing glossary term precisely matches a fixed-length feature vector.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "ls-bracket",
+      "entry_point": "notebooks/inversion/survey/lib/lc_features.py:ls_bracket",
+      "signature": "ls_bracket(times: np.ndarray, mag: np.ndarray, n_cells: int = 5, threshold_frac: float = 0.1) -> np.ndarray",
+      "role": "(times, magnitudes) -> (n_cells,) geomspaced |omega| grid in rad/s \u2014 LS-peak-based prior for joint-grid pivot",
+      "job_cluster": "lc-feature-extraction",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "multi-omegadir-start"
+      ],
+      "notes": "Condensed port of s019 bracket strategy. Outputs the |omega| grid consumed by the s082 joint-grid pivot pipeline. Output artifact 'multi-omegadir-start' is an existing glossary term and fits well (grid of omega starting points). No duplicate in area. Pre-fix cohort validation: 98/100 in-grid at ~50 cells; 5-cell form trades offset (~17%) for smaller grid.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "lc-compare-resolver",
+      "entry_point": "notebooks/inversion/survey/lib/lc_compare.py:resolve_lc",
+      "signature": "resolve_lc(spec: str, ctx_cache: dict, cache_dir: Optional[Path]) -> np.ndarray",
+      "role": "(LC spec string in traj:/npy:/npz:/state: scheme, context cache, optional cache dir) -> (N,) magnitude array \u2014 resolves any of the four spec schemes including fresh hi-fi propagation",
+      "job_cluster": "lc-render",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "q0-omega-state",
+        "epoch-observation"
+      ],
+      "output_artifacts": [
+        "windowed-lc",
+        "hifi-lightcurve"
+      ],
+      "notes": "The multi-scheme LC resolver is a coherent Tool \u2014 a researcher says 'resolve this LC spec'. Handles four source types including on-demand hi-fi propagation via hifi_render.render_hifi. New artifact terms needed: 'hifi-lightcurve' is flagged in the task brief as likely needing a new term; 'windowed-lc' covers the lofi/array cases.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "lc-compare-plotter",
+      "entry_point": "notebooks/inversion/survey/lib/lc_compare.py:make_plot",
+      "signature": "make_plot(ref_label: str, ref_lc: np.ndarray, cmps: list[tuple[str, np.ndarray]], output: Path, title: Optional[str] = None, rho_noise_sigma: float = 0.05) -> None",
+      "role": "(reference LC, N comparison LCs) -> PNG with overlay panel + N residual subplots, each labelled with RMS and rho",
+      "job_cluster": "lc-render",
+      "is_tool_candidate": true,
+      "input_artifacts": [
+        "windowed-lc"
+      ],
+      "output_artifacts": [
+        "single-wind-lc-window"
+      ],
+      "notes": "The survey-local lc_compare visualizer. Produces the standard residual-panel PNG used in experiment write-ups. Computes inline rho per comparison (rms/sigma). Note: 'single-wind-lc-window' is an existing glossary term but was defined for a polish-window artifact; the output here is a comparison PNG, which may need a new 'lc-comparison-plot' artifact term. Flag for ADR.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "cost-surfaces-alignment-stub",
+      "entry_point": "notebooks/inversion/survey/lib/cost_surfaces.py:alignment_cost",
+      "signature": "alignment_cost(*args, **kwargs) -> float",
+      "role": "Raises NotImplementedError \u2014 placeholder stub for the m103-era alignment cost surface, not yet ported to the survey",
+      "job_cluster": "filter-scoring",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "DEAD CODE / stub. Always raises NotImplementedError. The working alignment_cost lives at filter_costs.py:196 (confirmed). This stub exists only as documentation of intent + re-derivation contract. Scorer card ADR note already flags this: 'alignment_cost NOT YET PORTED'. Drift risk: both modules export a symbol named alignment_cost \u2014 any wildcard import or tab-completion could silently shadow the working version with this stub.",
+      "area": "survey-lib-scoring"
+    },
+    {
+      "name": "cost-surfaces-lofi-peak-match-stub",
+      "entry_point": "notebooks/inversion/survey/lib/cost_surfaces.py:lofi_peak_match",
+      "signature": "lofi_peak_match(pred_lofi: np.ndarray, target_lofi: np.ndarray, epoch_window: int = 5, bright_threshold: float = 11.0) -> int",
+      "role": "Raises NotImplementedError \u2014 placeholder stub for prominence-weighted bright-peak count match, not yet ported",
+      "job_cluster": "filter-scoring",
+      "is_tool_candidate": false,
+      "input_artifacts": [],
+      "output_artifacts": [],
+      "notes": "DEAD CODE / stub. Always raises NotImplementedError. Scorer card already flags: 'lofi_peak_match NOT YET PORTED'. The concept-level description (count peaks within \u00b15 epochs, prominence-weighted) differs from the implemented alignment_cost in filter_costs.py (local-min criterion, no prominence). Not the same operation \u2014 when eventually implemented it would be a distinct Tool.",
+      "area": "survey-lib-scoring"
+    }
+  ],
+  "usage": {
+    "in_use_functions": [
+      {
+        "function": "propagate_jacobi_path2",
+        "module": "lib/jacobi_propagator.py",
+        "used_by_count": 53,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s106_hybrid_loss_polish.py",
+          "s114_anchor_direct_omega_multistart.py",
+          "s114_hifi.py",
+          "s110_polish_116.py"
+        ]
+      },
+      {
+        "function": "get_model / predict_magnitude (SurrogateModel.load_default wrapper)",
+        "module": "lib/surrogate_eval.py",
+        "used_by_count": 72,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s106_hybrid_loss_polish.py",
+          "s108c_multistart_coarse_rank.py",
+          "s114_anchor_direct_omega_multistart.py",
+          "s113_slow_tumbler_generality.py"
+        ]
+      },
+      {
+        "function": "load_truth",
+        "module": "lib/traj_load.py",
+        "used_by_count": 98,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s106_hybrid_loss_polish.py",
+          "s114_anchor_direct_omega_multistart.py",
+          "s099_invert_116.py",
+          "s082_joint_grid_pivot.py"
+        ]
+      },
+      {
+        "function": "build_context",
+        "module": "lib/hifi_render.py",
+        "used_by_count": 67,
+        "used_by_sample": [
+          "s107_hifi.py",
+          "s110_polish_116.py",
+          "s114_hifi.py",
+          "s112_plot_slow_tumbler_sols.py",
+          "s113_slow_tumbler_generality.py"
+        ]
+      },
+      {
+        "function": "render_hifi",
+        "module": "lib/hifi_render.py",
+        "used_by_count": 36,
+        "used_by_sample": [
+          "s107_hifi.py",
+          "s099_hifi.py",
+          "s100_hifi.py",
+          "s114_hifi.py",
+          "s110_polish_116.py"
+        ]
+      },
+      {
+        "function": "rho_from_hifi / rho_band",
+        "module": "lib/hifi_render.py",
+        "used_by_count": 41,
+        "used_by_sample": [
+          "s107_hifi.py",
+          "s100_hifi.py",
+          "s114_hifi.py",
+          "s099_hifi.py",
+          "s098b_hifi_rho.py"
+        ]
+      },
+      {
+        "function": "compute_j2000_units",
+        "module": "lib/c_t_pipeline.py",
+        "used_by_count": 42,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s106_hybrid_loss_polish.py",
+          "s108c_multistart_coarse_rank.py",
+          "s114_anchor_direct_omega_multistart.py",
+          "s098_local_densify_116.py"
+        ]
+      },
+      {
+        "function": "sample_so3_pool",
+        "module": "lib/c_t_pipeline.py",
+        "used_by_count": 22,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s082_joint_grid_pivot.py",
+          "s098_local_densify_116.py",
+          "s099_invert_116.py",
+          "s092_cross_cloud_116.py"
+        ]
+      },
+      {
+        "function": "project_directions / survive_at_epoch",
+        "module": "lib/c_t_pipeline.py",
+        "used_by_count": 15,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s099_invert_116.py",
+          "s092_cross_cloud_116.py",
+          "s098_local_densify_116.py",
+          "s096_density_usefulness_116.py"
+        ]
+      },
+      {
+        "function": "nearest_in_pool_to_truth",
+        "module": "lib/c_t_pipeline.py",
+        "used_by_count": 8,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s098_local_densify_116.py",
+          "s099_invert_116.py",
+          "s092_cross_cloud_116.py",
+          "s096_density_usefulness_116.py"
+        ]
+      },
+      {
+        "function": "m048_inertia",
+        "module": "lib/shoot.py",
+        "used_by_count": 46,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s106_hybrid_loss_polish.py",
+          "s114_anchor_direct_omega_multistart.py",
+          "s108c_multistart_coarse_rank.py",
+          "s099_invert_116.py"
+        ]
+      },
+      {
+        "function": "shoot",
+        "module": "lib/shoot.py",
+        "used_by_count": 46,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s099_invert_116.py",
+          "s098_local_densify_116.py",
+          "s092_cross_cloud_116.py",
+          "s108b_no_cpass_cross.py"
+        ]
+      },
+      {
+        "function": "finite_diff_omega",
+        "module": "lib/shoot.py",
+        "used_by_count": 19,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s099_invert_116.py",
+          "s098_local_densify_116.py",
+          "s108a_stage0_oracle_probe.py",
+          "s108b_no_cpass_cross.py"
+        ]
+      },
+      {
+        "function": "omega_dir_err_deg",
+        "module": "lib/shoot.py",
+        "used_by_count": 51,
+        "used_by_sample": [
+          "s100_5step_proto.py",
+          "s106_hybrid_loss_polish.py",
+          "s114_anchor_direct_omega_multistart.py",
+          "s108c_multistart_coarse_rank.py",
+          "s107_discrimination_test.py"
+        ]
+      },
+      {
+        "function": "polhode_period",
+        "module": "lib/shoot.py",
+        "used_by_count": 11,
+        "used_by_sample": [
+          "s099_invert_116.py",
+          "s098_local_densify_116.py",
+          "s103_return_map_scan.py",
+          "s109_omega_traj_envelope.py",
+          "s091_per_pair_timing.py"
+        ]
+      },
+      {
+        "function": "shoot_multianchor / shoot_multianchor_freebase",
+        "module": "lib/shoot.py",
+        "used_by_count": 3,
+        "used_by_sample": [
+          "s090_shared_base_ablation.py",
+          "s089_multianchor_conditioning.py",
+          "s088_shoot_validation.py"
+        ]
+      },
+      {
+        "function": "propagate_to_body_frame",
+        "module": "lib/forward.py",
+        "used_by_count": 27,
+        "used_by_sample": [
+          "s059_pilot.py",
+          "s082_joint_grid_pivot.py",
+          "s112_plot_slow_tumbler_sols.py",
+          "s113_slow_tumbler_generality.py",
+          "s086_omega_refine_rescue.py"
+        ]
+      },
+      {
+        "function": "quat_geodesic_deg / quat_geodesic_deg_batch",
+        "module": "lib/forward.py",
+        "used_by_count": 20,
+        "used_by_sample": [
+          "s059_pilot.py",
+          "s064_jacobi_polish.py",
+          "s082_joint_grid_pivot.py",
+          "s078_nll_residual_ab.py",
+          "s086_omega_refine_rescue.py"
+        ]
+      },
+      {
+        "function": "canonical_batch",
+        "module": "lib/twin.py",
+        "used_by_count": 11,
+        "used_by_sample": [
+          "s059_pilot.py",
+          "s082_joint_grid_pivot.py",
+          "s059j_cloud_data_omega_grid.py",
+          "s081_hifi_rho_bands_twin.py",
+          "s114_plot_errors.py"
+        ]
+      },
+      {
+        "function": "twin / Q_180X / R_180X",
+        "module": "lib/twin.py",
+        "used_by_count": 54,
+        "used_by_sample": [
+          "s059_pilot.py",
+          "s082_joint_grid_pivot.py",
+          "s059j_cloud_data_omega_grid.py",
+          "s081_hifi_rho_bands_twin.py",
+          "s114_plot_errors.py"
+        ]
+      },
+      {
+        "function": "ls_bracket",
+        "module": "lib/lc_features.py",
+        "used_by_count": 3,
+        "used_by_sample": [
+          "s082_joint_grid_pivot.py",
+          "s099a_omega_bracket_holdout.py",
+          "s100_5step_proto.py"
+        ]
+      },
+      {
+        "function": "lc_features",
+        "module": "lib/lc_features.py",
+        "used_by_count": 7,
+        "used_by_sample": [
+          "s008_lc_feature_regression_omega.py",
+          "s055a_polhode_diameter_regression.py",
+          "s086_omega_refine_rescue.py",
+          "s099a_omega_bracket_holdout.py",
+          "s101_ls_peak_truth_proximity.py"
+        ]
+      },
+      {
+        "function": "load_static_geometry / alignment_cost / geo_cost",
+        "module": "lib/filter_costs.py",
+        "used_by_count": 19,
+        "used_by_sample": [
+          "s001_cost_at_truth_cohort.py",
+          "s020_seed_pipeline.py",
+          "s047_hybrid_pilot.py",
+          "s048b_per_epoch_spread_v1.py",
+          "s049_cascade_seed14.py"
+        ]
+      },
+      {
+        "function": "omega_jacobi",
+        "module": "lib/jacobi_propagator.py",
+        "used_by_count": 5,
+        "used_by_sample": [
+          "s072_jacobi_path2_rederive.py",
+          "s073_jacobi_path2_validate.py",
+          "s091_per_pair_timing.py",
+          "s103_return_map_scan.py",
+          "s109_omega_traj_envelope.py"
+        ]
+      }
+    ],
+    "live_inversion_path": [
+      "lib/traj_load.py:load_truth",
+      "lib/lc_features.py:ls_bracket (via s019 module for blind |\u03c9| bracket)",
+      "lib/c_t_pipeline.py:sample_so3_pool",
+      "lib/c_t_pipeline.py:survive_at_epoch (isophote cloud generation at anchors A,B)",
+      "lib/c_t_pipeline.py:compute_j2000_units",
+      "lib/c_t_pipeline.py:nearest_in_pool_to_truth",
+      "s100_5step_proto.py:decimate_2deg (SO(3) grid decimation -> reps)",
+      "lib/shoot.py:finite_diff_omega + shoot (cross: A-rep \u00d7 B-rep BVP solve)",
+      "s100_5step_proto.py:_set_coarse_globals + _coarse_rmse (coarse-K surrogate RMSE rank)",
+      "lib/jacobi_propagator.py:propagate_jacobi_path2 (full-LC propagation for scoring)",
+      "lib/surrogate_eval.py:get_model / predict_magnitude (full-500 RMSE rank)",
+      "lib/jacobi_propagator.py:propagate_jacobi_path2 + lib/surrogate_eval.py:predict_magnitude (abc-window LM polish via least_squares)"
+    ],
+    "notes": "TOOL CANDIDATE SUMMARY (all 201 experiment files, 354 total in experiments dir).\n\nLOAD-BEARING TODAY (s100\u2013s114 era):\n1. jacobi_propagator.py:propagate_jacobi_path2 \u2014 THE propagator, 53 files. Entry point for every propagation step in the live pipeline. Port type: (q0-omega-state, attitude-trajectory).\n2. surrogate_eval.py:get_model / predict_magnitude \u2014 THE scorer, 72 files. v2 surrogate, RMSE/rho-band scoring. Port type: (attitude-trajectory \u2192 scoring).\n3. traj_load.py:load_truth \u2014 universal data loader, 98 files. Every experiment uses it. Port type: (epoch-observation).\n4. hifi_render.py:build_context + render_hifi + rho_from_hifi \u2014 hi-fi diagnostic renderer, 67/36/41 files. Used as diagnostic in every hifi step. Port type: (attitude-trajectory \u2192 hifi-lightcurve \u2192 scoring).\n5. c_t_pipeline.py:compute_j2000_units \u2014 geometry preprocessing, 42 files. Prerequisite for all scoring.\n6. c_t_pipeline.py:sample_so3_pool + survive_at_epoch + project_directions \u2014 isophote cloud generator, 22/15/15 files. STEP 3 of s100 pipeline.\n7. shoot.py:m048_inertia + shoot + finite_diff_omega + omega_dir_err_deg \u2014 BVP cross, 46/46/19/51 files. STEP 5 cross.\n8. s100_5step_proto.py:_set_coarse_globals + _coarse_rmse \u2014 coarse surrogate RMSE, defined in s100 not a lib, 7/6 files import from s100 module via importlib. Port type: (windowed-lc, scoring).\n9. s100_5step_proto.py:decimate_2deg \u2014 SO(3) rep decimation, 2 files use it directly (s113, s114 use it via s100 importlib). Core STEP 4.\n10. forward.py:propagate_to_body_frame \u2014 ODE-based propagator wrapper, 27 files (used in s059\u2013s086 era and still in s112/s113 slow-tumbler branch).\n11. twin.py:canonical_batch / twin / Q_180X \u2014 body-twin dedup, 54 files total. Active in s059\u2013s082 era and still in s114_plot_errors.\n12. shoot.py:polhode_period \u2014 polhode period for anchor-cap bracket, 11 files.\n\nDEAD / DEPRECATED:\n- filter_costs.py:alignment_cost / geo_cost \u2014 last used s049 era (pre-s050). alignment_cost listed 'NOT YET PORTED' in scorer.json; working impl is filter_costs.py:196 but the cost_surfaces.py docstring still marks alignment_cost and lofi_peak_match as TODO. Zero post-s050 experiment uses them.\n- cost_surfaces.py \u2014 0 direct imports from experiments; re-exports surrogate_eval functions only.\n- lc_features.py:lc_features \u2014 used in regression experiments s055a etc., not in the live inversion pipeline. ls_bracket is used in s082 (pivot era) and s100 (via s019 module), so ls_bracket is load-bearing as the |\u03c9| prior input.\n- shoot.py:shoot_multianchor / shoot_multianchor_freebase \u2014 used only in s088\u2013s090 multianchor ablation series, not in s100\u2013s114 pipeline.\n\nNEW GLOSSARY TERMS NEEDED (not in existing list):\n- light-curve (the (t, mag) time-series, input/output of lc_features, scored by surrogate)\n- q0-omega-state (the (q0_wxyz, omega0_rad) initial state pair that seeds propagation)\n- attitude-trajectory (the (N,4) quaternion history output of propagate_jacobi_path2)\n- epoch-observation (the per-seed NPZ blob from traj_load: times, sun_pos, obs_pos, sat_pos, mag_hifi)\n- hifi-lightcurve (the full physics render from hifi_render, distinct from surrogate prediction)\n- candidate-set (the set of (q_a, omega) pairs after cross+filter, before ranking)\n- anchor-epoch (the integer epoch index ep_a selected by the sharpness scan)\n- surrogate-model (the SurrogateModel.load_default() object, not a generic term)"
+  }
+}

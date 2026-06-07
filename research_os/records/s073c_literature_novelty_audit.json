@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s073c_literature_novelty_audit",
+  "kind": "run_record",
+  "goal_node": "goal_rf25-audit",
+  "question": "Is the s073 L_J2000-ambiguity framing (continuous inertial-L ambiguity on asymmetric bodies) novel relative to the published man-made-object LC inversion literature, and is the s073 claim correctly scoped?",
+  "hypothesis": "The implied 'continuous L_J2000 family' framing is a fourth ambiguity category not in the literature; the s073 wind-down language overclaimed from N=1.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "L_mag_rel_diff_pct": 0.55,
+    "L_dir_angle_deg": 128.6,
+    "burton_thesis_polhode_hits": 0
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s073c_literature_novelty_audit.md"],
+  "parents": ["s073_cluster457_l_vector_check", "s073b_path2_cprofile", "s072_path2_closed_form_q"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "No-compute literature audit (three independent searches + Burton 2024 thesis/ASR PDFs). Two outcomes: (1) the s073-implied framing (continuous inertial-L ambiguity on asymmetric bodies with no shape symmetry) is a fourth ambiguity category absent from the published RSO LC inversion literature (Burton thesis has zero 'polhode' hits); (2) scope correction — the continuous-family / operational-filter language is hypothesis built on the single cluster_457 measurement, not a finding. Robinson & Frueh 2025 flagged as residual threat. Builds on truth-derived s073 numbers -> oracle_clean false."
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s003_landscape_vs_omega",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "How fragile is the surrogate-MSE q0-landscape to ω-misspecification, and how wide is the truth-ω tube within which truth-q0 remains the argmin?",
+  "hypothesis": "Surrogate-MSE is ω-fragile; truth-q0 is the argmin only inside a thin tube around truth-ω, ruling out decoupled ω-outer / q0-inner search.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [6, 41, 91],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "tube_dir_deg": "<= ~1",
+    "tube_mag_pct": "~2-5",
+    "n_cells_argmin_within_10deg": "11/72",
+    "n_cells_argmin_ge_30deg": "50/72",
+    "perturbations_per_seed": 24,
+    "candidates_per_cell": 512
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s003_landscape_vs_omega.md"],
+  "parents": ["s001_cost_at_truth_cohort", "s002_surrogate_landscape_probe"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "Probing 511 Sobol-q0 + truth across 24 ω-perturbations on 3 seeds: surrogate-MSE is extremely ω-fragile. Truth-q0 is the argmin only inside a thin tube (|Δω-dir| ≲ 1°, |Δω-mag| ≲ 2-5%); outside it the argmin slides >100° and truth_q0_mse explodes 3-4 OOM. Only 11/72 cells keep argmin within 10° of truth. Structurally explains m115's seed-91 failure (its ω-DE searched far wider than the tube) and rules out any decoupled ω-outer / q0-inner architecture — (q0, ω) must be jointly and tightly coupled."
+}

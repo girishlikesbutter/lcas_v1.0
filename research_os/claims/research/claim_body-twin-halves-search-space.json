@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_body-twin-halves-search-space",
+  "kind": "claim_card",
+  "deck": "research",
+  "statement": "Antipodal body-frame quaternion twins produce bit-exact light curves (max|delta|=2.29e-08 mag, 6 orders below noise; re-confirmed in hi-fi post-fix by s081). Deduplicating via a canonical hemisphere halves the search space at every pipeline stage. Convention-independent symmetry.",
+  "supporting_runs": [
+    "s043_twin_hifi_verify",
+    "s081_hifi_rho_bands_twin"
+  ],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "high",
+    "gates_passed": [],
+    "oracle_clean": false
+  },
+  "scope": {
+    "N": 3,
+    "kind": "N1"
+  },
+  "depends_on": [
+    "propagator@2.0.0",
+    "surrogate@v2",
+    "scorer@1.0.0"
+  ],
+  "status": "live",
+  "superseded_by": null,
+  "supersedes": null,
+  "links_to_writeups": [
+    "notebooks/inversion/survey/experiments/s043_twin_hifi_verify.md"
+  ],
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

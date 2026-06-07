@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s056b_ct_residual_spectrum",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "After regressing log|C_t|(t) on mag-derived features, does the residual variance contain a physically-meaningful new signal channel?",
+  "hypothesis": "The residual of log|C_t|(t) after removing mag_hifi has structure at f_rot / polhode period that mag_hifi cannot capture, i.e. a new signal channel.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "regression_r2": 0.681,
+    "residual_variance_frac": 0.32,
+    "residual_peak1_period_min": 12.99,
+    "residual_peak2_period_min": 8.26
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s056b_ct_residual_spectrum.md"],
+  "parents": ["s056_ct_breathing_spectrum"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Decisive negative: regressing log|C_t|(t) on [mag_hifi, log|dmag/dt|^-1, mag^2] captures R^2=0.681. The 32% residual peaks at 12.99 min (2x f_rot) and 8.26 min (3x f_rot) -- real body-rotation-symmetry harmonics, but already encoded in LC peak-spacing (s007/s008 closed). Not a NEW channel beyond LC features. Uses rotation frequency derived from truth dynamics -- oracle-leak, N=1."
+}

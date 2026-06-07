@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "pipeline",
+  "kind": "glossary_term",
+  "term": "Pipeline",
+  "definition": "A BET on how to reach a Goal: a composition of Tools that transforms inputs into a desired output (in this codebase almost always light curve → information about the satellite). UNLIKE a Tool, a Pipeline carries a `hypothesis` and `serves` a Goal. Store object: the `pipeline` node (ADR-0005). Edges: serves→Goal, composes→Tool, tested-by←Experiment, supersedes→Pipeline (rivalry). Girish's level-3 'pipeline'. Same typed-operation concept as primitive/Tool, distinguished by role (it is hypothesis-bearing and goal-serving), not by kind.",
+  "status": "canon",
+  "promoted_on": "2026-06-07",
+  "coined_in": "research_os/decisions/0005-pipeline-as-first-class-node.md",
+  "synonyms_blocked": [],
+  "related_terms": ["tool", "primitive", "artifact"],
+  "created_at": "2026-06-07T00:00:00Z"
+}

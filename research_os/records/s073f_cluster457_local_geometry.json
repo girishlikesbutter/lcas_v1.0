@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s073f_cluster457_local_geometry",
+  "kind": "run_record",
+  "goal_node": "goal_l-vector-discriminator",
+  "question": "Is the seed-89 Band A attractor cluster_457 a locally isolated point, or a sample from a soft (L-direction) family \u2014 i.e. does the LC residual grow fast in every local direction?",
+  "hypothesis": "Distinguishing strict (cluster_457 genuinely off truth's polhode) vs charitable (the 1.1% Casimir mismatch is just polish residual the LC can't see) via controlled local perturbation; the strict reading holds if both L-direction and polhode-scaling sweeps are stiff.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    89
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "base_rho_hifi": 0.9041,
+    "L_dir_bandAB_edge_deg": 2,
+    "omega_scale_bandAB_edge_pct": 0.5,
+    "twin_control_rho_at_2deg": 3.23,
+    "n_renders": 63,
+    "wall_s": 518.8
+  },
+  "artefacts": [
+    {
+      "path": "results/s073f/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s073f/states.npz",
+      "kind": "checkpoint"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s073f_cluster457_local_geometry.md"
+  ],
+  "parents": [
+    "s073_cluster457_l_vector_check",
+    "s077_l_vector_basin_sweep"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "Perturbed cluster_457 in two families (L-direction rotation at fixed body polhode; polhode/Casimir scaling at fixed L direction) and rendered 63 hi-fi LCs vs seed-89 truth. Every direction is stiff \u2014 exits Band A-union-B at +-2 deg of inertial rotation and +-0.5% scaling, including the twist-about-L control. Conclusion: cluster_457 is a locally isolated point, closing the charitable polish-residual reading; the strict 'different polhode' reading holds. N=1; does not bear on cohort-wide cat-4. Renders vs truth LC and perturbs truth-derived state -> oracle_clean false."
+}

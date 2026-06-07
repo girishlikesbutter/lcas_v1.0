@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s095_calibration_threshold_transfer",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-discriminator",
+  "question": "Does a cohort-calibrated truth-near windowed-RMSE retention threshold transfer to held-out seeds, and does a truth-near-ω candidate even exist per seed?",
+  "hypothesis": "A windowed-RMSE retention threshold calibrated on cohort seeds transfers to held-out seeds and is tight enough to filter junk.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [
+    109,
+    67,
+    114,
+    53,
+    75,
+    85,
+    36,
+    119,
+    116,
+    10
+  ],
+  "N": 16,
+  "claim_scope": "N1",
+  "metrics": {
+    "near_pct_zero_seeds": 8,
+    "total_seeds": 16,
+    "holdout_retention_pct": 100,
+    "p99_spread_raw_x": 12.4,
+    "p99_spread_norm_x": 9.9,
+    "seed116_truthnear_raw_p99": 0.298
+  },
+  "artefacts": [
+    {
+      "path": "notebooks/inversion/survey/results/s095/transfer.json",
+      "kind": "data"
+    },
+    {
+      "path": "notebooks/inversion/survey/results/s095/transfer.png",
+      "kind": "plot"
+    },
+    {
+      "path": "notebooks/inversion/survey/results/s095/truthnear_rmse.npz",
+      "kind": "checkpoint"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s095_calibration_threshold_transfer.md"
+  ],
+  "parents": [
+    "s097_times0_gauge_bug_audit",
+    "s096_density_usefulness_116",
+    "s088_bvp_shoot_conditioning"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": false,
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "Held-out retention is 100% but the per-seed p99 threshold spans 12.4× raw — too loose to be a tight filter; normalization did not help. The load-bearing, bug-independent finding: for 8/16 seeds a pool-scale perturbation of truth's own anchors aliases to the wrong winding (near%=0) — shoot never lands a near-truth-ω candidate. For those seeds the bottleneck is candidate existence, not the filter. Perturbs truth anchors to compute truth-near RMSE → not blind.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ]
+}

@@ -1,0 +1,481 @@
+direction: down
+
+# ============================================================
+# LCAS Light Curve Generation Pipeline — Functional Block Diagram
+# ============================================================
+
+# --- Title ---
+title: {
+  label: "LCAS Light Curve Generation Pipeline"
+  near: top-center
+  shape: text
+  style.font-size: 28
+  style.bold: true
+  style.font-color: "#2d3436"
+}
+
+# ============================================================
+# INPUT GROUP (Gold parallelograms)
+# ============================================================
+
+inputs: {
+  label: "INPUTS"
+  style.fill: "#fff8e1"
+  style.stroke: "#fdcb6e"
+  style.border-radius: 12
+  style.font-size: 18
+  style.bold: true
+
+  yaml_config: {
+    label: "A. Satellite Configuration\n(YAML File)\n─────────────────\n• Component list & STL paths\n• Positions & orientations\n• BRDF material mappings\n• Articulation capabilities\n• SPICE metakernel path\n• Simulation time window"
+    shape: parallelogram
+    style.fill: "#ffeaa7"
+    style.stroke: "#fdcb6e"
+    style.font-color: "#2d3436"
+    style.font-size: 13
+  }
+
+  spice_kernels: {
+    label: "B. SPICE Kernels\n(Binary Files)\n─────────────────\n• SPK (ephemeris/orbits)\n• CK (attitude/orientation)\n• FK (frame definitions)\n• LSK & PCK (constants)"
+    shape: parallelogram
+    style.fill: "#ffeaa7"
+    style.stroke: "#fdcb6e"
+    style.font-color: "#2d3436"
+    style.font-size: 13
+  }
+
+  user_params: {
+    label: "C. User Parameters\n(Runtime)\n─────────────────\n• Number of epochs\n• Observer/station ID\n• Articulation behaviors\n• Custom attitudes (opt.)"
+    shape: parallelogram
+    style.fill: "#ffeaa7"
+    style.stroke: "#fdcb6e"
+    style.font-color: "#2d3436"
+    style.font-size: 13
+  }
+}
+
+# ============================================================
+# BLOCK 1–3: Data Loading & Configuration (Blue)
+# ============================================================
+
+loading: {
+  label: "Data Loading & Configuration"
+  style.fill: "#e3f2fd"
+  style.stroke: "#0984e3"
+  style.border-radius: 12
+  style.font-size: 16
+  style.bold: true
+
+  block1: {
+    label: "Block 1: Load Configuration\n━━━━━━━━━━━━━━━━━━━━━━\nRead YAML config file\nResolve all relative paths\n→ Parsed config object"
+    style.fill: "#74b9ff"
+    style.stroke: "#0984e3"
+    style.font-color: "#ffffff"
+    style.border-radius: 10
+    style.font-size: 13
+  }
+
+  block2: {
+    label: "Block 2: Load 3D Satellite Model\n━━━━━━━━━━━━━━━━━━━━━━\nRead STL mesh per component\nExtract vertices, normals, areas\nAssemble into Satellite object\n→ ~10,000 triangular facets"
+    style.fill: "#74b9ff"
+    style.stroke: "#0984e3"
+    style.font-color: "#ffffff"
+    style.border-radius: 10
+    style.font-size: 13
+  }
+
+  block3: {
+    label: "Block 3: Assign Material Properties\n━━━━━━━━━━━━━━━━━━━━━━\nMap BRDF params to each facet\nName-matching (exact then substring)\n→ r_d, r_s, n_phong per facet"
+    style.fill: "#74b9ff"
+    style.stroke: "#0984e3"
+    style.font-color: "#ffffff"
+    style.border-radius: 10
+    style.font-size: 13
+  }
+
+  block1 -> block2: "Parsed config\n(STL paths, positions)" {
+    style.stroke: "#0984e3"
+    style.font-size: 11
+  }
+  block1 -> block3: "BRDF mappings" {
+    style.stroke: "#0984e3"
+    style.font-size: 11
+  }
+}
+
+# ============================================================
+# BLOCK 4: Articulation Assignment (Orange)
+# ============================================================
+
+block4: {
+  label: "Block 4: Assign Articulation Behaviors\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nRegister control laws per component\n• SunTracking (solar panels → Sun)\n• FixedAngle (dishes held constant)\n• Interpolated profile (time-varying)\n→ ArticulationEngine"
+  style.fill: "#fdcb6e"
+  style.stroke: "#e17055"
+  style.font-color: "#2d3436"
+  style.border-radius: 10
+  style.font-size: 13
+}
+
+# ============================================================
+# BLOCK 5–6: Orbital Mechanics / SPICE (Green)
+# ============================================================
+
+orbital: {
+  label: "Orbital Mechanics (SPICE)"
+  style.fill: "#e0f7f0"
+  style.stroke: "#00b894"
+  style.border-radius: 12
+  style.font-size: 16
+  style.bold: true
+
+  block5: {
+    label: "Block 5: Initialize SPICE\n━━━━━━━━━━━━━━━━━━━━━━\nLoad metakernel into memory\nEnable position/attitude queries\n→ SpiceHandler ready"
+    style.fill: "#55efc4"
+    style.stroke: "#00b894"
+    style.font-color: "#2d3436"
+    style.border-radius: 10
+    style.font-size: 13
+  }
+
+  block6: {
+    label: "Block 6: Generate Epoch Array\n━━━━━━━━━━━━━━━━━━━━━━\nUTC → Ephemeris Time (ET)\nLinspace N points in time window\n→ epochs (N,), utc_times, time_hours"
+    style.fill: "#55efc4"
+    style.stroke: "#00b894"
+    style.font-color: "#2d3436"
+    style.border-radius: 10
+    style.font-size: 13
+  }
+
+  block5 -> block6: "SpiceHandler" {
+    style.stroke: "#00b894"
+    style.font-size: 11
+  }
+}
+
+# ============================================================
+# Attitude Decision Diamond (Green)
+# ============================================================
+
+attitude_switch: {
+  label: "Attitude\nSource?"
+  shape: diamond
+  style.fill: "#55efc4"
+  style.stroke: "#00b894"
+  style.font-color: "#2d3436"
+  style.font-size: 14
+  style.bold: true
+}
+
+spice_att: {
+  label: "SPICE CK Kernels\n(query per epoch)"
+  style.fill: "#55efc4"
+  style.stroke: "#00b894"
+  style.font-color: "#2d3436"
+  style.border-radius: 8
+  style.font-size: 12
+}
+
+custom_att: {
+  label: "Custom Quaternions\n(SLERP interpolation)"
+  style.fill: "#fdcb6e"
+  style.stroke: "#e17055"
+  style.font-color: "#2d3436"
+  style.border-radius: 8
+  style.font-size: 12
+}
+
+attitude_switch -> spice_att: "Path A (default)" {
+  style.stroke: "#00b894"
+  style.font-size: 11
+}
+attitude_switch -> custom_att: "Path B (user-defined)" {
+  style.stroke: "#e17055"
+  style.font-size: 11
+}
+
+# ============================================================
+# BLOCK 7: Observation Geometry (Green)
+# ============================================================
+
+block7: {
+  label: "Block 7: Compute Observation Geometry\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nQuery Sun, satellite, observer positions (J2000)\nGet attitude matrix R (SPICE or SLERP)\nTransform to body frame:\n  k1 = R^T · sun_dir    k2 = R^T · obs_dir\n→ k1_vectors (N,3)  k2_vectors (N,3)  distances (N,)"
+  style.fill: "#55efc4"
+  style.stroke: "#00b894"
+  style.font-color: "#2d3436"
+  style.border-radius: 10
+  style.font-size: 13
+  style.bold: true
+}
+
+# ============================================================
+# BLOCKS 8–9: Articulation Motion (Orange)
+# ============================================================
+
+motion: {
+  label: "Articulation & Motion"
+  style.fill: "#fff3e0"
+  style.stroke: "#e17055"
+  style.border-radius: 12
+  style.font-size: 16
+  style.bold: true
+
+  block8: {
+    label: "Block 8: Compute Articulation Angles\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nPer component, per epoch:\nEvaluate behavior(k1) → angle\nCompose: final = tracking + offset\n→ component_angles dict (N,) per comp"
+    style.fill: "#fdcb6e"
+    style.stroke: "#e17055"
+    style.font-color: "#2d3436"
+    style.border-radius: 10
+    style.font-size: 13
+  }
+
+  block9: {
+    label: "Block 9: Angles → Rotation Matrices\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTranslate to rotation center\nRotate by angle about axis\nTranslate back\n→ component_matrices dict (N, 4x4) per comp"
+    style.fill: "#fdcb6e"
+    style.stroke: "#e17055"
+    style.font-color: "#2d3436"
+    style.border-radius: 10
+    style.font-size: 13
+  }
+
+  block8 -> block9: "component_angles" {
+    style.stroke: "#e17055"
+    style.font-size: 11
+  }
+}
+
+# ============================================================
+# PER-EPOCH LOOP indicator
+# ============================================================
+
+epoch_loop: {
+  label: "Per-Epoch Loop (N epochs)"
+  style.fill: "#f5f5f5"
+  style.stroke: "#636e72"
+  style.border-radius: 16
+  style.font-size: 16
+  style.bold: true
+  style.stroke-dash: 5
+
+  # ============================================================
+  # BLOCK 10: Shadow Computation (Red) — PROMINENT
+  # ============================================================
+
+  block10: {
+    label: "Block 10: Ray-Traced Shadow Computation\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nMost expensive step (~60s for 500 epochs)\n\n1. Separate static vs. articulated meshes\n2. Apply rotation matrices to vertices\n3. Combine into scene mesh\n4. Back-face culling: n·k1 > 0\n5. Cast shadow rays → trimesh intersection\n6. Batched ray casting for performance\n\n→ lit_status_dict: component → bool (N, num_facets)"
+    style.fill: "#ff7675"
+    style.stroke: "#d63031"
+    style.font-color: "#ffffff"
+    style.border-radius: 12
+    style.font-size: 13
+    style.bold: true
+  }
+
+  # ============================================================
+  # BLOCK 11: BRDF + Flux Summation (Purple) — PROMINENT
+  # ============================================================
+
+  block11: {
+    label: "Block 11: BRDF Calculation & Flux Summation\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCore physics engine — per-epoch computation\n\n1. Transform facet normals (articulation)\n2. Visibility: n·k1>0 AND n·k2>0 AND lit=True\n3. Per-facet BRDF: h = normalize(k1+k2)\n4. flux = rho · area · (n·k1) · (n·k2)\n5. total_flux = Sum(flux) all active facets\n6. m = m_sun + 5·log10(dist) - 2.5·log10(flux)\n\n→ magnitudes (N,) — apparent magnitude per epoch"
+    style.fill: "#a29bfe"
+    style.stroke: "#6c5ce7"
+    style.font-color: "#ffffff"
+    style.border-radius: 12
+    style.font-size: 13
+    style.bold: true
+  }
+
+  brdf_formula: {
+    label: "Ashikhmin-Shirley BRDF Model\n────────────────────────────────\nrho = rho_d + rho_s\n\nrho_d = (28·r_d)/(23·pi) · (1-r_s)\n         · [1-(1-n·k1/2)^5]\n         · [1-(1-n·k2/2)^5]\n\nrho_s = (n_p+1)/(8·pi)\n         · (n·h)^n_p\n         / (h·k1 · max(n·k1,n·k2))\n         · F\n\nF = r_s + (1-r_s)·(1-h·k1)^5"
+    style.fill: "#6c5ce7"
+    style.stroke: "#6c5ce7"
+    style.font-color: "#ffffff"
+    style.border-radius: 8
+    style.font-size: 11
+  }
+
+  block10 -> block11: "lit_status_dict\n(shadow mask)" {
+    style.stroke: "#d63031"
+    style.font-size: 12
+    style.bold: true
+  }
+  block11 -> brdf_formula: {
+    style.stroke: "#6c5ce7"
+    style.stroke-dash: 3
+  }
+}
+
+# ============================================================
+# OUTPUTS (Gold)
+# ============================================================
+
+outputs: {
+  label: "OUTPUTS"
+  style.fill: "#fff8e1"
+  style.stroke: "#fdcb6e"
+  style.border-radius: 12
+  style.font-size: 18
+  style.bold: true
+
+  lightcurve: {
+    label: "Light Curve\nApparent Magnitude vs. Time\n(Primary Output)"
+    shape: parallelogram
+    style.fill: "#ffeaa7"
+    style.stroke: "#fdcb6e"
+    style.font-color: "#2d3436"
+    style.font-size: 14
+    style.bold: true
+  }
+
+  unshadowed: {
+    label: "Unshadowed Light Curve\n(no ray tracing, for comparison)"
+    shape: parallelogram
+    style.fill: "#ffeaa7"
+    style.stroke: "#fdcb6e"
+    style.font-color: "#2d3436"
+    style.font-size: 12
+  }
+
+  csv_data: {
+    label: "CSV Data File\ntime, mag, flux,\nphase angle, distance"
+    shape: parallelogram
+    style.fill: "#ffeaa7"
+    style.stroke: "#fdcb6e"
+    style.font-color: "#2d3436"
+    style.font-size: 12
+  }
+
+  anim_3d: {
+    label: "3D Animation (HTML)\nInteractive Plotly viz\nper-facet flux coloring"
+    shape: parallelogram
+    style.fill: "#ffeaa7"
+    style.stroke: "#fdcb6e"
+    style.font-color: "#636e72"
+    style.font-size: 12
+    style.stroke-dash: 3
+  }
+}
+
+# ============================================================
+# CONNECTIONS — Data Flow
+# ============================================================
+
+# Inputs → Loading
+inputs.yaml_config -> loading.block1: "YAML file path" {
+  style.stroke: "#fdcb6e"
+  style.font-size: 11
+}
+
+inputs.user_params -> block4: "Behaviors &\ncustom attitudes" {
+  style.stroke: "#fdcb6e"
+  style.font-size: 11
+}
+
+inputs.spice_kernels -> orbital.block5: "Kernel files" {
+  style.stroke: "#fdcb6e"
+  style.font-size: 11
+}
+
+inputs.user_params -> orbital.block6: "N epochs,\nobserver ID" {
+  style.stroke: "#fdcb6e"
+  style.font-size: 11
+}
+
+# Block 1 → config branches
+loading.block1 -> block4: "Articulation\ncapabilities" {
+  style.stroke: "#0984e3"
+  style.font-size: 11
+}
+
+loading.block1 -> orbital.block5: "Metakernel path" {
+  style.stroke: "#0984e3"
+  style.font-size: 11
+}
+
+# Block 2 output
+loading.block2 -> loading.block3: "Satellite object\n(facets, no BRDF yet)" {
+  style.stroke: "#0984e3"
+  style.font-size: 11
+}
+
+# Block 3 output → downstream
+loading.block3 -> epoch_loop.block10: "Satellite\n(geometry + BRDF)" {
+  style.stroke: "#0984e3"
+  style.font-size: 11
+}
+loading.block3 -> epoch_loop.block11: "Satellite\n(with BRDF params)" {
+  style.stroke: "#0984e3"
+  style.font-size: 11
+}
+
+# Block 6 → Block 7
+orbital.block6 -> block7: "Epoch array (N,)" {
+  style.stroke: "#00b894"
+  style.font-size: 11
+}
+
+# Attitude paths → Block 7
+spice_att -> block7: "R matrices (from CK)" {
+  style.stroke: "#00b894"
+  style.font-size: 11
+}
+custom_att -> block7: "R matrices (from SLERP)" {
+  style.stroke: "#e17055"
+  style.font-size: 11
+}
+
+# Config → attitude switch
+inputs.user_params -> attitude_switch: "Attitude choice" {
+  style.stroke: "#636e72"
+  style.font-size: 11
+  style.stroke-dash: 3
+}
+
+# Block 7 → downstream
+block7 -> motion.block8: "k1_vectors (N,3)\nSun direction body frame" {
+  style.stroke: "#00b894"
+  style.font-size: 11
+}
+block7 -> epoch_loop.block10: "k1_vectors (N,3)" {
+  style.stroke: "#00b894"
+  style.font-size: 11
+}
+block7 -> epoch_loop.block11: "k1, k2 vectors\nobserver_distances" {
+  style.stroke: "#00b894"
+  style.font-size: 11
+}
+
+# Block 4 → Block 8
+block4 -> motion.block8: "ArticulationEngine\n(behaviors)" {
+  style.stroke: "#e17055"
+  style.font-size: 11
+}
+
+# Block 9 → Blocks 10, 11
+motion.block9 -> epoch_loop.block10: "component_matrices\n(N, 4x4)" {
+  style.stroke: "#e17055"
+  style.font-size: 11
+}
+motion.block9 -> epoch_loop.block11: "component_matrices" {
+  style.stroke: "#e17055"
+  style.font-size: 11
+}
+
+# Block 11 → Outputs
+epoch_loop.block11 -> outputs.lightcurve: "magnitudes (N,)\ntotal_flux (N,)" {
+  style.stroke: "#6c5ce7"
+  style.font-size: 12
+  style.bold: true
+}
+epoch_loop.block11 -> outputs.unshadowed: "unshadowed\nmagnitudes" {
+  style.stroke: "#6c5ce7"
+  style.font-size: 11
+}
+epoch_loop.block11 -> outputs.csv_data: "time, mag, flux,\nphase angle, dist" {
+  style.stroke: "#6c5ce7"
+  style.font-size: 11
+}
+epoch_loop.block11 -> outputs.anim_3d: "animation_data\n(per-facet)" {
+  style.stroke: "#6c5ce7"
+  style.font-size: 11
+  style.stroke-dash: 3
+}

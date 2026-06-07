@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s024_omega_prior_pilot",
+  "kind": "run_record",
+  "goal_node": "goal_lc-omega-priors",
+  "question": "Can alignment cost (marginalised over Sobol q0 ICs) serve as an omega-localizer rather than just a filter?",
+  "hypothesis": "Alignment cost, maximised over q0 ICs per omega-cell, localizes truth-omega.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [6, 28, 44],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_cells_per_seed": 171,
+    "localizer_success": "1/3",
+    "fail_seeds_best_mag_ratio": 2.0,
+    "wall_s": 240
+  },
+  "artefacts": [
+    { "path": "results/s024/summary.json", "kind": "data" },
+    { "path": "results/s024/seed006.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s024_omega_prior_pilot.md"],
+  "parents": ["s019_ls_bracket_omega_mag", "s025_tube_shape", "s021_truth_vs_random"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-04T00:00:00Z",
+  "narrative_md": "Decisive NO: alignment cost is a filter, not an omega-localizer. On 2/3 seeds (6, 28) the global-max cell sits at 2x truth-omega-magnitude (a peak-density harmonic artifact where extra peaks let random q0 trivially hit truth peak times); only seed 44 (densest peaks) localizes. Omega localization stays with the LS-bracket (s019, ~5%)."
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s047a_cell_filter_informativeness",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "On s032's 5-cell bracket, does the cell-filter aggregate score pick the closest-to-truth-|omega| cell, supporting a rank-then-densify architecture?",
+  "hypothesis": "Cell-filter survivor count or score correlates with cell-to-truth distance, so cells can be ranked and the top-K densified.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 81,
+  "claim_scope": "cohort",
+  "metrics": {
+    "top1_max_geo_rate": 0.716,
+    "top2_max_geo_align_sum_rate": 0.975,
+    "random_top1_baseline": 0.20,
+    "Q4_top1_rate": 0.71,
+    "Q2_top1_rate_anomaly": 0.50,
+    "cells_per_seed": 5
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s047a_cell_filter_informativeness.md"],
+  "parents": ["s032_cohort_fast", "s046_s019_bracket_basin_coverage", "s044_canonical_validation", "s045_bracket_density_projection"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "On s032's cached 5-cell bracket (81 seeds), the highest-max_geo cell equals the closest-to-truth-|omega| cell on 71.6% of seeds (+258% over the 20% random baseline); top-2 by max_geo_align_sum catches it on 97.5%. No fast-tail degradation (Q4 71%); Q2 anomalously weak (50%). Caveat: 4/5 cells are usually grossly off-truth so the lift is partly elimination-by-mismatch (tested directly in s047b). Picks the closest-to-truth cell, so it reads truth as input."
+}

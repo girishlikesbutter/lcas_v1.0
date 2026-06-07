@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s112_slow_tumbler_pipeline_report",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-cap-slow-tumbler",
+  "question": "Does the slow-tumbler inversion pipeline (|ω| clamp + anchor-cap + surrogate LM polish) recover the true attitude+spin state of slow tumblers as Band-A multi-solution sets?",
+  "hypothesis": "The slow-tumbler pipeline recovers truth in Band A as a multi-solution set on slow seeds.",
+  "status": "inconclusive",
+  "run_type": "cheap",
+  "seeds": [116, 10],
+  "N": 2,
+  "claim_scope": "N1",
+  "metrics": {
+    "rho_band": "A",
+    "n_solutions_116": 7,
+    "n_bandA_116": 4,
+    "truth_q0_err_116_deg": 0.19,
+    "truth_w_dir_err_116_deg": 0.03,
+    "n_solutions_10": 6,
+    "n_bandA_10": 3,
+    "truth_q0_err_10_deg": 2.41,
+    "truth_w_dir_err_10_deg": 1.18,
+    "wall_s": 47
+  },
+  "artefacts": [
+    { "path": "results/s110/polish_116.json", "kind": "data" },
+    { "path": "results/s110/polish_010.json", "kind": "data" },
+    { "path": "results/s112/slow_tumbler_seed116.png", "kind": "plot" },
+    { "path": "results/s112/slow_tumbler_seed010.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s112_slow_tumbler_pipeline_report.md"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-29T00:00:00Z",
+  "narrative_md": "Report on the slow-tumbler pipeline (|ω| clamp + anchor-cap dt_ab<π/ω_hi + surrogate LM polish) on seeds 116 and 10. Both recover truth in Band A as multi-solution sets: 116 → 7 solutions (4 Band A, truth q0 0.19°/ω-dir 0.03°); 10 → 6 solutions (3 Band A, truth q0 2.41°/ω-dir 1.18°). Inconclusive overall: surrogate-only (no hi-fi confirmation), seed 10's candidates came from an over-coarsened set (lower bound), and N=2 with seeds 42/31 needing the decimation/sampling fixes first. Surrogate-only; truth used as label/diagnostic."
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/frontier_ranking.schema.json",
+  "title": "Frontier ranking",
+  "description": "A DERIVED, ephemeral artifact (NOT a canonical store object): the ranked frontier the `/strategize` skill emits for the dashboard (PLAN Q9, req #9). It lives at research_os/render/frontier_ranking.json alongside the other derived render artifacts (the live-head, the plot-stream manifest) and is gitignored. The web backend only ever READS it — the boundary (Q1/Q11) is intact. A new ranking overwrites the old one; the artifact carries the store revision it ranked (`generated_for_rev`) so the dashboard can flag it stale once the store moves. Because it is lens-dependent and re-derivable, it is never referentially-closed by loop/validate.py.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["lens", "items"],
+  "properties": {
+    "lens": {
+      "type": "string",
+      "description": "The ranking lens this pass used (the human's call per phase).",
+      "enum": ["leverage-to-trunk", "cheapest-to-resolve", "max-uncertainty-reduction", "unblocks-most", "trust-repair"]
+    },
+    "generated_at": { "type": "string", "description": "ISO timestamp the ranking was produced." },
+    "generated_for_rev": {
+      "type": "string",
+      "description": "The store revision (indexer.store_revision()) this ranking was computed against; the dashboard marks the ranking stale when the live store rev differs."
+    },
+    "items": {
+      "type": "array",
+      "description": "Frontier goal nodes in priority order (rank 1 = highest).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["goal_id", "rank"],
+        "properties": {
+          "goal_id": { "type": "string", "description": "The ranked goal node id (must resolve in goals/)." },
+          "rank": { "type": "integer", "minimum": 1, "description": "1-based priority; 1 is the top pick." },
+          "rationale": { "type": "string", "description": "One line under the chosen lens, store-cited." },
+          "action": { "type": "string", "description": "The concrete next action — what one run would move it." },
+          "cost": { "type": "string", "description": "Rough cost, e.g. '~30 min' (from the node budget or nearest-analog run)." },
+          "crux": { "type": "string", "description": "The one uncertain thing whose outcome can't be predicted." }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_anchor-cap-slow-tumbler",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_blind-pipeline",
+  "title": "Does sharpness-based first-anchor + single-wind proximity/variation second-anchor + |ω|-clamp invert the slow-tumbler class generally?",
+  "state": "blocked",
+  "spent": {
+    "runs": 3,
+    "wall_s": 47.0
+  },
+  "contract_refs": [
+    "contract_slow-tumbler-generality"
+  ],
+  "child_runs": [
+    "s111_anchor_cap_116_invert_and_decimation_bug",
+    "s112_slow_tumbler_pipeline_report",
+    "s113_slow_tumbler_cross_cost_wall"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-04T00:00:00Z",
+  "last_measured": {
+    "run": "s113_slow_tumbler_cross_cost_wall",
+    "summary": "BLOCKED: the s111 decimation fix is correct (fixed-2° preserves resolution) but the fixed-2° A×B cross is intractable on weak-anchor seeds (116 B=ep52 → 40941 cells → 211M pairs; coarse-6° → 16.4M). The anchor-cap forces a close-and-weak B; the s111 adaptive coarsening was load-bearing for tractability. Needs a weak-anchor-aware cross redesign (C-anchor pre-prune / Basin characterisation).",
+    "at": "2026-06-01T00:00:00Z"
+  }
+}

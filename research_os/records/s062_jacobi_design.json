@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s062_jacobi_design",
+  "kind": "run_record",
+  "goal_node": "goal_jacobi-propagator",
+  "question": "How should the closed-form Jacobi-elliptic omega(t) and q(t) propagator be implemented and validated in phases?",
+  "status": "inconclusive",
+  "run_type": "probe",
+  "seeds": [],
+  "N": 0,
+  "claim_scope": "N1",
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s062_jacobi_design.md"],
+  "parents": ["s061c_seed28_thread"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "DESIGN doc (not executed). Phased implementation plan for the closed-form Jacobi-elliptic propagator: s062a (eigendecompose m048 inertia + omega_jacobi via scipy.special.ellipj, validated vs DOP853 rtol < 1e-8), s062b (closed-form q(t) via theta-function Path 1 or precession+nutation Path 2, with a non-negotiable 3-gate round-trip validation), s062c (wire into lib/forward and profile), s062d (sample on polhode coords for the s061 reframe). Recommends Path 2 for debuggability and stresses not skipping the validation gate."
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "ck-kernel",
+  "kind": "glossary_term",
+  "term": "ck-kernel",
+  "definition": "A SPICE CK attitude (orientation-over-time) kernel file generated from a prediCkt spec.",
+  "status": "provisional",
+  "coined_in": "research_os/backfill/W-D_tool_pipeline_scour.md",
+  "synonyms_blocked": [],
+  "aliases": [],
+  "related_terms": [
+    "spk-kernel",
+    "sclk-kernel",
+    "spice-setup-file"
+  ],
+  "created_at": "2026-06-07T00:00:00Z"
+}

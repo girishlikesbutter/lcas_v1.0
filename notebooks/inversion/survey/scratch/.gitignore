@@ -1,0 +1,5 @@
+# scratch/ holds one-off diagnostic / smoke scripts during experiment design.
+# Per workspace convention, the formal experiments live under experiments/.
+# Files here can be committed if useful for reproducing a finding, or left
+# uncommitted otherwise. This file is here so that explicitly-untracked
+# files don't surprise anyone.

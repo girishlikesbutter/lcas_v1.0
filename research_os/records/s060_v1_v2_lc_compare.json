@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s060_v1_v2_lc_compare",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "How do the v1 and v2 surrogates differ on a real (truth) light curve?",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [28],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "v1_rms_mag": 0.104,
+    "v1_rho": 2.09,
+    "v1_rho_band": "B",
+    "v2_rms_mag": 0.024,
+    "v2_rho": 0.48,
+    "v2_rho_band": "A"
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s060_v1_v2_compare/seed28_v1_vs_truth.png", "kind": "plot", "caption": "v1 surrogate vs truth LC, seed 28" },
+    { "path": "notebooks/inversion/survey/results/s060_v1_v2_compare/seed28_v2_vs_truth.png", "kind": "plot", "caption": "v2 surrogate vs truth LC, seed 28" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s060_v1_v2_lc_compare.md"],
+  "parents": ["s060_v1_v2_cloud_compare"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-10T00:00:00Z",
+  "narrative_md": "Rendering seed 28's truth trajectory under both surrogates: v1 RMS 0.104 mag / rho 2.09 (Band B) with a localized ~1.0 mag spike near t=110; v2 RMS 0.024 / rho 0.48 (Band A) with scattered ~0.2 mag spikes. The v1 and v2 error spikes are NOT co-located. This seed observation motivated the cloud-regime test (s060_v1_v2_cloud_compare). Renders the truth trajectory (render-at-truth)."
+}

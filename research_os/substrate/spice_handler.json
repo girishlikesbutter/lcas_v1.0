@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "spice_handler",
+  "kind": "substrate_component",
+  "name": "SpiceHandler",
+  "path": "src/spice/spice_handler.py",
+  "tier": "substrate",
+  "interface": "class: load_metakernel, utc_to_et/et_to_utc, get_body_position, get_target_orientation, get_frame_name_from_id. The ephemeris-access block; the class is the unit, no single method is the Tool.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:d908e807ca0c8c7a",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/spice/spice_handler.py:SpiceHandler",
+  "ports": {
+    "input": [
+      "epoch-observation"
+    ],
+    "output": [
+      "attitude-trajectory",
+      "epoch-observation"
+    ]
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:d908e807ca0c8c7a",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

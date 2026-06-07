@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "pipeline_cross-cloud",
+  "kind": "pipeline",
+  "title": "Two-point BVP \u03c9-solve across IA Clouds",
+  "hypothesis": "Connecting per-epoch IA Cloud anchors via a two-point boundary-value \u03c9-solve, then filtering the survivors, recovers (q0, \u03c9) blind.",
+  "state": "open",
+  "serves": [
+    "goal_cross-cloud-bridging"
+  ],
+  "composes": [
+    "propagator",
+    "scorer",
+    "sample_so3_pool",
+    "survive_at_epoch",
+    "shoot",
+    "twin_dedup"
+  ],
+  "supersedes": null,
+  "superseded_by": null,
+  "last_measured": {
+    "run": "s096_density_usefulness_116",
+    "summary": "Filter works at \u03b4<1\u00b0 (windowed-RMSE p50 0.033, 100% below junk); cross intractable on weak anchors (s113)",
+    "at": "2026-05-22T00:00:00Z"
+  },
+  "created_at": "2026-06-04T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

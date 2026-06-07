@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s111_anchor_cap_116_invert_and_decimation_bug",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-cap-slow-tumbler",
+  "question": "Do a physical |ω| clamp + an anchor-spacing cap (dt_ab < π/ω_hi) cure finite-diff aliasing and invert seed 116, and does the config generalise to slow tumblers?",
+  "hypothesis": "An |ω| clamp [0.05,1.6] dps + anchor-cap keeps the single-shoot under half a turn so it stops aliasing, inverting 116 and generalising to slow seeds.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [116, 10, 42, 31],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_attractors_116": 7,
+    "n_bandA_equiv_116": 4,
+    "truth_q0_err_deg": 0.19,
+    "truth_w_dir_err_deg": 0.03,
+    "truth_w_mag": 0.1335,
+    "surr_rho_truth": 0.202,
+    "anchor_cap_single_shoot_before_deg": 145,
+    "anchor_cap_single_shoot_after_deg": 0.94,
+    "w_envelope_min_dps": 0.1053,
+    "w_envelope_max_dps": 1.5034
+  },
+  "artefacts": [
+    { "path": "results/s110/polish_116.json", "kind": "data" },
+    { "path": "results/s109/omega_envelope.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s111_anchor_cap_116_invert_and_decimation_bug.md"],
+  "parents": ["s099_blind_fast_invert_116", "s106_hybrid_loss_polish"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-29T00:00:00Z",
+  "narrative_md": "A physical |ω| clamp [0.05,1.6] dps + an anchor-spacing cap (dt_ab < π/ω_hi, keeping the A→B finite-diff under half a turn) cure single-shoot aliasing and invert seed 116 as a clean 7-attractor multi-solution set (4 at the surrogate floor; truth at q0 0.19°, ω-dir 0.03°, |ω| 0.1335 vs 0.1336). Anchor-cap mechanism confirmed (single-shoot 145°→0.94°). BUT the slow-tumbler sweep (10/42/31) is BROKEN by a decimation bug that widens 2° cells (truth-near 1.45°→6.61°) + a 6M-vs-1M sampling bug + a padding bug that skipped all polishes — generality unproven. Surrogate-only; truth used only as a label."
+}

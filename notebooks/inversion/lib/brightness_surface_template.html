@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brightness Surface</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: #000; color: #ccc; font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  #header {
+    height: 36px; padding: 0 16px; background: #0a0a0a; border-bottom: 1px solid #222;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  #header h1 { font-size: 14px; color: #ddd; font-weight: 500; }
+  #info-text { font-size: 12px; color: #888; }
+  #plot { flex: 1; min-height: 0; }
+  #controls {
+    background: #0a0a0a; border-top: 1px solid #222;
+    display: flex; align-items: center; padding: 6px 12px; gap: 10px;
+    flex-wrap: wrap; flex-shrink: 0;
+  }
+  .ctrl-group { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .ctrl-label { font-size: 11px; color: #999; }
+  .ctrl-val { font-size: 11px; color: #5dade2; min-width: 32px; text-align: right; }
+  .ctrl-group input[type=range] { width: 100px; accent-color: #5dade2; cursor: pointer; }
+  .ctrl-group select {
+    background: #1a1a1a; color: #ccc; border: 1px solid #333; border-radius: 3px;
+    padding: 2px 6px; font-size: 11px; cursor: pointer;
+  }
+  .ctrl-toggle { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #999; cursor: pointer; }
+  .ctrl-toggle input { accent-color: #5dade2; cursor: pointer; }
+  .sep { width: 1px; height: 24px; background: #333; flex-shrink: 0; }
+  .kbd { font-size: 10px; color: #444; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1 id="title">Brightness Surface</h1>
+  <span id="info-text"></span>
+</div>
+<div id="plot"></div>
+<div id="controls">
+  <span id="art-sliders"></span>
+  <div class="sep"></div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Detail:</span>
+    <select id="subdiv-select">
+      <option value="2">Low (42)</option>
+      <option value="3">Med (162)</option>
+      <option value="4" selected>High (642)</option>
+      <option value="5">Ultra (2562)</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <label class="ctrl-toggle">
+    <input type="checkbox" id="normals-check" checked onchange="toggleNormals()"> Normals
+  </label>
+  <div class="sep"></div>
+  <span id="brdf-sliders"></span>
+  <label class="ctrl-toggle">
+    <input type="checkbox" id="brdf-default-check" checked onchange="toggleBrdfDefault()"> Default BRDF
+  </label>
+  <div class="sep"></div>
+  <label class="ctrl-toggle">
+    <input type="checkbox" id="abs-check" onchange="toggleAbsMode()"> Absolute
+  </label>
+  <div class="sep"></div>
+  <span class="kbd">N: normals &middot; B: reset BRDF &middot; A: abs/rel</span>
+</div>
+
+<script>
+const D = __SURFACE_DATA__;
+const PI = Math.PI, DEG = PI / 180;
+
+// ── Vector math ──
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function cross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function vlen(a){return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
+function normalize(a){const l=vlen(a);return l>1e-10?[a[0]/l,a[1]/l,a[2]/l]:[0,0,0];}
+function rotateAroundAxis(v,axis,angle){
+  const c=Math.cos(angle),s=Math.sin(angle),d=dot(axis,v),cr=cross(axis,v);
+  return[v[0]*c+cr[0]*s+axis[0]*d*(1-c),v[1]*c+cr[1]*s+axis[1]*d*(1-c),v[2]*c+cr[2]*s+axis[2]*d*(1-c)];
+}
+
+// ── Icosphere ──
+function generateIcosphere(sub){
+  const t=(1+Math.sqrt(5))/2;
+  let V=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]].map(normalize);
+  let F=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+  for(let s=0;s<sub;s++){const mc={},nf=[];function gm(a,b){const k=Math.min(a,b)+'_'+Math.max(a,b);if(mc[k]!==undefined)return mc[k];V.push(normalize([(V[a][0]+V[b][0])/2,(V[a][1]+V[b][1])/2,(V[a][2]+V[b][2])/2]));mc[k]=V.length-1;return mc[k];}for(const f of F){const a=gm(f[0],f[1]),b=gm(f[1],f[2]),c=gm(f[2],f[0]);nf.push([f[0],a,c],[f[1],b,a],[f[2],c,b],[a,b,c]);}F=nf;}
+  return{verts:V,faces:F,N:V.length,F:F.length};
+}
+
+// ── BRDF (Ashikhmin-Shirley) ──
+function computeBRDF(nk1,nk2,hk1,nh,r_d,r_s,n_p){
+  const a=1-nk1/2,b=1-nk2/2;
+  const fr=r_s+(1-r_s)*Math.pow(1-hk1,5);
+  const rd=(28*r_d/(23*PI))*(1-r_s)*(1-Math.pow(a,5))*(1-Math.pow(b,5));
+  const dn=hk1*Math.max(nk1,nk2);
+  let rs=0;if(dn>1e-10)rs=((n_p+1)/(8*PI))*Math.pow(nh,n_p)/dn*fr;
+  return rd+rs;
+}
+
+// ── BRDF state ──
+let useDefaultBrdf = true;
+const brdfOverrides = {}, brdfDefaults = {};
+for(const bd of D.brdfDefaults)for(const cn of bd.components){
+  brdfDefaults[cn]={r_d:bd.r_d,r_s:bd.r_s,n_phong:bd.n_phong};
+  brdfOverrides[cn]={r_d:bd.r_d,r_s:bd.r_s,n_phong:bd.n_phong};
+}
+function getBrdf(cn){return useDefaultBrdf?brdfDefaults[cn]:brdfOverrides[cn];}
+
+// ── Build active groups (with articulation + BRDF overrides) ──
+// Returns array of {normal, area, r_d, r_s, n_phong, comp}
+function buildActiveGroups(){
+  const groups=[];
+  for(const comp of D.components){
+    const ang=sliderAngles[comp.name]||0;
+    const rot=comp.articulation&&Math.abs(ang)>1e-6;
+    const axis=comp.articulation?comp.articulation.axis:null;
+    const rad=ang*DEG;
+    const b=getBrdf(comp.name);
+    for(const g of comp.groups){
+      let n=g.normal; if(rot)n=rotateAroundAxis(n,axis,rad);
+      groups.push({normal:n,area:g.area,r_d:b.r_d,r_s:b.r_s,n_phong:b.n_phong,comp:comp.name});
+    }
+  }
+  return groups;
+}
+
+// ── Compute flux (k1=k2=d, zero phase angle) ──
+function computeFlux(d,groups){
+  let flux=0;
+  for(let i=0;i<groups.length;i++){
+    const g=groups[i],nd=dot(g.normal,d);
+    if(nd<=0)continue;
+    flux+=computeBRDF(nd,nd,1,nd,g.r_d,g.r_s,g.n_phong)*g.area*nd*nd;
+  }
+  return flux;
+}
+
+// ── Compute surface ──
+const R_MAX=1.0;
+let absoluteMode=false, refRange=null;
+
+function computeSurface(mesh,groups){
+  const N=mesh.N;
+  const fluxArr=new Float64Array(N),logFlux=new Float64Array(N);
+  for(let i=0;i<N;i++){fluxArr[i]=computeFlux(mesh.verts[i],groups);logFlux[i]=fluxArr[i]>0?Math.log10(fluxArr[i]):NaN;}
+
+  let logMin=Infinity,logMax=-Infinity;
+  for(let i=0;i<N;i++){if(!isNaN(logFlux[i])){if(logFlux[i]<logMin)logMin=logFlux[i];if(logFlux[i]>logMax)logMax=logFlux[i];}}
+
+  const mMin=(absoluteMode&&refRange)?refRange.logMin:logMin;
+  const mMax=(absoluteMode&&refRange)?refRange.logMax:logMax;
+  const span=mMax-mMin;
+
+  const x=new Float64Array(N),y=new Float64Array(N),z=new Float64Array(N);
+  for(let i=0;i<N;i++){
+    if(isNaN(logFlux[i])){x[i]=0;y[i]=0;z[i]=0;}
+    else{let t=span>1e-10?(logFlux[i]-mMin)/span:1;t=Math.max(0,Math.min(1,t));const r=0.1+t*(R_MAX-0.1);x[i]=mesh.verts[i][0]*r;y[i]=mesh.verts[i][1]*r;z[i]=mesh.verts[i][2]*r;}
+  }
+
+  const F=mesh.F,fi=new Float64Array(F);
+  for(let f=0;f<F;f++){const fc=mesh.faces[f];const a=logFlux[fc[0]],b=logFlux[fc[1]],c=logFlux[fc[2]];fi[f]=(isNaN(a)||isNaN(b)||isNaN(c))?NaN:(a+b+c)/3;}
+
+  let best=0;for(let i=1;i<N;i++)if(fluxArr[i]>fluxArr[best])best=i;
+  return{x,y,z,faceIntensity:fi,logMin,logMax,bestIdx:best};
+}
+
+// ── State ──
+let currentSubdiv=4, meshCache={}, surfaceTraceIdx=0, normalTraceStart=-1, normalTraceCount=0;
+const sliderAngles={};
+for(const c of D.components)sliderAngles[c.name]=0;
+function getMesh(s){if(!meshCache[s])meshCache[s]=generateIcosphere(s);return meshCache[s];}
+
+// ── Distinct colour palette for normal groups ──
+const GROUP_PALETTE=[
+  '#e6194b','#3cb44b','#4363d8','#f58231','#911eb4',
+  '#42d4f4','#f032e6','#bfef45','#fabed4','#469990',
+  '#dcbeff','#9A6324','#fffac8','#800000','#aaffc3',
+];
+
+// Group active normals by unique direction, aggregate area + track contributing components
+function groupNormals(groups){
+  const keys=[], normals=[], areas=[], compSets=[];
+  for(const g of groups){
+    const key=g.normal.map(v=>v.toFixed(3)).join(',');
+    const idx=keys.indexOf(key);
+    if(idx===-1){keys.push(key);normals.push(g.normal);areas.push(g.area);compSets.push(new Set([g.comp]));}
+    else{areas[idx]+=g.area;compSets[idx].add(g.comp);}
+  }
+  return normals.map((n,i)=>({normal:n,area:areas[i],comps:[...compSets[i]]}));
+}
+
+// ── Build Plotly traces ──
+const SHAFT=1.15, CONE_SZ=0.1;
+
+function buildTraces(){
+  const groups=buildActiveGroups();
+  const mesh=getMesh(currentSubdiv);
+  const result=computeSurface(mesh,groups);
+
+  const iArr=[],jArr=[],kArr=[];
+  for(const f of mesh.faces){iArr.push(f[0]);jArr.push(f[1]);kArr.push(f[2]);}
+
+  const traces=[];
+
+  // Trace 0: mesh3d surface
+  traces.push({
+    type:'mesh3d',
+    x:Array.from(result.x),y:Array.from(result.y),z:Array.from(result.z),
+    i:iArr,j:jArr,k:kArr,
+    intensity:Array.from(result.faceIntensity),
+    intensitymode:'cell',colorscale:'Plasma',showscale:true,
+    colorbar:{title:{text:'log\u2081\u2080(flux)',font:{size:10,color:'#999'}},tickfont:{size:9,color:'#777'},len:0.5,x:1.02,bgcolor:'rgba(0,0,0,0)',borderwidth:0},
+    flatshading:true,lighting:{ambient:0.7,diffuse:0.4,specular:0.1,fresnel:0},
+    lightposition:{x:0,y:0,z:10000},
+    hovertemplate:'log\u2081\u2080(flux): %{intensity:.2f}<extra></extra>',
+    name:'Surface',showlegend:false,
+  });
+  surfaceTraceIdx=0;
+
+  // Normal arrows — one per unique normal group
+  // ± pairs (n and -n) share the same colour; positive = solid, negative = dashed
+  // "Positive" = first non-zero component is positive
+  normalTraceStart=traces.length;
+  const AREA_THRESH=2.0;
+  const gn=groupNormals(groups);
+
+  // Pair ± normals: canonical key = the positive member's rounded coords
+  function isPositive(n){for(let i=0;i<3;i++){if(Math.abs(n[i])>0.001)return n[i]>0;}return true;}
+  function canonKey(n){const p=isPositive(n);const s=p?n:n.map(v=>-v);return s.map(v=>v.toFixed(3)).join(',');}
+
+  const pairMap={};  // canonKey → {colorIdx}
+  let nextColor=0;
+  const pairInfo=new Array(gn.length);
+  for(let i=0;i<gn.length;i++){
+    const ck=canonKey(gn[i].normal);
+    if(!pairMap[ck])pairMap[ck]={colorIdx:nextColor++};
+    pairInfo[i]={colorIdx:pairMap[ck].colorIdx,pos:isPositive(gn[i].normal)};
+  }
+
+  for(let i=0;i<gn.length;i++){
+    const g=gn[i],n=g.normal,pi=pairInfo[i];
+    const col=GROUP_PALETTE[pi.colorIdx%GROUP_PALETTE.length];
+    const primary=g.area>AREA_THRESH;
+    const w=primary?3.5:1.5;
+    const dash=pi.pos?'solid':'dash';
+    const compList=g.comps.map(c=>c.replace('_North','_N').replace('_South','_S').replace('_West','_W').replace('_East','_E')).join('+');
+    const sign=pi.pos?'+':'\u2212';
+    const hover=sign+' '+compList+' '+g.area.toFixed(1)+' m\u00b2';
+
+    traces.push({
+      type:'scatter3d',mode:'lines',
+      x:[0,n[0]*SHAFT],y:[0,n[1]*SHAFT],z:[0,n[2]*SHAFT],
+      line:{color:col,width:w,dash:dash},showlegend:false,
+      hovertext:hover,hoverinfo:'text',
+    });
+    traces.push({
+      type:'cone',anchor:'tail',
+      x:[n[0]*SHAFT],y:[n[1]*SHAFT],z:[n[2]*SHAFT],
+      u:[n[0]],v:[n[1]],w:[n[2]],
+      sizemode:'absolute',sizeref:primary?CONE_SZ:CONE_SZ*0.6,
+      colorscale:[[0,col],[1,col]],showscale:false,
+      showlegend:false,hoverinfo:'none',
+    });
+  }
+  normalTraceCount=traces.length-normalTraceStart;
+
+  return{traces,result};
+}
+
+// ── Layout ──
+function buildLayout(){
+  const sd={showbackground:true,backgroundcolor:'#050505',gridcolor:'#181818',zerolinecolor:'#252525',showticklabels:false,title:''};
+  return{
+    scene:{
+      xaxis:Object.assign({},sd,{range:[-1.4,1.4]}),
+      yaxis:Object.assign({},sd,{range:[-1.4,1.4]}),
+      zaxis:Object.assign({},sd,{range:[-1.4,1.4]}),
+      aspectmode:'cube',camera:{eye:{x:1.6,y:1.6,z:1.0}},
+    },
+    paper_bgcolor:'#000',plot_bgcolor:'#000',
+    font:{color:'#aaa',size:10},showlegend:false,
+    margin:{l:0,r:0,t:5,b:5},
+  };
+}
+
+// ── Camera save/restore ──
+function getCamera(){
+  try{const p=document.getElementById('plot');if(p&&p._fullLayout&&p._fullLayout.scene)return p._fullLayout.scene._scene.getCamera();}catch(e){}
+  return null;
+}
+
+// ── Full rebuild (articulation changes → trace count changes) ──
+function rebuildPlot(){
+  const cam=getCamera();
+  const{traces,result}=buildTraces();
+  const layout=buildLayout();
+  if(cam)layout.scene.camera=cam;  // inject BEFORE react — no flicker
+  Plotly.react('plot',traces,layout,{responsive:true,displayModeBar:false});
+  applyNormalsVisibility();
+  updateInfoText(result);
+}
+
+// ── Fast update (BRDF / abs toggle — normals unchanged, camera preserved) ──
+// Uses Plotly.update() to combine data + layout in one render pass,
+// preventing camera snap-back to the layout's stored value.
+function updateSurfaceOnly(){
+  const cam=getCamera();
+  const groups=buildActiveGroups();
+  const mesh=getMesh(currentSubdiv);
+  const result=computeSurface(mesh,groups);
+
+  const iArr=[],jArr=[],kArr=[];
+  for(const f of mesh.faces){iArr.push(f[0]);jArr.push(f[1]);kArr.push(f[2]);}
+
+  const dataUpdate={
+    x:[Array.from(result.x)],y:[Array.from(result.y)],z:[Array.from(result.z)],
+    i:[iArr],j:[jArr],k:[kArr],
+    intensity:[Array.from(result.faceIntensity)],
+  };
+  const layoutUpdate=cam?{'scene.camera':cam}:{};
+  Plotly.update('plot',dataUpdate,layoutUpdate,[surfaceTraceIdx]);
+
+  updateInfoText(result);
+}
+
+// ── Info text ──
+function updateInfoText(result){
+  const mesh=getMesh(currentSubdiv);
+  const best=mesh.verts[result.bestIdx];
+  const axes=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  const names=['+X','-X','+Y','-Y','+Z','-Z'];
+  let bi=0,bd=-2;for(let i=0;i<6;i++){const d=dot(best,axes[i]);if(d>bd){bd=d;bi=i;}}
+  const lr=isFinite(result.logMin)?`[${result.logMin.toFixed(2)}, ${result.logMax.toFixed(2)}]`:'--';
+  const arts=D.sliders.map(s=>{const a=sliderAngles[s.components[0]]||0;return`${s.label.replace('Solar Panels','SP').replace('Antenna Dishes','AD')}=${a}\u00b0`;}).join(' ');
+  const mode=absoluteMode?'ABS':'REL';
+  document.getElementById('info-text').textContent=`Peak near ${names[bi]} | range ${lr} | ${arts} | ${mode} | ${mesh.N} pts`;
+}
+
+function applyNormalsVisibility(){
+  const show=document.getElementById('normals-check').checked;
+  const idx=[];for(let i=0;i<normalTraceCount;i++)idx.push(normalTraceStart+i);
+  if(idx.length>0)Plotly.restyle('plot',{visible:show},idx);
+}
+function toggleNormals(){applyNormalsVisibility();}
+
+// ── Articulation sliders ──
+function buildSliderUI(){
+  const c=document.getElementById('art-sliders');let h='';
+  for(let si=0;si<D.sliders.length;si++){
+    const s=D.sliders[si],id='art-'+si;
+    h+='<div class="ctrl-group"><span class="ctrl-label">'+s.label+':</span>';
+    h+='<input type="range" id="'+id+'" min="'+s.range[0]+'" max="'+s.range[1]+'" value="'+s.default+'" step="'+s.step+'">';
+    h+='<span class="ctrl-val" id="'+id+'-val">'+s.default+'\u00b0</span></div>';
+    if(si<D.sliders.length-1)h+='<div class="sep"></div>';
+  }
+  c.innerHTML=h;
+  for(let si=0;si<D.sliders.length;si++){
+    const s=D.sliders[si],id='art-'+si;
+    document.getElementById(id).oninput=function(){
+      const v=+this.value;document.getElementById(id+'-val').textContent=v+'\u00b0';
+      for(const cn of s.components)sliderAngles[cn]=v;
+      rebuildPlot();  // full rebuild: normals move
+    };
+  }
+}
+
+// ── BRDF sliders ──
+function buildBrdfUI(){
+  const c=document.getElementById('brdf-sliders');let h='';
+  for(let bi=0;bi<D.brdfDefaults.length;bi++){
+    const bd=D.brdfDefaults[bi],pfx='brdf-'+bi;
+    h+='<div class="ctrl-group" id="'+pfx+'-group" style="display:none;">';
+    h+='<span class="ctrl-label" style="color:#e0c060;">'+bd.label+':</span>';
+    h+=' <span class="ctrl-label">r<sub>d</sub></span>';
+    h+='<input type="range" id="'+pfx+'-rd" min="0" max="1" value="'+bd.r_d+'" step="0.01" style="width:60px">';
+    h+='<span class="ctrl-val" id="'+pfx+'-rd-val">'+bd.r_d.toFixed(3)+'</span>';
+    h+=' <span class="ctrl-label">r<sub>s</sub></span>';
+    h+='<input type="range" id="'+pfx+'-rs" min="0" max="1" value="'+bd.r_s+'" step="0.01" style="width:60px">';
+    h+='<span class="ctrl-val" id="'+pfx+'-rs-val">'+bd.r_s.toFixed(2)+'</span>';
+    h+=' <span class="ctrl-label">n</span>';
+    h+='<input type="range" id="'+pfx+'-n" min="1" max="1000" value="'+bd.n_phong+'" step="1" style="width:60px">';
+    h+='<span class="ctrl-val" id="'+pfx+'-n-val">'+bd.n_phong+'</span>';
+    h+='</div>';
+  }
+  c.innerHTML=h;
+
+  for(let bi=0;bi<D.brdfDefaults.length;bi++){(function(bi){
+    const bd=D.brdfDefaults[bi],pfx='brdf-'+bi;
+
+    function updateBrdf(changedParam){
+      const rdEl=document.getElementById(pfx+'-rd'),rsEl=document.getElementById(pfx+'-rs');
+      let rd=+rdEl.value,rs=+rsEl.value;
+      // Energy conservation: r_d + r_s ≤ 1
+      if(rd+rs>1){
+        if(changedParam==='rd'){rs=Math.max(0,+(1-rd).toFixed(3));rsEl.value=rs;}
+        else{rd=Math.max(0,+(1-rs).toFixed(3));rdEl.value=rd;}
+      }
+      document.getElementById(pfx+'-rd-val').textContent=rd.toFixed(3);
+      document.getElementById(pfx+'-rs-val').textContent=rs.toFixed(2);
+      const np=+document.getElementById(pfx+'-n').value;
+      for(const cn of bd.components){brdfOverrides[cn].r_d=rd;brdfOverrides[cn].r_s=rs;brdfOverrides[cn].n_phong=np;}
+      updateSurfaceOnly();  // fast path: no normal changes
+    }
+
+    document.getElementById(pfx+'-rd').oninput=function(){updateBrdf('rd');};
+    document.getElementById(pfx+'-rs').oninput=function(){updateBrdf('rs');};
+    document.getElementById(pfx+'-n').oninput=function(){
+      const v=+this.value;document.getElementById(pfx+'-n-val').textContent=''+Math.round(v);
+      for(const cn of bd.components)brdfOverrides[cn].n_phong=v;
+      updateSurfaceOnly();
+    };
+  })(bi);}
+}
+
+// Sync slider positions to current override values (called when unchecking Default BRDF)
+function syncBrdfSliders(){
+  for(let bi=0;bi<D.brdfDefaults.length;bi++){
+    const bd=D.brdfDefaults[bi],pfx='brdf-'+bi;
+    const ov=brdfOverrides[bd.components[0]];
+    document.getElementById(pfx+'-rd').value=ov.r_d;
+    document.getElementById(pfx+'-rd-val').textContent=ov.r_d.toFixed(3);
+    document.getElementById(pfx+'-rs').value=ov.r_s;
+    document.getElementById(pfx+'-rs-val').textContent=ov.r_s.toFixed(2);
+    document.getElementById(pfx+'-n').value=ov.n_phong;
+    document.getElementById(pfx+'-n-val').textContent=''+Math.round(ov.n_phong);
+  }
+}
+
+function toggleBrdfDefault(){
+  useDefaultBrdf=document.getElementById('brdf-default-check').checked;
+  // When checking default: reset overrides so unchecking stays at defaults
+  if(useDefaultBrdf){
+    for(const bd of D.brdfDefaults)
+      for(const cn of bd.components)
+        brdfOverrides[cn]={r_d:bd.r_d,r_s:bd.r_s,n_phong:bd.n_phong};
+  }
+  for(let bi=0;bi<D.brdfDefaults.length;bi++)
+    document.getElementById('brdf-'+bi+'-group').style.display=useDefaultBrdf?'none':'';
+  if(!useDefaultBrdf)syncBrdfSliders();
+  updateSurfaceOnly();
+}
+
+function toggleAbsMode(){
+  absoluteMode=document.getElementById('abs-check').checked;
+  updateSurfaceOnly();
+}
+
+function resetBrdfSliders(){
+  for(let bi=0;bi<D.brdfDefaults.length;bi++){
+    const bd=D.brdfDefaults[bi];
+    for(const cn of bd.components)brdfOverrides[cn]={r_d:bd.r_d,r_s:bd.r_s,n_phong:bd.n_phong};
+  }
+  syncBrdfSliders();
+  useDefaultBrdf=true;
+  document.getElementById('brdf-default-check').checked=true;
+  toggleBrdfDefault();
+}
+
+// ── Controls ──
+document.getElementById('subdiv-select').onchange=function(){currentSubdiv=+this.value;rebuildPlot();};
+
+// ── Keyboard ──
+document.addEventListener('keydown',function(e){
+  if(e.code==='KeyN'){const cb=document.getElementById('normals-check');cb.checked=!cb.checked;toggleNormals();}
+  else if(e.code==='KeyB'){resetBrdfSliders();}
+  else if(e.code==='KeyA'){const cb=document.getElementById('abs-check');cb.checked=!cb.checked;toggleAbsMode();}
+});
+
+// ── Init ──
+document.getElementById('title').textContent=D.title;
+buildSliderUI();
+buildBrdfUI();
+
+// Capture reference range from default config for absolute mode
+{const g=buildActiveGroups(),m=getMesh(currentSubdiv),r=computeSurface(m,g);refRange={logMin:r.logMin,logMax:r.logMax};}
+
+rebuildPlot();
+</script>
+</body>
+</html>

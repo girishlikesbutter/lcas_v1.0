@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s055d_cascade_pol_diam_filter",
+  "kind": "run_record",
+  "goal_node": "goal_polhode-prior",
+  "question": "Does pol_diam disagreement act as a non-trivial filter that enriches truth-q_a hypotheses in the cached s049 cascade survivor pool (seed 14)?",
+  "hypothesis": "Rejecting (q_a, omega) hypotheses whose implied pol_diam disagrees with the LC-predicted pol_diam (s055a) is orthogonal to mag-agreement and enriches truth-adjacent hypotheses by >=3x.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [14],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "best_enrichment": 1.24,
+    "poldiam_only_enrichment_range": "0.87-1.02",
+    "operational_gate": "3x",
+    "truth_qa_median_pol_diam_dps": 1.37,
+    "pool_median_pol_diam_dps": 1.79,
+    "pool_size": 141000
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s049_cascade_seed14/cascade.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s055d_cascade_pol_diam_filter.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Decisive negative: pol_diam disagreement is NOT a useful filter on the s049 cascade pool for seed 14. Best enrichment of truth-q_a hypotheses = 1.24x (K=3 intersect pol_diam at 25% threshold), far below the 3x gate; pol_diam-only is flat (0.87-1.02x). Mechanism: cascade omega from anchor-pair finite-diff has pol_diams set by (q_a,q_b) geometry, not by truth-adjacency, so random q_a reproduce truth-like pol_diams. Closes the last extract-from-cascade-pool hypothesis. Reads truth-q_a labels and truth pol_diam -- oracle-leak, N=1."
+}

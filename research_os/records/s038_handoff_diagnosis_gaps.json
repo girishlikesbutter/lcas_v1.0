@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s038_handoff_diagnosis_gaps",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Which assumptions in the s036/s037 'phi-sweep is the bottleneck, switch to Sobol' narrative were asserted without testing, and what must the next agent investigate?",
+  "status": "inconclusive",
+  "run_type": "probe",
+  "seeds": [23],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "seed23_q_target_min_to_truth_deg": 26.9,
+    "filter_rejection_rate": "99.9%"
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s038_handoff_diagnosis_gaps.md"],
+  "parents": ["s036_multi_seed_pilot", "s037_sobol_lm_pilot", "s032_cohort_fast", "s033_density_sensitivity"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "Problem-statement handoff (no result): argues the s036->s037 'phi-sweep is the bottleneck, replace with Sobol' jump stacked untested assumptions (filter rejection mechanism, 37deg off-circle decomposition, LM-bridge-from-37deg, cohort off-circle floor distribution). Lists five investigations the next agent must run before any architecture change, and warns against trusting the s037 'architecture validated' framing or the s018a/b tier table as definitive. s038 (the diagnostic) executes items 1/3/4."
+}

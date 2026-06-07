@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s066_lj2000_nonconservation",
+  "kind": "run_record",
+  "goal_node": "goal_convention-bug",
+  "question": "Does the codebase coupled q-omega ODE conserve L_J2000 over a full LC, and is the s065 'physical at -omega' framing valid over the LC duration?",
+  "hypothesis": "The s065 omega-sign residual makes the m048 LCs real physical light curves of satellites tumbling at -omega0_rad.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89, 28, 14],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "toy_textbook_drift": 1.13e-12,
+    "toy_codebase_drift_pct": 191,
+    "seed89_rel_drift_pct": 62.5,
+    "seed28_rel_drift_pct": 36.4,
+    "seed14_rel_drift_pct": 136.7,
+    "L_body_conserved_to": 1e-14,
+    "lc_duration_min": 60
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s066_lj2000_nonconservation.md"],
+  "parents": ["s065_propagator_convention_spice_test", "s062b_jacobi_quaternion"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak", "conservation-smoke"],
+  "oracle_clean": false,
+  "created_at": "2026-05-12T00:00:00Z",
+  "narrative_md": "The codebase coupled q-omega ODE does NOT conserve L_J2000: it drifts 36-137% of |L_body| over a 60-min LC across seeds 89/28/14 (textbook control on a toy holds to 1e-12; codebase toy drifts 191%). |L_body| is conserved to 1e-14 -- the Euler equation is correct, only the q-evolution is wrong. This SUPERSEDES s065: the omega-sign residual holds only at t=0 and over ~1 s windows, not over LC duration -- no global sign substitution fixes it (Euler RHS is even in omega). The m048 cached LCs are deterministic outputs of a self-consistent but NON-physical forward model; the inversion benchmark stays well-posed and methodology carries over, but fix-and-regen is strongly indicated. Propagates cohort truth states to measure drift (render-at-truth)."
+}

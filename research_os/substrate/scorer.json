@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0.0",
+  "id": "scorer",
+  "kind": "substrate_component",
+  "name": "cost_surfaces",
+  "path": "notebooks/inversion/survey/lib/surrogate_eval.py",
+  "tier": "substrate",
+  "interface": "Surrogate-MSE residual + \u03c1-band classification (A/B/C/D) over a candidate (q0, \u03c9) against an observed light curve. The \u03c1-band convention is the shared acceptance scale across the survey.  [in_use=True]",
+  "functions": [
+    {
+      "name": "surrogate_full_lc_mse",
+      "signature": "surrogate_full_lc_mse(predicted, target)",
+      "role": "The scorer-facing primary residual \u2014 re-exports surrogate_eval.full_lc_mse (the LM objective).",
+      "line": 30
+    },
+    {
+      "name": "surrogate_bright_mse",
+      "signature": "surrogate_bright_mse(predicted, target, bright_threshold=11.0)",
+      "role": "Bright-subset MSE re-export \u2014 scores the glint epochs only.",
+      "line": 36
+    },
+    {
+      "name": "surrogate_nll_residual",
+      "signature": "surrogate_nll_residual(predicted, target, sigma_mag=0.05, rescale=True)",
+      "role": "RF25 NLL residual vector re-export (flux space).",
+      "line": 46
+    },
+    {
+      "name": "surrogate_nll_cost",
+      "signature": "surrogate_nll_cost(predicted, target, sigma_mag=0.05, rescale=True)",
+      "role": "Scalar mean-NLL re-export for candidate ranking (RF25 Eq.3).",
+      "line": 60
+    },
+    {
+      "name": "alignment_cost",
+      "signature": "alignment_cost(*args, **kwargs)",
+      "role": "NOT YET PORTED \u2014 this cost_surfaces.py entry raises NotImplementedError; the working impl is filter_costs.py:196 (the filter cost [0,1] over bright-peak matches), which the machinery map maps instead.",
+      "line": 71
+    },
+    {
+      "name": "lofi_peak_match",
+      "signature": "lofi_peak_match(\u2026)",
+      "role": "NOT YET PORTED \u2014 raises NotImplementedError (placeholder for a lo-fi peak-match pre-filter). Surfaces as 'uncovered' drift on the machinery map until ported.",
+      "line": 90
+    }
+  ],
+  "current_version": "1.0.0",
+  "current_hash": "sha256:656f87a622060681",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changed_on": "2026-04-30",
+      "change_reason": "Full-LC surrogate-MSE residual + \u03c1-band cut. Stable across the survey; \u03c1-band thresholds unchanged post-propagator-fix (scoring is geometry\u2192mag, bridge-independent).",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-04-30T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z",
+  "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:full_lc_mse",
+  "ports": {
+    "input": [
+      "light-curve",
+      "windowed-lc"
+    ],
+    "output": {
+      "return": "scoring"
+    }
+  },
+  "default_params": {
+    "bright_threshold": 11,
+    "sigma_mag": 0.05,
+    "rescale": true
+  },
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null
+}

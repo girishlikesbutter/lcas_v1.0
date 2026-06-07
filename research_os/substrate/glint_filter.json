@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "id": "glint_filter",
+  "kind": "substrate_component",
+  "name": "GlintFilter.evaluate",
+  "path": "src/inversion/glint_filter.py",
+  "tier": "substrate",
+  "interface": "(q0, \u03c90, times, inertia, mode) -> {precision, recall, f1}; PAB-alignment check vs observed glint epochs, ~3x faster than lo-fi LC, ~770x faster than hi-fi.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:30a178ca64e47c28",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/inversion/glint_filter.py:GlintFilter.evaluate",
+  "ports": {
+    "input": [
+      "q0-omega-state",
+      "epoch-observation"
+    ],
+    "output": {
+      "f1": "filter"
+    }
+  },
+  "default_params": {
+    "mode": "tumbling"
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:30a178ca64e47c28",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

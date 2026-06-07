@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s046_s019_bracket_basin_coverage",
+  "kind": "run_record",
+  "goal_node": "goal_ls-bracket",
+  "question": "When the s019 LS-bracket strategies are re-scored against the s042 basin rule (not a flat 5% bar), what fraction of the cohort is actually covered, and how does it stratify by |omega|?",
+  "hypothesis": "The 98/100-within-5% headline overstates usable coverage; under realistic basin widths the bracket covers far fewer seeds and breaks down on the fast |omega| tail.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "five_pct_bar_pass": "98/100",
+    "conservative_rule_pass": "54/100",
+    "lenient_rule_pass": "75/100",
+    "Q1_slowest_pass": "24/25",
+    "Q4_fastest_pass": "5/25",
+    "median_bracket_offset_pct": 1.25
+  },
+  "artefacts": [
+    { "path": "results/s046_s019_bracket_basin_coverage/per_seed.csv", "kind": "data" },
+    { "path": "results/s046_s019_bracket_basin_coverage/summary.json", "kind": "data" },
+    { "path": "results/s046_s019_bracket_basin_coverage/run.log", "kind": "log" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s046_s019_bracket_basin_coverage.md"],
+  "parents": ["s019_ls_bracket_omega_mag", "s042_basin_radius_cohort", "s045_bracket_density_projection"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "Re-scored s019's per-seed bracket offsets against the s042 basin rule: the 98/100-within-5% headline drops to 54/100 (conservative) to 75/100 (lenient) basin coverage, strongly |omega|-stratified (Q1 24/25 vs Q4 5/25). The bracket offset is roughly constant ~1.25% while the basin shrinks ~3x toward the fast tail. Conclusion: s019 bracket is a good coarse prior but needs local densification on fast seeds. Compares offsets against truth |omega|."
+}

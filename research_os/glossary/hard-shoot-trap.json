@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "id": "hard-shoot-trap",
+  "kind": "glossary_term",
+  "term": "Hard-shoot trap",
+  "definition": "Hard-connecting two ~1°-off anchor endpoints over several turns via a single two-point boundary-value shoot bakes a large ω error (e.g. 4.25° over 3.1 turns → Band D), even though LM multistart on the EXACT pair is Band A. The endpoints' small position error is amplified by the long propagation. The binding blocker s100/s105 isolated. Cure: a free-ω photometry-window polish (single-wind-lc-window-polish) seeded from the shoot, not the hard shoot itself.",
+  "status": "provisional",
+  "coined_in": "s105_pairs_to_omega_decomposition",
+  "synonyms_blocked": [],
+  "related_terms": ["single-wind-lc-window-polish", "finite-diff-omega-aliasing", "multi-omegadir-start"],
+  "created_at": "2026-06-04T00:00:00Z"
+}

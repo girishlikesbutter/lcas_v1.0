@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s077_l_vector_basin_sweep",
+  "kind": "run_record",
+  "goal_node": "goal_l-vector-discriminator",
+  "question": "Across the cohort, how does a converged solution basin's angular-momentum vector L relate to truth's L \u2014 is |L| pinned and/or L direction free, and is there evidence of a continuous L-direction family?",
+  "hypothesis": "The 'equal |L|, different direction' intuition holds at cohort scale: competing low-MSE basins match truth's |L| but spread in inertial L direction; the continuous-family escalation is what is under test.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    6,
+    10,
+    21,
+    28,
+    41,
+    44,
+    48,
+    60,
+    84,
+    91
+  ],
+  "N": 10,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_competing_basins": 104,
+    "L_mag_rel_diff_median_pct": 0.73,
+    "L_dir_angle_median_deg": 90.8,
+    "d_twoT_rel_median_pct": 1.42,
+    "d_L2_rel_median_pct": 1.47
+  },
+  "artefacts": [
+    {
+      "path": "results/s077/summary.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s077/basin_l_metrics.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "results/s077/s077_competing_hist.png",
+      "kind": "plot"
+    },
+    {
+      "path": "results/s077/s077_L_plane.png",
+      "kind": "plot"
+    },
+    {
+      "path": "results/s077/s077_casimir_per_seed.png",
+      "kind": "plot"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s077_l_vector_basin_sweep.md"
+  ],
+  "parents": [
+    "s073_cluster457_l_vector_check",
+    "s073e_robinson_frueh_2025_full_audit"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-14T00:00:00Z",
+  "narrative_md": "Re-scored all 640 converged basins from the post-fix s011/s068 pilot for their L vector. Among 104 competing low-MSE basins, |L| magnitude is pinned to truth (median 0.73%) while inertial L_J2000 direction is free (median 90.8 deg, near-uniform) \u2014 confirming the magnitude/direction asymmetry at cohort scale. The continuous-family escalation is NOT supported (discrete clumps; polhode structure ranges 1 to 24 distinct polhodes per seed). Casimirs match ~1.4%, 'nearby not identical' polhodes is cohort-typical. Descriptive (necessary side), not generative; loose surrogate gate. Reads truth L per basin -> oracle_clean false."
+}

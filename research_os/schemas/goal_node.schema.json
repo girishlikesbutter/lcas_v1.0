@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/goal_node.schema.json",
+  "title": "Goal node",
+  "description": "One node of the goal tree (PLAN §2, Q3). Runs attach to nodes; budgets live per node; the drift governor fires on budget breach -> auto-strategy-review. The tree is stored one-file-per-node (parent pointers), so the dashboard rebuilds the tree from the node set; this is git-friendlier than one monolithic tree file. The thesis root has parent=null and is_trunk_artifact=true (the gap / thesis contribution that papers can threaten and meetings can steer, Q10).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "node_kind",
+    "title",
+    "state",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^goal_[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "goal_<kebab-slug>. Stable; runs, contracts and child nodes reference it.",
+      "examples": ["goal_attitude-inversion", "goal_windowed-photometry-polish"]
+    },
+    "kind": { "type": "string", "const": "goal_node" },
+    "node_kind": {
+      "type": "string",
+      "enum": ["thesis", "chapter", "branch", "question"],
+      "description": "Depth in the tree. thesis = root (one). chapter = major thrust. branch = a contracted line of work. question = a specific answerable question runs attach to."
+    },
+    "parent": {
+      "type": ["string", "null"],
+      "description": "Parent goal_node id. Null ONLY for the thesis root."
+    },
+    "title": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["open", "blocked", "closed", "revivable"],
+      "description": "open = active. blocked = waiting on a dependency. closed = done/abandoned. revivable = closed but its blocker may no longer hold (dead-branch revival scans these, PLAN §4)."
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Expected cost. The governor compares spent vs this (breach factor is config, PLAN §7.2, not in-schema).",
+      "properties": {
+        "expected_runs": { "type": "integer", "minimum": 0 },
+        "expected_wall_s": { "type": "number", "minimum": 0, "description": "Expected total compute wall in seconds." }
+      }
+    },
+    "spent": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Accumulated actuals (summed from child_runs by the indexer).",
+      "properties": {
+        "runs": { "type": "integer", "minimum": 0 },
+        "wall_s": { "type": "number", "minimum": 0 }
+      }
+    },
+    "contract_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "branch_contract ids attached to this node (a branch usually has one frozen contract; amendments live inside it)."
+    },
+    "child_runs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "run_record ids attached directly to this node. (Child NODES are discovered via their parent pointer, not listed here.)"
+    },
+    "last_measured": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "default": null,
+      "description": "The most recent headline result on this node — what 'Last measured' lines in PROGRESS currently encode by hand.",
+      "properties": {
+        "run": { "type": "string", "description": "run_record id of the measuring run." },
+        "summary": { "type": "string", "description": "One-line headline (e.g. 'seed 119: 0.0300 Band A, |ω| 1.5025 deg/s')." },
+        "at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "is_trunk_artifact": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for the gap / thesis-contribution node (Q10): a first-class trunk artifact papers can threaten and meetings can steer. Typically exactly one node carries this."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

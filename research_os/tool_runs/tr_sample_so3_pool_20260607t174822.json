@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0.0",
+  "id": "tr_sample_so3_pool_20260607t174822",
+  "kind": "tool_run",
+  "tool": "sample_so3_pool",
+  "tool_version": "1.0.0",
+  "hash_at_run": "sha256:3893ace4b5223f1b",
+  "hash_ok": true,
+  "input": {},
+  "params": {
+    "sample_seed": 42,
+    "n_samples": 1000
+  },
+  "oracle_clean": true,
+  "reason": "live-test of the run-button (first bench run)",
+  "commit": "c6d2674",
+  "source": "cli",
+  "created_at": "2026-06-07T17:48:22",
+  "status": "ok",
+  "wall_s": 0.0005,
+  "metrics": {
+    "returned_keys": [
+      "R_cache",
+      "q_pool_wxyz",
+      "q_pool_xyzw",
+      "rotvec_pool"
+    ],
+    "R_cache_shape": [
+      1000,
+      3,
+      3
+    ],
+    "q_pool_wxyz_shape": [
+      1000,
+      4
+    ],
+    "q_pool_xyzw_shape": [
+      1000,
+      4
+    ],
+    "rotvec_pool_shape": [
+      1000,
+      3
+    ],
+    "wall_s": 0.0005
+  },
+  "artefacts": [
+    {
+      "path": "research_os/tool_runs/artifacts/tr_sample_so3_pool_20260607t174822.npz",
+      "kind": "data",
+      "caption": "tr_sample_so3_pool_20260607t174822 output (R_cache, q_pool_wxyz, q_pool_xyzw, rotvec_pool)"
+    }
+  ],
+  "executed_at": "2026-06-07T17:48:22"
+}

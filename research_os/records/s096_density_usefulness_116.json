@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s096_density_usefulness_116",
+  "kind": "run_record",
+  "goal_node": "goal_cross-cloud-discriminator",
+  "question": "If a denser pool put a candidate within <1° of truth at the solve anchors, do the connectability ω-dir error and the windowed-RMSE discriminator both work on seed 116?",
+  "hypothesis": "At <1° geodesic distance the connecting ω-dir error drops below the s087 1.25° gate AND windowed RMSE separates from junk.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    116
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "w_dir_p50_at_delta1_deg": 0.46,
+    "windowed_rmse_p50_at_delta1": 0.0332,
+    "pct_below_junk_at_delta1": 100,
+    "pct_w_dir_lt_1p25_at_delta1": 100,
+    "exact_truth_floor": 0.0077,
+    "junk_p1": 0.1093,
+    "degradation_knee_deg": 2.5
+  },
+  "artefacts": [
+    {
+      "path": "notebooks/inversion/survey/results/s096/basin.json",
+      "kind": "data"
+    },
+    {
+      "path": "notebooks/inversion/survey/results/s096/basin.npz",
+      "kind": "checkpoint"
+    },
+    {
+      "path": "notebooks/inversion/survey/results/s096/basin.png",
+      "kind": "plot"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s096_density_usefulness_116.md"
+  ],
+  "parents": [
+    "s097_times0_gauge_bug_audit",
+    "s092_cross_cloud_116",
+    "s087_omega_dir_threshold"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "oracle_clean": false,
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "Forward-model basin probe placing candidates at controlled geodesic distance δ from truth at the solve anchors. Decisive: at δ<1° truth-near windowed RMSE is ~0.01-0.03 mag, 100% below the junk floor (0.109), and 100% of candidates have ω-dir<1.25°. Both levers degrade through δ≈2-3° — exactly the gap a 30k pool gives — explaining the s092/s093 marginality. Density is the lever; the discriminator works once a candidate is within ~1-1.5°. Places candidates relative to truth → not blind.",
+  "tests": [
+    "pipeline_cross-cloud"
+  ]
+}

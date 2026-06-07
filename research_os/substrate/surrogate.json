@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0.0",
+  "id": "surrogate",
+  "kind": "substrate_component",
+  "name": "surrogate_model",
+  "path": "notebooks/inversion/survey/lib/surrogate_eval.py",
+  "tier": "substrate",
+  "interface": "surrogate_eval: maps body-frame (k1,k2) geometry \u2192 apparent magnitude via a residual ensemble (weights under ~/surrogate_model). Bridge-independent \u2014 needs NO retraining across the propagator convention fix.  [in_use=True]",
+  "functions": [
+    {
+      "name": "predict",
+      "signature": "predict(k1_body, k2_body, obs_dist_km, sp_angle_deg=\u2026, ad_angle_deg=\u2026)",
+      "role": "The gated seam: body-frame sun/observer geometry + articulation + observer distance \u2192 per-epoch apparent magnitude via the ensemble.",
+      "line": 42
+    },
+    {
+      "name": "get_model",
+      "signature": "get_model()",
+      "role": "Lazy loader that caches the default SurrogateModel singleton on first call (backs predict).",
+      "line": 34
+    },
+    {
+      "name": "full_lc_mse",
+      "signature": "full_lc_mse(predicted, target)",
+      "role": "Primary optimisation residual: masked mean of (pred\u2212target)\u00b2 over all finite epochs (mag space). Re-exported by the scorer.",
+      "line": 66
+    },
+    {
+      "name": "bright_mse",
+      "signature": "bright_mse(predicted, target, bright_threshold=\u2026)",
+      "role": "Bright-subset MSE \u2014 weights the glint epochs (target < threshold).",
+      "line": 74
+    },
+    {
+      "name": "rho",
+      "signature": "rho(predicted, target)",
+      "role": "\u221aMSE / 0.05 \u2014 the surrogate-space relative-fit metric against the noise floor (the cheap proxy for the hi-fi \u03c1-band).",
+      "line": 86
+    },
+    {
+      "name": "nll_residual",
+      "signature": "nll_residual(predicted, target, sigma_mag=0.05, rescale=True)",
+      "role": "RF25 Eq.3 per-epoch residual vector in flux space, with optional signal rescaling (absorbs albedo/scale).",
+      "line": 118
+    },
+    {
+      "name": "nll_cost",
+      "signature": "nll_cost(predicted, target, sigma_mag=0.05, rescale=True)",
+      "role": "Scalar mean negative-log-likelihood (RF25 Eq.3) combining \u03c7\u00b2 data-fit and the per-epoch noise model.",
+      "line": 167
+    }
+  ],
+  "current_version": "v2",
+  "current_hash": "sha256:656f87a622060681",
+  "versions": [
+    {
+      "version": "v1",
+      "changed_on": "2026-04-30",
+      "change_reason": "First residual surrogate. Materially different cloud than v2 at TOL=0.10 mag in the cloud-survival regime (s060: IoU 0.42 at LC extrema); admission noise propagates into any q\u2192\u03c9 derivation pipeline.",
+      "is_bug_fix": false
+    },
+    {
+      "version": "v2",
+      "changed_on": "2026-04-30",
+      "change_reason": "Residual ensemble used in production. Faithful in-basin (s002 argmin=truth; s014 Spearman 0.9952 outside basin). Default for all search/rank/polish; v1 is a fallback only when v2 is too slow.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-04-30T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z",
+  "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:predict",
+  "ports": {
+    "input": [
+      "attitude-trajectory",
+      "epoch-observation"
+    ],
+    "output": {
+      "return": "light-curve"
+    }
+  },
+  "default_params": {
+    "sp_angle_deg": 0,
+    "ad_angle_deg": 15,
+    "version": "v2"
+  },
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null
+}

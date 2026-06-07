@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "propagator",
+  "kind": "substrate_component",
+  "name": "attitude_propagator",
+  "path": "src/dynamics/attitude_propagator.py",
+  "tier": "substrate",
+  "interface": "propagate_euler / propagate_principal_axis: torque-free attitude q(t) under textbook convention conv-(a), dq/dt = -0.5 ω ⊗ q.",
+  "current_version": "2.0.0",
+  "current_hash": "sha256:PLACEHOLDER_compute_at_register_time",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changed_on": "2026-04-30",
+      "change_reason": "Initial implementation — conv-(b), dq/dt = +0.5 ω ⊗ q (LEFT). Opposite sign of textbook conv-(a); silently produced conv-(b) q the renderer mis-read.",
+      "is_bug_fix": false
+    },
+    {
+      "version": "2.0.0",
+      "changed_on": "2026-05-12",
+      "change_reason": "ω-sign convention FIX: +0.5 → -0.5 in propagate_euler L318 + propagate_principal_axis L177-184 (and lib/jacobi_propagator.py:432). Restores exact L_J2000 conservation. BLAST RADIUS: invalidated all pre-fix numerical findings s001–s066; cohort regenerated.",
+      "is_bug_fix": true,
+      "commit": "d5705ff"
+    }
+  ],
+  "created_at": "2026-04-30T00:00:00Z",
+  "updated_at": "2026-05-12T00:00:00Z"
+}

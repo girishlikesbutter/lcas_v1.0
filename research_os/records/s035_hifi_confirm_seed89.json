@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s035_hifi_confirm_seed89",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Do the 24 surrogate-Band-A polished candidates from s034 confirm as hi-fi Band A on seed 89?",
+  "hypothesis": "The surrogate-Band-A polished candidates confirm as hi-fi Band A.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_hifi_band_A": 24,
+    "rho_band": "A",
+    "truth_surr_rho": 0.391,
+    "truth_hifi_rho": 0.177,
+    "twin_hifi_rho": 0.161,
+    "n_distinct_basins": 4,
+    "wall_s": 171.5
+  },
+  "artefacts": [
+    { "path": "results/s035_hifi_confirm_seed089/hifi_confirm.json", "kind": "data" },
+    { "path": "results/s035_hifi_confirm_seed089/hifi_mags.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s035_hifi_confirm_seed89.md"],
+  "parents": ["s034_lm_polish_seed89", "s033_density_sensitivity"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-05T00:00:00Z",
+  "narrative_md": "Hi-fi render of the 24 surrogate-Band-A s034 candidates: 24/24 confirm Band A (0 B/C/D). Surrogate was 2.2x over-pessimistic at truth (surr rho 0.391 -> hi-fi 0.177). Four distinct physically-valid basins recovered (truth, 180deg twin, multi-sol-A q0~60deg, multi-sol-B q0~174deg), all hi-fi rho<1.1 — genuinely observationally indistinguishable. Density+polish chain validated end-to-end on seed 89 in ~10 min wall."
+}

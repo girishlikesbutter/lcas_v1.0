@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_attitude-inversion",
+  "kind": "goal_node",
+  "node_kind": "thesis",
+  "parent": null,
+  "title": "Recover satellite attitude state (q0, ω) from a single ground-based light curve",
+  "state": "open",
+  "spent": {
+    "runs": 0,
+    "wall_s": 0
+  },
+  "contract_refs": [],
+  "child_runs": [],
+  "is_trunk_artifact": true,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-05T00:00:00Z",
+  "last_measured": {
+    "run": "s114_anchor_direct_omega_multistart",
+    "summary": "fast aliased 119 — which s112 said needs the IA Cloud Cross — is now RECOVERED BLIND WITHOUT the cross: anchor-direct ω-multistart per cloud rep lands winner rep 192 at q0 2.27°/ω-dir 1.64°/hi-fi-ρ 1.534 Band A (26 A∪B, 0 phantoms; ω uniquely determined, attitude multi-valued). Both tumbler classes now invert blind (slow 116 @ s112, fast 119 @ s114). OPEN: cost — fast-class blind invert is ~32–97 min, over the 15-min target.",
+    "at": "2026-06-05T00:00:00Z"
+  }
+}

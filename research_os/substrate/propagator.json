@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "id": "propagator",
+  "kind": "substrate_component",
+  "name": "attitude_propagator",
+  "path": "src/dynamics/attitude_propagator.py",
+  "tier": "substrate",
+  "interface": "propagate_euler / propagate_principal_axis: torque-free attitude q(t) under textbook convention conv-(a), dq/dt = -0.5 \u03c9 \u2297 q.  [in_use=True]",
+  "functions": [
+    {
+      "name": "propagate_attitude",
+      "signature": "propagate_attitude(q0, omega0, times, mode, inertia_tensor=None, rtol=1e-10, atol=1e-12)",
+      "role": "Canonical entry point: routes (q0, \u03c9, t) to the closed-form principal-axis path or the ODE Euler path by the mode flag.",
+      "line": 42
+    },
+    {
+      "name": "propagate_principal_axis",
+      "signature": "propagate_principal_axis(q0, omega, times)",
+      "role": "Closed-form constant-\u03c9 attitude via the quaternion exponential q(t)=exp(-0.5 \u03c9\u00b7t)\u2297q0 (LEFT-multiply, conv-(a)).",
+      "line": 114
+    },
+    {
+      "name": "propagate_euler",
+      "signature": "propagate_euler(q0, omega0, inertia_tensor, times, rtol=1e-10, atol=1e-12)",
+      "role": "DOP853 integration of the coupled torque-free Euler equations + quaternion kinematics for a tumbling body. The \u03c9-sign that the 2.0.0 fix corrected lives here (L318).",
+      "line": 231
+    }
+  ],
+  "current_version": "2.0.0",
+  "current_hash": "sha256:5f108479e6e5266f",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changed_on": "2026-04-30",
+      "change_reason": "Initial implementation \u2014 conv-(b), dq/dt = +0.5 \u03c9 \u2297 q (LEFT). Opposite sign of textbook conv-(a); silently produced conv-(b) q the renderer mis-read.",
+      "is_bug_fix": false
+    },
+    {
+      "version": "2.0.0",
+      "changed_on": "2026-05-12",
+      "change_reason": "\u03c9-sign convention FIX: +0.5 \u2192 -0.5 in propagate_euler L318 + propagate_principal_axis L177-184 (and lib/jacobi_propagator.py:432). Restores exact L_J2000 conservation. BLAST RADIUS: invalidated all pre-fix numerical findings s001\u2013s066; cohort regenerated.",
+      "is_bug_fix": true,
+      "commit": "d5705ff"
+    }
+  ],
+  "created_at": "2026-04-30T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z",
+  "entry_point": "src/dynamics/attitude_propagator.py:propagate_attitude",
+  "ports": {
+    "input": [
+      "q0-omega-state",
+      "epoch-observation"
+    ],
+    "output": {
+      "quaternions": "attitude-trajectory",
+      "omega_history": "attitude-trajectory"
+    }
+  },
+  "default_params": {
+    "mode": "principal_axis",
+    "inertia_tensor": null,
+    "rtol": 1e-10,
+    "atol": 1e-12
+  },
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null
+}

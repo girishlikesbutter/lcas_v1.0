@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "id": "finite-diff-omega-aliasing",
+  "kind": "glossary_term",
+  "term": "finite-diff ω-aliasing",
+  "definition": "The single-shoot ω estimate aliases truth when the anchor-pair Δt is too large vs the tumble period. A property of the SPACING, not the seed (seed 119: A→B = 743 s ≈ 3.1 winds → 4.25° ω-dir error → Band D).",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "coined_in": "notebooks/inversion/survey/experiments/s105_pairs_to_omega_decomposition.md",
+  "synonyms_blocked": [
+    "aliased seed"
+  ],
+  "related_terms": [
+    "wind",
+    "multi-omegadir-start",
+    "ia-cloud-cross"
+  ]
+}

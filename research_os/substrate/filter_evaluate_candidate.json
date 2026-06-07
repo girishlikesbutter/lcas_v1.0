@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "filter_evaluate_candidate",
+  "kind": "substrate_component",
+  "name": "evaluate_candidate",
+  "path": "notebooks/inversion/survey/lib/filter_costs.py",
+  "tier": "substrate",
+  "interface": "(q0, \u03c90, seed_data, inertia, face_normals, tier_face_idx, geom params) -> {score_alignment, score_geo, mag_pred}; composes propagate_candidate + surrogate.predict + alignment_cost + geo_cost in one call.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:057d6f8fd0fe8154",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/filter_costs.py:evaluate_candidate",
+  "ports": {
+    "input": [
+      "q0-omega-state",
+      "epoch-observation"
+    ],
+    "output": {
+      "score_alignment": "filter",
+      "mag_pred": "light-curve"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:057d6f8fd0fe8154",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

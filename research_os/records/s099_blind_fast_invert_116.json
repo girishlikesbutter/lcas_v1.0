@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s099_blind_fast_invert_116",
+  "kind": "run_record",
+  "goal_node": "goal_blind-fast-invert",
+  "question": "Can seed 116 be inverted with a truth-free |ω| bracket (s019 Lomb-Scargle) in under 15 minutes?",
+  "hypothesis": "Replacing the truth-centered |ω| band with the blind s019 LS bracket plus two-stage coarse-K→full-500 scoring inverts seed 116 blind in <15 min.",
+  "status": "confirmed",
+  "run_type": "batch",
+  "seeds": [116],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "rho": 0.52,
+    "rho_band": "A",
+    "top_w_dir_deg": 0.86,
+    "n_bandA": 15,
+    "n_cross_survivors": 97938,
+    "coarse_k_spearman": 0.997,
+    "truth_floor_rmse": 0.0102,
+    "wall_s": 705
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s099/hifi_rho.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s099_blind_fast_invert_116.md"],
+  "parents": ["s098_local_densify_116", "s019_ls_bracket_omega_mag"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-26T00:00:00Z",
+  "narrative_md": "Fixed s098's two holes: replaced the truth-centered |ω| band with the blind s019 LS bracket (validated held-out 20/20 on seeds 100-119) and cut the wall 9.6× to 705 s (11.7 min) via coarse-K-decimated RMSE (Spearman 0.997) + two-stage scoring. Top blind candidate renders hi-fi ρ 0.52 (Band A); all 15 saved blind candidates Band A (ρ 0.52-0.75), a mix of near-truth-ω basins and body-twins. Blindness audit: the only remaining truth use is the infra LC floor and labeling — genuinely blind selection."
+}

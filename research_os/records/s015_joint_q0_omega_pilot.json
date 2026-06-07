@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s015_joint_q0_omega_pilot",
+  "kind": "run_record",
+  "goal_node": "goal_joint-polish",
+  "question": "Under blind random-ω stitched-Sobol + 6-DOF LM, does the s011 lowest-surrogate-MSE cohort selector still return near-truth landings?",
+  "hypothesis": "Joint (q0, ω) search under random-ω yields ~0 in-basin landings on seed 6 (tube-volume argument) and the s011 cohort selector breaks under joint search.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [6, 10, 13, 28, 41, 49, 79, 91],
+  "N": 8,
+  "claim_scope": "N1",
+  "metrics": {
+    "in_basin_seed6_smoke": "0/512",
+    "cohort_yield_N64": "0/8",
+    "predicted_seed6_in_basin": "0-2/512"
+  },
+  "artefacts": [
+    { "path": "results/s015_smoke/runs.npz", "kind": "checkpoint" },
+    { "path": "results/s015_diagnostic_n64/runs.npz", "kind": "checkpoint" },
+    { "path": "results/s015_diagnostic_n64/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s015_joint_q0_omega_pilot.md"],
+  "parents": ["s003_landscape_vs_omega", "s005_joint_local_descent", "s011_q4cii_sobol_so3_polish_pilot", "s014_cohort_rho_band", "s014b_n_rotations_analysis", "s016_omega_mag_frozen_polish", "s016c_prime_fresh_sobol_fixed_omag"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-01T00:00:00Z",
+  "narrative_md": "First joint (q0, ω) inversion pilot under random-ω. Pre-registered tube-volume prediction (0-2/512 on seed 6) confirmed exactly: 0/512 in-basin on the seed-6 smoke, 0/8 cohort yield at N=64. The s011 cohort selector (lowest-surrogate-MSE → Band A truth at fixed truth-ω) is structurally broken under joint search — argmin landings are 80-180° from truth on every seed. Failure mode uniform across n_rotations strata. Architectural pivot required (s016 chain)."
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_gauge-times0",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_forward-substrate",
+  "title": "times[0]==0 propagator-gauge bug audit",
+  "state": "closed",
+  "spent": {
+    "runs": 1,
+    "wall_s": 0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s097_times0_gauge_bug_audit"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s097_times0_gauge_bug_audit",
+    "summary": "bug found+fixed; reversed s093/s094/s095 conclusions",
+    "at": "2026-05-22T00:00:00Z"
+  }
+}

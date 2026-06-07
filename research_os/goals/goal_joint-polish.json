@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_joint-polish",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_cost-landscape",
+  "title": "Joint (q0, ω) LM polish + ρ-band classification",
+  "state": "closed",
+  "spent": {
+    "runs": 15,
+    "wall_s": 38487.5
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s005_joint_local_descent",
+    "s011_q4cii_sobol_so3_polish_pilot",
+    "s015_joint_q0_omega_pilot",
+    "s016_omega_mag_frozen_polish",
+    "s016c_prime_fresh_sobol_fixed_omag",
+    "s020_seed_pipeline",
+    "s031_hifi_rerank_seed6",
+    "s032_cohort_fast",
+    "s034_lm_polish_seed89",
+    "s035_hifi_confirm_seed89",
+    "s036_multi_seed_pilot",
+    "s037_sobol_lm_pilot",
+    "s064_jacobi_polish",
+    "s068_replicate_s011",
+    "s070_replicate_s064"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s064_jacobi_polish",
+    "summary": "polhode-basis LM polish 21-27× in-basin speedup",
+    "at": "2026-05-13T00:00:00Z"
+  }
+}

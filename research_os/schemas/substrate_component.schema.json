@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/substrate_component.schema.json",
+  "title": "Substrate component (version registry)",
+  "description": "FLAGGED EXTENSION beyond PLAN §2's five objects — see README 'Deviations'. The registry entry for one shared substrate function (propagator, surrogate, scorer, cross, decimate, ...). PLAN §3 (Q6) requires every shared function to 'carry a version/hash and live behind a versioned, gated interface'; this is that registry. It is what makes the `depends_on: component@version` edge on claim cards and the `substrate_versions` stamp on run records RESOLVE to something — and therefore what makes automatic blast-radius computable ('the thing that cost s001–s066 becomes one line'). One file per component; `versions` is the append-only history.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "name",
+    "path",
+    "current_version",
+    "versions",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$",
+      "description": "Short stable id used as the LHS of `component@version` refs (e.g. 'propagator', 'surrogate', 'scorer'). NOTE: this bare id is what run_record.substrate_versions keys and claim_card.depends_on reference — keep it terse and never reuse it.",
+      "examples": ["propagator", "surrogate", "scorer"]
+    },
+    "kind": { "type": "string", "const": "substrate_component" },
+    "name": { "type": "string", "description": "Human name (e.g. 'attitude_propagator')." },
+    "path": {
+      "type": "string",
+      "description": "Repo-relative source path of the canonical implementation.",
+      "examples": ["src/dynamics/attitude_propagator.py", "lib/jacobi_propagator.py"]
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["substrate"],
+      "default": "substrate",
+      "description": "Only substrate-tier code is versioned here. Scratch (experiments/sXXX.py) is deliberately NOT registered (two-tier model, Q7)."
+    },
+    "interface": {
+      "type": "string",
+      "description": "One-line description of the versioned public interface (the gated seam)."
+    },
+    "functions": {
+      "type": "array",
+      "description": "Optional, hand-authored breakdown of the load-bearing functions this component is made of — the comprehension granularity beneath the single versioned interface. Display-only and HAND-MAINTAINED: the version/hash/blast-radius live at the COMPONENT, never per-function (per-function blast would drown the 's001-s066 = one line' signal). For the AST-grounded, drift-checked view of these functions in the wider pipeline, curate them as overlay units in the machinery map (render/machinery_overlay.json) — the derive cross-checks THOSE against the code, not this array.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "role"],
+        "properties": {
+          "name": { "type": "string", "description": "Function name as it appears in `path`." },
+          "signature": { "type": "string", "description": "The def line (args), trimmed — e.g. 'propagate_euler(q0, omega, times)'." },
+          "role": { "type": "string", "description": "Plain-language one-liner: what this function does in the pipeline (inputs→outputs)." },
+          "line": { "type": ["integer", "null"], "description": "1-based line of the def in `path` (best-effort, hand-maintained — NOT auto-refreshed; the machinery map carries the AST-authoritative line for the same function when it is curated as an overlay unit)." }
+        }
+      }
+    },
+    "current_version": {
+      "type": "string",
+      "description": "The version currently in force. Must equal versions[-1].version. A run stamped with any other version, or a claim depending on any other version, is in the blast radius of the latest bump.",
+      "examples": ["2.0.0", "v2"]
+    },
+    "promoted_from": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "run_record id this Tool was operationalised from (Tool -> promoted-from -> Experiment, ADR-0005). Null for tools that predate the run-record store or were authored directly. Records the moment a scratch experiment became reusable substrate."
+    },
+    "canon": {
+      "type": "boolean",
+      "default": true,
+      "description": "ADR-0007. Whether this is the CANONICAL Tool of its variant family — the one you get by default when you name the Tool. False = a meaningful variant (see variant_of). Accidental copies are NOT variants; they collapse into the canon Tool's default_params."
+    },
+    "variant_of": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "ADR-0007. id of the canonical Tool this is a MEANINGFUL variant of (the variant-of edge; mirrors Pipeline rivalry). Null for canon Tools. Validated to resolve to an existing substrate_component."
+    },
+    "entry_point": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "ADR-0007. The single canonical callable seam for the run-button: 'repo/relative/path.py:function'. The executor (#15) invokes THIS to 'run the Tool on an input'. Binds to canonical code (Q1 reflect-not-own); the drift-check refuses to run if it no longer resolves or its hash moved.",
+      "examples": ["lib/ia_cloud.py:generate", "notebooks/inversion/survey/lib/cost_surfaces.py:surrogate_full_lc_mse"]
+    },
+    "ports": {
+      "type": ["object", "null"],
+      "default": null,
+      "additionalProperties": false,
+      "description": "ADR-0007. Typed input/output signature written in ARTIFACT TYPES — each entry's VALUE is a glossary_term id (the glossary doubles as the port type-system). Two forms (transition): the legacy FLAT LIST ['ia-cloud'] (describes types, not bound to return-keys — NOT reifiable), and the KEYED MAP {'<return-key/kwarg/tuple-position-name>': '<glossary_term id>'} which binds each name to its type. The keyed map is what `loop/artifacts.py` needs to reify outputs ('recognised materials only') and to type-check re-fed inputs. e.g. {input:{'q0_arr':'ia-cloud'}, output:{'q_pool_wxyz':'ia-cloud'}}. All values validated to resolve to existing glossary terms.",
+      "properties": {
+        "input": {
+          "default": [],
+          "description": "Input artifact types. Keyed map {kwarg_name: glossary_term id} (preferred — enables re-feed type-check), or legacy flat list [glossary_term id, ...].",
+          "oneOf": [
+            { "type": "array", "items": { "type": "string" } },
+            { "type": "object", "additionalProperties": { "type": "string" } }
+          ]
+        },
+        "output": {
+          "default": [],
+          "description": "Output artifact types. Keyed map {return-key/tuple-position-name: glossary_term id} (preferred — required to reify the output as an artifact_instance), or legacy flat list [glossary_term id, ...] (described but NOT reified).",
+          "oneOf": [
+            { "type": "array", "items": { "type": "string" } },
+            { "type": "object", "additionalProperties": { "type": "string" } }
+          ]
+        }
+      }
+    },
+    "default_params": {
+      "type": ["object", "null"],
+      "default": null,
+      "description": "ADR-0007. Default parameterisation. The lever that collapses accidental copies into ONE parameterised Tool: variation that is just a different param value lives HERE, not in a new Tool. e.g. {tol_mag:0.10, n_samples:1000000, surrogate:'v2', pool:24}."
+    },
+    "current_hash": {
+      "type": "string",
+      "description": "Content hash (e.g. git blob sha or sha256 of the source) of the current implementation. If the file changes but current_version does not, that is a silent change the gate flags (an undocumented bump)."
+    },
+    "versions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Append-only version history, oldest first. Appending an entry (a bump) is the blast-radius trigger.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "change_reason"],
+        "properties": {
+          "version": { "type": "string" },
+          "hash": { "type": "string", "description": "Content hash at this version." },
+          "changed_on": { "type": "string", "format": "date" },
+          "change_reason": { "type": "string", "description": "Why it changed (e.g. 'ω-sign convention fix +0.5→-0.5; invalidated s001-s066')." },
+          "is_bug_fix": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if the bump corrects a bug (vs a feature/refactor). Bug-fix bumps are the dangerous ones — they retroactively invalidate dependent evidence."
+          },
+          "commit": { "type": "string", "description": "git SHA of the change." }
+        }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

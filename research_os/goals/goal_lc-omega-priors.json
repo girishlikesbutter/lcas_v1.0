@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_lc-omega-priors",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_omega-from-lc",
+  "title": "ω from LC features (peak-spacing, regression) — DEAD class",
+  "state": "closed",
+  "spent": {
+    "runs": 6,
+    "wall_s": 431.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s007_omega_mag_peak_spacing_pilot",
+    "s008_lc_feature_regression_omega",
+    "s024_omega_prior_pilot",
+    "s055a_pol_diam_lc_regression",
+    "s055b_lhat_lc_regression",
+    "s055c_aux_priors"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s055c_aux_priors",
+    "summary": "LC-only ω-direction priors structurally dead (28-feat 16.4% LOO MAPE)",
+    "at": "2026-05-08T00:00:00Z"
+  }
+}

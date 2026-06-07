@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s018a_bright_band_calibration",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Under correct post-fix truth, what magnitude threshold reliably identifies PAB-aligned (spec) bright epochs, and how rare are +/-X spec anchors cohort-wide?",
+  "hypothesis": "The buggy-era bright_threshold=11 is too loose under correct truth; a calibrated post-fix threshold gives higher PAB-alignment purity.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "calibrated_threshold_mag": 8,
+    "p_within5deg_at_mag8": 0.597,
+    "p_within5deg_at_mag11": 0.221,
+    "p_within5deg_at_mag6": 1.000,
+    "n_seeds_lack_pmX_spec": "56/100",
+    "n_seeds_zero_bright_peaks": "19/100",
+    "wall_s": 0.6
+  },
+  "artefacts": [
+    { "path": "results/s018a/calibration.npz", "kind": "checkpoint" },
+    { "path": "results/s018a/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s018a_bright_band_calibration.md"],
+  "parents": ["s018b_face_identity_tiers", "s001_cost_at_truth_cohort"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-02T00:00:00Z",
+  "narrative_md": "The buggy-era bright_threshold=11 is too loose under correct truth: at mag<11 only 22% of 'bright' epochs are within 5° of PAB. Calibrated post-fix threshold is mag<8 (P(<5°)=0.60, rising to 1.00 at mag<6). The m096 '87% of seeds lack +/-X spec constraints' claim softens to 56/100 under correct truth — still a majority, so +/-X-anchor architectures are limited to ≤44/100 seeds. 19/100 seeds have zero bright peaks. Cached min_ang_dist fields make this a 0.6 s cohort calibration with no rendering."
+}

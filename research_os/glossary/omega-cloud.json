@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "id": "omega-cloud",
+  "kind": "glossary_term",
+  "term": "ω-Cloud",
+  "definition": "The angular-velocity pool paired index-for-index with an IA Cloud's attitudes — the (N,3) rotvec array sampled alongside the q-pool, so each candidate attitude carries its candidate ω. The ω half of an attitude-pool draw; a recognised material (reifiable), not scratch.",
+  "status": "canon",
+  "coined_in": "ADR-0007 Slice 2 (re-feed)",
+  "promoted_on": "2026-06-08",
+  "created_at": "2026-06-08T00:00:00Z",
+  "synonyms_blocked": [],
+  "aliases": [
+    "omega pool",
+    "rotvec pool"
+  ],
+  "related_terms": [
+    "ia-cloud",
+    "q0-omega-state"
+  ]
+}

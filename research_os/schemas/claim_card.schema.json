@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lcas.local/research_os/schemas/claim_card.schema.json",
+  "title": "Claim card",
+  "description": "A first-class unit of knowledge state (PLAN §2/§8, Q8). 'What's true right now?' = the set of cards with status 'live'. Corrections are POINTERS, not rewrites: a refutation flips `status` and adds a `superseded_by` edge rather than editing the statement. A substrate version bump auto-flips every dependent card to 'needs_replication' via the `depends_on` edge. Two decks share this schema, discriminated by `deck`: research claims (refuted by experiments) and working-preferences (change when you change your mind).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "deck",
+    "statement",
+    "status",
+    "scope",
+    "trust_stamp",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "id": {
+      "type": "string",
+      "pattern": "^claim_[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "claim_<kebab-slug>. Stable; superseding/superseded edges reference it.",
+      "examples": ["claim_windowed-photometry-breaks-hard-shoot-trap", "claim_omega-reported-in-degps"]
+    },
+    "kind": { "type": "string", "const": "claim_card" },
+    "deck": {
+      "type": "string",
+      "enum": ["research", "preference"],
+      "description": "research = an empirical claim refutable by experiment (stored under claims/research/). preference = a working-preference / how-to-work rule that changes only when YOU change your mind (claims/preferences/). PLAN §2 'two separate decks'."
+    },
+    "statement": {
+      "type": "string",
+      "description": "The claim, stated so its truth value is checkable. Include the scope qualifier in the prose when load-bearing (e.g. 'on seed 119', 'cohort n=100')."
+    },
+    "supporting_runs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Run ids whose evidence supports the claim. Referential: each must resolve to a run_record. Empty is normal for preference-deck cards."
+    },
+    "refuting_runs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Run ids whose evidence refutes the claim. A non-empty list on a 'live' card is a contradiction the claim-consolidate skill should surface."
+    },
+    "trust_stamp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confidence", "oracle_clean"],
+      "description": "Machine-recomputable trust, not human prose (Q6).",
+      "properties": {
+        "confidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Ordinal confidence. The calibration skill tunes the mapping to measured hit-rate; it does not replace this field."
+        },
+        "gates_passed": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Gate ids passed by the supporting evidence (union or strongest run). Same vocab as run_record.gates_passed."
+        },
+        "oracle_clean": {
+          "type": "boolean",
+          "description": "True iff every supporting run is oracle_clean. A claim resting on an oracle-tainted run is NOT oracle_clean and must not be cited as blind-pipeline evidence (the s058/s059 retraction rule)."
+        },
+        "calibrated_hit_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Optional. Filled by the calibration skill: empirical fraction of past claims at this confidence band that held up."
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["N", "kind"],
+      "description": "The N-scope gate enforces consistency: kind='cohort' requires N >= threshold (config), else auto-downgrade to N1.",
+      "properties": {
+        "N": { "type": "integer", "minimum": 0, "description": "Sample size backing the claim." },
+        "kind": { "type": "string", "enum": ["N1", "cohort"] }
+      }
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]+@[A-Za-z0-9._-]+$",
+        "description": "substrate-ref string 'component@version' (grammar in README). Must resolve to a substrate_component id + a version in its history."
+      },
+      "default": [],
+      "description": "The substrate versions this claim's evidence rests on (Q8). THE blast-radius edge: when component bumps past the cited version, this card auto-flips to needs_replication.",
+      "examples": [["propagator@2.0.0", "surrogate@v2", "scorer@1.0.0"]]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "live", "needs_replication", "superseded", "retracted"],
+      "description": "Lifecycle. draft = auto-drafted, awaiting human confirm (Q8 §8). live = current truth. needs_replication = a substrate bump invalidated the evidence (auto-set by blast-radius). superseded = a newer card replaces it (see superseded_by). retracted = withdrawn (e.g. oracle taint discovered, structurally false). PLAN §2 names live|superseded|needs_replication; draft/retracted are the lifecycle endpoints §8 implies — see README 'Deviations'."
+    },
+    "superseded_by": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Id of the claim that replaces this one. Set together with status='superseded'. The correction is this pointer, not an edit to `statement`."
+    },
+    "supersedes": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Back-edge: id of the claim this one replaces (optional convenience for the index)."
+    },
+    "links_to_writeups": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Paths to prose writeups / memory files behind the claim."
+    },
+    "confirmed_by": {
+      "type": "string",
+      "description": "Who promoted draft->live (e.g. 'girish'). Absent while status='draft'."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time", "description": "Last status/edge change. Claim FIELDS other than status/edges should rarely change (corrections are new cards)." }
+  }
+}

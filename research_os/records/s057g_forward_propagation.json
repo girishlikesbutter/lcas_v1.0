@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s057g_forward_propagation",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does forward-propagation validation against multiple weighted validator epochs discriminate dynamics-consistent (q_a, omega) candidates from noise?",
+  "hypothesis": "Per-pair finite-diff noise can be tolerated if candidates are validated by forward-propagation against multiple weighted validators rather than per-pair angular distance to truth.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "discrimination_over_null": "4400x",
+    "n_candidates": 548,
+    "truth_rank": "55/548",
+    "truth_score": 178,
+    "max_score": 406,
+    "null_expected_score": 0.04,
+    "dt_gen": 15,
+    "hit_threshold_deg": 5
+  },
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s057g_forward_propagation.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Structural positive and the major architectural finding of the session: forward-propagation discrimination is strong (4400x over null) on seed 89. Each (q_a, omega) candidate (single-pair finite-diff at dt_gen=15, +-25% |omega|-prior) is const-omega propagated to multiple validators and scored by weighted hit-count. Truth scores 178 (44% of max), rank 55/548 (top 10%); top ranks dominated by body-twins + multi-solution alternates. Reads truth rank/direction -- oracle-leak, N=1."
+}

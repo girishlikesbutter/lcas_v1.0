@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s061b_multi_step_thread",
+  "kind": "run_record",
+  "goal_node": "goal_threading",
+  "question": "Does cluster-disappearance occur over 30 multi-step threading iterations on slow seed 89 with an omega_max=0.5 dps (~2x truth) budget?",
+  "hypothesis": "Brightness + connectability filtering kills inconsistent clusters over multi-step threading.",
+  "status": "refuted",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "anchor_epoch": 208,
+    "anchor_clusters": 5,
+    "clusters_alive_right_step30": 5,
+    "clusters_alive_left_step30": 5,
+    "truth_dmin_right_final_deg": 44.1,
+    "truth_dmin_left_final_deg": 9.2,
+    "omega_max_dps": 0.5,
+    "w_mag": 0.24,
+    "min_retention_pct": 4.5
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s061b_multi_step_thread/seed089/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s061b_multi_step_thread.md"],
+  "parents": ["s061a_thread_smoke", "s061c_seed28_thread"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-10T00:00:00Z",
+  "narrative_md": "30-step threading each direction on slow seed 89 with omega_max=0.5 dps (~2x truth |omega|=0.24). All 5 anchor clusters retain descendants through 30 steps in both directions -- NO cluster-disappearance. Brightness filtering does real work at some epochs (step 9 right kills 95.5%) but per-cluster contributions are even. Cluster-disappearance does not occur on slow seeds with a 2x-truth budget; the filter is too generous when omega_max is a multiple of truth |omega|. Tracks truth-cluster distance (truth read as input)."
+}

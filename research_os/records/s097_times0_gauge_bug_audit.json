@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s097_times0_gauge_bug_audit",
+  "kind": "run_record",
+  "goal_node": "goal_gauge-times0",
+  "question": "Did a times[0]==0 gauge precondition violation in the scoring wrappers corrupt the s093/s094 full-LC vs windowed RMSE conclusions, and what are the corrected conclusions?",
+  "hypothesis": "The 1.67-mag exact-truth floor in s096 is a bug signature (gauge violation), not physics; fixing it will change the s093/s094 discriminator conclusions.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [116],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "exact_truth_floor_buggy_mag": 1.6738,
+    "exact_truth_floor_fixed_mag": 0.0077,
+    "stitch_repro_err_deg_buggy": 107.9,
+    "stitch_repro_err_deg_fixed": 1.71e-6,
+    "s093_truth_rank_buggy": "31515/79443",
+    "s093_truth_rank_fixed": "4/79443",
+    "s094_best_window": "W_full (54) > W_ACb (19)"
+  },
+  "artefacts": [
+    { "path": "results/s093/score.json", "kind": "data" },
+    { "path": "results/s094/windows.json", "kind": "data" },
+    { "path": "results/s095/transfer.json", "kind": "data" },
+    { "path": "results/s095/transfer.png", "kind": "plot" },
+    { "path": "results/s096/basin.json", "kind": "data" },
+    { "path": "results/s096/basin.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s097_times0_gauge_bug_audit.md"],
+  "parents": ["s093_fullc_score_survivors", "s094_window_score", "s096_density_usefulness_116"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "Audit isolated a times[0]==0 gauge-precondition violation (_TREL = times0 - times0[ep_a], first element negative) that mis-referenced candidate trajectories by up to 107.9 deg. Fix REVERSES s093 and s094 on seed 116: full-LC RMSE is a STRONG discriminator (most-truth-like survivor rank 31515 -> 4 of 79443) and the FULL LC is the best window (windowing HURTS). Connectability/shoot results (s088/089/092/095-aliasing) stand (always times=[0,dt]). Validated two ways (exact-truth repro 1.7e-6 vs 108 deg; s093/s094 W_full agree bit-for-bit). Reads exact truth for the floor + rank (oracle-leak); N=1 seed 116."
+}

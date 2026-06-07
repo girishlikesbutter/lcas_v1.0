@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_surrogate-first-hifi-last",
+  "kind": "claim_card",
+  "deck": "preference",
+  "statement": "Every intermediate step (search, ranking, clustering, LM polish, sanity checks) runs on the surrogate. Hi-fi is reserved for a SINGLE render per polished basin winner that passes surrogate-rho < 4, to classify the rho-band -- it is never an optimisation step.",
+  "supporting_runs": [],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "high",
+    "gates_passed": [],
+    "oracle_clean": true
+  },
+  "scope": {
+    "N": 0,
+    "kind": "N1"
+  },
+  "depends_on": [],
+  "status": "live",
+  "superseded_by": null,
+  "supersedes": null,
+  "links_to_writeups": [
+    "memory/feedback_surrogate_first_hifi_last.md",
+    "memory/feedback_lm_cost_use_surrogate.md"
+  ],
+  "confirmed_by": "girish",
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

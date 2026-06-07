@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "ia-cloud-cross",
+  "kind": "glossary_term",
+  "term": "IA Cloud Cross",
+  "definition": "The cross-paired survivors across TWO IA Clouds (two epochs) — candidates admitted at both epochs once paired by a connecting trajectory. The two-epoch intersection.",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "synonyms_blocked": [
+    "cross-cloud"
+  ],
+  "related_terms": [
+    "ia-cloud",
+    "anchor-based-ia-cloud-cross",
+    "multi-omegadir-start"
+  ]
+}

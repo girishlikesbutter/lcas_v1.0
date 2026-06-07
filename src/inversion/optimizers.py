@@ -1,0 +1,521 @@
+"""
+Optimization algorithms for lightcurve inversion.
+
+This module provides global and local optimization algorithms for
+finding the initial attitude and angular velocity that best explain
+an observed lightcurve.
+
+Includes:
+- Differential Evolution for global optimization
+- L-BFGS-B for local refinement
+- Multi-start wrapper for robustness
+"""
+
+from dataclasses import dataclass
+import multiprocessing
+from multiprocessing import Manager
+from typing import List, Tuple, Optional
+import numpy as np
+from numpy.typing import NDArray
+from scipy.optimize import differential_evolution, minimize
+
+from .objective_function import ObjectiveFunction
+from .quaternion_utils import axis_angle_to_quaternion, quaternion_to_axis_angle, normalize_quaternion
+
+
+# Module-level shared state for parallel progress tracking
+# Using Manager creates proxy objects that work across processes
+_parallel_state = {
+    'counter': None,
+    'lock': None,
+    'interval': 500,
+    'objective': None,
+}
+
+
+def _parallel_evaluate_wrapper(params):
+    """
+    Wrapper function for parallel evaluation with shared progress counter.
+
+    This is a module-level function that can be pickled and sent to workers.
+    It accesses the shared state set up before optimization starts.
+    """
+    objective = _parallel_state['objective']
+    counter = _parallel_state['counter']
+    lock = _parallel_state['lock']
+    interval = _parallel_state['interval']
+
+    # Evaluate the objective
+    result = objective.evaluate(params)
+
+    # Update shared counter and print progress
+    if counter is not None:
+        with lock:
+            counter.value += 1
+            current = counter.value
+
+        if current % interval == 0:
+            with lock:
+                print(f"      [Evaluations: {current}]", flush=True)
+
+    return result
+
+
+@dataclass
+class OptimizationResult:
+    """
+    Container for optimization results.
+
+    Attributes
+    ----------
+    params : ndarray, shape (6,)
+        Optimal parameters [axis_angle(3), omega(3)].
+    cost : float
+        Final objective function value.
+    n_evaluations : int
+        Number of function evaluations.
+    success : bool
+        Whether optimization converged successfully.
+    message : str
+        Description of termination condition.
+    """
+
+    params: NDArray[np.floating]
+    cost: float
+    n_evaluations: int
+    success: bool
+    message: str
+
+
+def get_default_bounds(omega_max_deg_per_s: float = 30.0) -> List[Tuple[float, float]]:
+    """
+    Get default parameter bounds for optimization.
+
+    Parameters
+    ----------
+    omega_max_deg_per_s : float, optional
+        Maximum angular velocity magnitude in degrees per second.
+        Default is 30 deg/s.
+
+    Returns
+    -------
+    list of (min, max) tuples
+        Bounds for 6 parameters: [axis_angle(3), omega(3)].
+        - axis_angle bounds: [-pi, pi] for each component (covers all rotations)
+        - omega bounds: [-omega_max, omega_max] for each component in rad/s
+    """
+    omega_max_rad_per_s = np.deg2rad(omega_max_deg_per_s)
+
+    # axis_angle parameters: [-pi, pi] covers all possible rotations
+    # (axis_angle magnitude <= pi is sufficient for any rotation)
+    axis_angle_bounds = [(-np.pi, np.pi)] * 3
+
+    # omega parameters: each component bounded by max magnitude
+    omega_bounds = [(-omega_max_rad_per_s, omega_max_rad_per_s)] * 3
+
+    return axis_angle_bounds + omega_bounds
+
+
+def global_optimize(
+    objective: ObjectiveFunction,
+    bounds: Optional[List[Tuple[float, float]]] = None,
+    seed: Optional[int] = None,
+    x0: Optional[NDArray[np.floating]] = None,
+    maxiter: int = 1000,
+    tol: float = 0.01,
+    workers: int = 1,
+    polish: bool = False,
+    show_progress: bool = True,
+    progress_interval: int = 10,
+) -> OptimizationResult:
+    """
+    Run global optimization using Differential Evolution.
+
+    Parameters
+    ----------
+    objective : ObjectiveFunction
+        The objective function to minimize.
+    bounds : list of (min, max) tuples, optional
+        Parameter bounds for each of the 6 parameters.
+        If None, uses default bounds with omega max of 30 deg/s.
+    seed : int, optional
+        Random seed for reproducibility.
+    x0 : ndarray, optional
+        Initial guess for seeding the optimization. When provided, this is
+        used as a starting point in the population for differential evolution.
+        Useful for multi-fidelity optimization where coarse results seed fine
+        optimization. Requires scipy >= 1.9.0.
+    maxiter : int, optional
+        Maximum number of generations. Default is 1000.
+    tol : float, optional
+        Relative tolerance for convergence. Default is 0.01.
+    workers : int, optional
+        Number of parallel workers. Default is 1 (serial).
+    polish : bool, optional
+        Whether to polish the result with L-BFGS-B. Default is False
+        (use local_refine separately for more control).
+    show_progress : bool, optional
+        Whether to print progress during optimization. Default is True.
+    progress_interval : int, optional
+        Print progress every N generations. Default is 10.
+
+    Returns
+    -------
+    OptimizationResult
+        Optimization result with best parameters and cost.
+    """
+    if bounds is None:
+        bounds = get_default_bounds()
+
+    # For parallel workers, we can't use closures (not picklable)
+    # Use module-level wrapper with Manager for shared progress counter
+    if workers != 1:
+        # Create shared counter using Manager (works across processes)
+        manager = Manager()
+        shared_counter = manager.Value('i', 0)
+        shared_lock = manager.Lock()
+
+        # Set up module-level state for the wrapper function
+        # Disable progress in the objective itself (wrapper handles it)
+        old_show_progress = objective.show_progress
+        objective.show_progress = False
+
+        _parallel_state['objective'] = objective
+        _parallel_state['counter'] = shared_counter
+        _parallel_state['lock'] = shared_lock
+        _parallel_state['interval'] = 100 if show_progress else 999999999
+
+        if show_progress:
+            actual_workers = workers if workers > 0 else multiprocessing.cpu_count()
+            print(f"      (Parallel mode: {actual_workers} workers)", flush=True)
+
+        try:
+            # Build kwargs for differential evolution
+            de_kwargs = {
+                "func": _parallel_evaluate_wrapper,
+                "bounds": bounds,
+                "seed": seed,
+                "maxiter": maxiter,
+                "tol": tol,
+                "workers": workers,
+                "polish": polish,
+                "callback": None,  # Callbacks can't be used with parallel workers
+                "strategy": "best1bin",
+                "mutation": (0.5, 1.0),
+                "recombination": 0.7,
+                "updating": "deferred",
+            }
+
+            # Add x0 if provided (seeds the initial population)
+            if x0 is not None:
+                de_kwargs["x0"] = x0
+
+            # Run differential evolution with the wrapper function
+            result = differential_evolution(**de_kwargs)
+        finally:
+            # Clean up module-level state
+            _parallel_state['objective'] = None
+            _parallel_state['counter'] = None
+            _parallel_state['lock'] = None
+            objective.show_progress = old_show_progress
+            manager.shutdown()
+
+        if show_progress:
+            print(f"      Converged, cost = {result.fun:.6f}", flush=True)
+
+    else:
+        # Serial mode: can use closures for progress tracking
+        generation_count = [0]
+
+        def progress_callback(xk, convergence):
+            generation_count[0] += 1
+            if show_progress and generation_count[0] % progress_interval == 0:
+                current_cost = objective.evaluate(xk)
+                print(f"      Generation {generation_count[0]}: best cost = {current_cost:.6f}", flush=True)
+            return False  # Return False to continue optimization
+
+        # Build kwargs for differential evolution
+        de_kwargs = {
+            "func": objective.evaluate,
+            "bounds": bounds,
+            "seed": seed,
+            "maxiter": maxiter,
+            "tol": tol,
+            "workers": workers,
+            "polish": polish,
+            "callback": progress_callback if show_progress else None,
+            "strategy": "best1bin",
+            "mutation": (0.5, 1.0),
+            "recombination": 0.7,
+            "updating": "deferred",
+        }
+
+        # Add x0 if provided (seeds the initial population)
+        if x0 is not None:
+            de_kwargs["x0"] = x0
+
+        # Run differential evolution
+        result = differential_evolution(**de_kwargs)
+
+        if show_progress:
+            print(f"      Converged at generation {generation_count[0]}, cost = {result.fun:.6f}", flush=True)
+
+    # Use scipy's nfev (number of function evaluations) for accurate count
+    # This works correctly for both serial and parallel modes
+    n_evals = result.nfev
+
+    return OptimizationResult(
+        params=result.x,
+        cost=result.fun,
+        n_evaluations=n_evals,
+        success=result.success,
+        message=result.message,
+    )
+
+
+def local_refine(
+    objective: ObjectiveFunction,
+    x0: NDArray[np.floating],
+    bounds: Optional[List[Tuple[float, float]]] = None,
+    maxiter: int = 1000,
+    ftol: float = 1e-8,
+    gtol: float = 1e-5,
+    show_progress: bool = True,
+    initial_cost: Optional[float] = None,
+) -> OptimizationResult:
+    """
+    Refine solution using local optimization (L-BFGS-B).
+
+    Parameters
+    ----------
+    objective : ObjectiveFunction
+        The objective function to minimize.
+    x0 : ndarray, shape (6,)
+        Initial guess from global optimization.
+    bounds : list of (min, max) tuples, optional
+        Parameter bounds. If None, uses default bounds.
+    maxiter : int, optional
+        Maximum number of iterations. Default is 1000.
+    ftol : float, optional
+        Function tolerance for convergence. Default is 1e-8.
+    gtol : float, optional
+        Gradient tolerance for convergence. Default is 1e-5.
+    show_progress : bool, optional
+        Whether to print progress during optimization. Default is True.
+    initial_cost : float, optional
+        Initial cost before refinement (for computing improvement).
+
+    Returns
+    -------
+    OptimizationResult
+        Refined optimization result.
+
+    Notes
+    -----
+    The quaternion normalization constraint is enforced by converting the
+    axis-angle representation back to a normalized quaternion and then
+    back to axis-angle after each iteration. This ensures the optimization
+    stays on the unit quaternion manifold without adding explicit constraints.
+    """
+    if bounds is None:
+        bounds = get_default_bounds()
+
+    x0 = np.asarray(x0, dtype=np.float64)
+
+    # Normalize the initial axis-angle to ensure valid starting point
+    axis_angle = x0[:3]
+    omega = x0[3:]
+
+    # Convert to quaternion, normalize, convert back to axis-angle
+    q = axis_angle_to_quaternion(axis_angle)
+    q = normalize_quaternion(q)
+    axis_angle_normalized = quaternion_to_axis_angle(q)
+
+    x0_normalized = np.concatenate([axis_angle_normalized, omega])
+
+    # Wrap the objective function to:
+    # 1. Track evaluations
+    # 2. Normalize the axis-angle representation at each evaluation
+    n_evals = [0]  # Use list for mutable closure
+
+    def wrapped_objective(params: NDArray[np.floating]) -> float:
+        n_evals[0] += 1
+
+        # Extract axis-angle and omega
+        axis_angle_current = params[:3]
+        omega_current = params[3:]
+
+        # Normalize via quaternion round-trip (enforces unit quaternion constraint)
+        q_current = axis_angle_to_quaternion(axis_angle_current)
+        q_normalized = normalize_quaternion(q_current)
+        axis_angle_norm = quaternion_to_axis_angle(q_normalized)
+
+        # Create normalized parameter vector
+        params_normalized = np.concatenate([axis_angle_norm, omega_current])
+
+        return objective.evaluate(params_normalized)
+
+    # Run L-BFGS-B optimization
+    result = minimize(
+        wrapped_objective,
+        x0_normalized,
+        method="L-BFGS-B",
+        bounds=bounds,
+        options={
+            "maxiter": maxiter,
+            "ftol": ftol,
+            "gtol": gtol,
+            "disp": False,
+        },
+    )
+
+    # Normalize final result
+    final_axis_angle = result.x[:3]
+    final_omega = result.x[3:]
+
+    q_final = axis_angle_to_quaternion(final_axis_angle)
+    q_final_normalized = normalize_quaternion(q_final)
+    final_axis_angle_normalized = quaternion_to_axis_angle(q_final_normalized)
+
+    final_params = np.concatenate([final_axis_angle_normalized, final_omega])
+
+    # Print progress if enabled
+    if show_progress:
+        if initial_cost is not None and initial_cost > 0:
+            improvement = 100.0 * (initial_cost - result.fun) / initial_cost
+            print(f"      Refined cost: {result.fun:.6f} (improvement: {improvement:.1f}%)", flush=True)
+        else:
+            print(f"      Refined cost: {result.fun:.6f}", flush=True)
+
+    return OptimizationResult(
+        params=final_params,
+        cost=result.fun,
+        n_evaluations=n_evals[0],
+        success=result.success,
+        message=result.message,
+    )
+
+
+def multi_start_optimize(
+    objective: ObjectiveFunction,
+    bounds: Optional[List[Tuple[float, float]]] = None,
+    n_starts: int = 5,
+    seed: Optional[int] = None,
+    global_maxiter: int = 500,
+    local_maxiter: int = 500,
+    use_local_refinement: bool = True,
+    show_progress: bool = True,
+    workers: int = 1,
+) -> List[OptimizationResult]:
+    """
+    Run optimization with multiple random starting points.
+
+    This function runs global optimization (Differential Evolution) from
+    multiple random initial populations to improve robustness against
+    local minima. Optionally refines each result with local optimization.
+
+    Parameters
+    ----------
+    objective : ObjectiveFunction
+        The objective function to minimize.
+    bounds : list of (min, max) tuples, optional
+        Parameter bounds. If None, uses default bounds with omega max of 30 deg/s.
+    n_starts : int, optional
+        Number of random starting points. Default is 5.
+    seed : int, optional
+        Base random seed for reproducibility. Each start uses seed+i.
+    global_maxiter : int, optional
+        Maximum iterations for global optimizer. Default is 500.
+    local_maxiter : int, optional
+        Maximum iterations for local refinement. Default is 500.
+    use_local_refinement : bool, optional
+        Whether to refine global result with L-BFGS-B. Default is True.
+    show_progress : bool, optional
+        Whether to print progress during optimization. Default is True.
+    workers : int, optional
+        Number of parallel workers for function evaluations. Default is 1
+        (serial). Set to -1 to use all available CPU cores. Higher values
+        can significantly speed up optimization on multi-core systems.
+
+    Returns
+    -------
+    list of OptimizationResult
+        Results sorted by cost (best first). The first element is the
+        best result found across all starts.
+
+    Notes
+    -----
+    Each start uses a different random seed (seed + start_index) to ensure
+    diverse initial populations. The results are sorted by final cost so
+    the best solution is always first in the returned list.
+    """
+    if bounds is None:
+        bounds = get_default_bounds()
+
+    results: List[OptimizationResult] = []
+
+    if show_progress:
+        workers_str = "all cores" if workers == -1 else f"{workers} worker(s)"
+        print(f"\nStarting multi-start optimization ({n_starts} starts, {workers_str})...", flush=True)
+
+    for i in range(n_starts):
+        # Use different seed for each start
+        start_seed = None if seed is None else seed + i
+
+        if show_progress:
+            print(f"\n  Start {i+1}/{n_starts}:", flush=True)
+            print(f"    Global optimization (Differential Evolution)...", flush=True)
+
+        # Run global optimization
+        global_result = global_optimize(
+            objective=objective,
+            bounds=bounds,
+            seed=start_seed,
+            maxiter=global_maxiter,
+            polish=False,  # We'll do local refinement separately
+            show_progress=show_progress,
+            workers=workers,
+        )
+
+        if use_local_refinement:
+            if show_progress:
+                print(f"    Local refinement (L-BFGS-B)...", flush=True)
+
+            # Refine with local optimizer
+            refined_result = local_refine(
+                objective=objective,
+                x0=global_result.params,
+                bounds=bounds,
+                maxiter=local_maxiter,
+                show_progress=show_progress,
+                initial_cost=global_result.cost,
+            )
+
+            # Combine evaluation counts
+            total_evals = global_result.n_evaluations + refined_result.n_evaluations
+            final_result = OptimizationResult(
+                params=refined_result.params,
+                cost=refined_result.cost,
+                n_evaluations=total_evals,
+                success=refined_result.success,
+                message=f"Global + local: {refined_result.message}",
+            )
+        else:
+            total_evals = global_result.n_evaluations
+            final_result = global_result
+
+        if show_progress:
+            print(f"    Start {i+1} complete: cost = {final_result.cost:.6f}, evaluations = {total_evals:,}", flush=True)
+
+        results.append(final_result)
+
+    # Sort by cost (best first)
+    results.sort(key=lambda r: r.cost)
+
+    if show_progress:
+        total_all_evals = sum(r.n_evaluations for r in results)
+        print(f"\nMulti-start optimization complete.", flush=True)
+        print(f"  Best result: cost = {results[0].cost:.6f}", flush=True)
+        print(f"  Total evaluations: {total_all_evals:,}", flush=True)
+
+    return results

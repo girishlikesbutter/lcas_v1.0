@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "id": "ia-cloud",
+  "kind": "glossary_term",
+  "term": "IA Cloud",
+  "definition": "Isophotic Attitude Cloud — the set of candidate attitudes admitted at ONE epoch within photometric tolerance. The single-epoch isophotic locus.",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "synonyms_blocked": [
+    "cloud"
+  ],
+  "aliases": [
+    "isophotic attitude cloud"
+  ],
+  "related_terms": [
+    "isophotic",
+    "ia-cloud-cross"
+  ]
+}

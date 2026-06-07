@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_bvp-shoot",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_cross-cloud-bridging",
+  "title": "Two-point BVP ω-solve (shoot) conditioning",
+  "state": "closed",
+  "spent": {
+    "runs": 1,
+    "wall_s": 0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s088_bvp_shoot_conditioning"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z",
+  "last_measured": {
+    "run": "s088_bvp_shoot_conditioning",
+    "summary": "BVP beats finite-diff 1-2 OOM; clears 1.25° gate at σ_q≲2.0°",
+    "at": "2026-05-22T00:00:00Z"
+  }
+}

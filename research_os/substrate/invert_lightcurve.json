@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "id": "invert_lightcurve",
+  "kind": "substrate_component",
+  "name": "invert_lightcurve",
+  "path": "src/inversion/results.py",
+  "tier": "substrate",
+  "interface": "(observed_lightcurve, satellite, geometry, mode, uncertainty_mode, n_starts) -> InversionResult (q0/\u03c90 estimate + uncertainty); composes ObjectiveFunction + multi_start_optimize + propagate_attitude + uncertainty.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:b67f2f9386d3bff7",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/inversion/results.py:invert_lightcurve",
+  "ports": {
+    "input": [
+      "light-curve",
+      "epoch-observation"
+    ],
+    "output": {
+      "return": "inversion-result"
+    }
+  },
+  "default_params": {
+    "mode": "principal_axis",
+    "uncertainty_mode": "quick",
+    "n_starts": 3,
+    "omega_max_deg_per_s": 30,
+    "compute_shadows": true
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:b67f2f9386d3bff7",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

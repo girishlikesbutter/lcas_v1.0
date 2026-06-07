@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "scorer_nll",
+  "kind": "substrate_component",
+  "name": "scorer_nll",
+  "path": "notebooks/inversion/survey/lib/surrogate_eval.py",
+  "tier": "substrate",
+  "interface": "VARIANT: DIFFERENT METHOD: RF25 Eq.3 NLL (flux-space, optional rescale) vs masked mag-space MSE. Opt-in, NOT production default (s078). Genuinely different objective shape; variant_of scorer.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:656f87a622060681",
+  "canon": false,
+  "variant_of": "scorer",
+  "promoted_from": null,
+  "entry_point": "notebooks/inversion/survey/lib/surrogate_eval.py:nll_cost",
+  "ports": {
+    "input": [
+      "light-curve",
+      "windowed-lc"
+    ],
+    "output": {
+      "return": "scoring"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:656f87a622060681",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

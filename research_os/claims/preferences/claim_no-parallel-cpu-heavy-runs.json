@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_no-parallel-cpu-heavy-runs",
+  "kind": "claim_card",
+  "deck": "preference",
+  "statement": "Do not stack CPU-saturating jobs. Set OMP/OPENBLAS/MKL threads=1 before Pool(N) for the surrogate; hi-fi Pool needs gc.collect() between renders (Pool(24) OOMs without it on the 30 GB box).",
+  "supporting_runs": [],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "high",
+    "gates_passed": [],
+    "oracle_clean": true
+  },
+  "scope": {
+    "N": 0,
+    "kind": "N1"
+  },
+  "depends_on": [],
+  "status": "live",
+  "superseded_by": null,
+  "supersedes": null,
+  "links_to_writeups": [
+    "memory/feedback_no_parallel_cpu.md",
+    "memory/feedback_blas_threads_for_pool.md",
+    "memory/feedback_pool_size_with_trimesh_gc.md"
+  ],
+  "confirmed_by": "girish",
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}

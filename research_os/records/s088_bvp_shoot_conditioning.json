@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s088_bvp_shoot_conditioning",
+  "kind": "run_record",
+  "goal_node": "goal_bvp-shoot",
+  "question": "Is a two-point attitude BVP shoot (solve ω that connects q_a→q_b under torque-free dynamics) well-posed, how many roots connect a pair, and does it beat finite-diff ω under anchor noise?",
+  "hypothesis": "A large-Δt BVP solve removes the constant-ω/polhode-drift error of finite-diff and is better conditioned against anchor noise.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [119, 116],
+  "N": 2,
+  "claim_scope": "N1",
+  "metrics": {
+    "roundtrip_err_deg": 1.7e-6,
+    "bvp_w_dir_err_fast_deg": 1.5,
+    "finitediff_w_dir_err_fast_deg": 80,
+    "gate_clears_at_sigma_q_deg": 2.0,
+    "w_mag_fast": 1.48,
+    "w_mag_slow": 0.134
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s088/gateA1.json", "kind": "data" },
+    { "path": "notebooks/inversion/survey/results/s088/gateA2.json", "kind": "data" },
+    { "path": "notebooks/inversion/survey/results/s088/phaseB.json", "kind": "data" },
+    { "path": "notebooks/inversion/survey/results/s088/phaseB_sigma.json", "kind": "data" },
+    { "path": "notebooks/inversion/survey/results/s088/phaseB_conditioning.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s088_bvp_shoot_conditioning.md"],
+  "parents": ["s087_omega_dir_threshold"],
+  "substrate_versions": { "propagator": "2.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": false,
+  "gates_failed": ["oracle-leak"],
+  "created_at": "2026-05-22T00:00:00Z",
+  "narrative_md": "Built and validated lib/shoot.py: a two-point attitude BVP solver that LM-solves the body-frame ω connecting q_a→q_b under torque-free dynamics. Primitive validated (round-trip 1.7e-6°); multiplicity is real but tamed by a ±30% |ω| prior (truth unique on slow seed to 241°, fast to ~160°). BVP decisively beats finite-diff on fast tumblers under q-cloud noise (ω-dir ~1.5-2.4° vs finite-diff 80-127°), clearing the s087 1.25° gate for σ_q≲2.0°. Uses perturbed-truth pairs → not blind."
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "id": "generate_lightcurves",
+  "kind": "substrate_component",
+  "name": "generate_lightcurves",
+  "path": "src/computation/lightcurve_generator.py",
+  "tier": "substrate",
+  "interface": "(lit-status-dict, k1/k2 vectors, observer distances, satellite, epochs, articulation matrices) -> (magnitude, flux, mag_no_shadow, flux_no_shadow, distances, animation_data). The primary hi-fi render entry point (pipeline step 5); render_hifi wraps it.  [in_use=True]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:342ca7b6f826f94b",
+  "canon": true,
+  "variant_of": null,
+  "promoted_from": null,
+  "entry_point": "src/computation/lightcurve_generator.py:generate_lightcurves",
+  "ports": {
+    "input": [
+      "attitude-trajectory",
+      "satellite-model"
+    ],
+    "output": {
+      "magnitudes_shadowed": "hifi-lightcurve"
+    }
+  },
+  "default_params": {
+    "generate_no_shadow": false,
+    "animate": false
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:342ca7b6f826f94b",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "goal_cross-cloud-discriminator",
+  "kind": "goal_node",
+  "node_kind": "branch",
+  "parent": "goal_cross-cloud-bridging",
+  "title": "Filter/Rank among IA Cloud Cross survivors (full-LC RMSE / windowed)",
+  "state": "open",
+  "spent": {
+    "runs": 8,
+    "wall_s": 1274.0
+  },
+  "contract_refs": [],
+  "child_runs": [
+    "s076_horizon_density",
+    "s078_nll_residual_ab",
+    "s091_per_pair_timing",
+    "s092_cross_cloud_116",
+    "s093_fullc_score_survivors",
+    "s094_window_score",
+    "s095_calibration_threshold_transfer",
+    "s096_density_usefulness_116"
+  ],
+  "is_trunk_artifact": false,
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-04T00:00:00Z",
+  "last_measured": {
+    "run": "s108_cross_cloud_multistart_cost_wall",
+    "summary": "coarse-K Filter clean (6 Band A, 0 spurious survivors) but search ~100× over 15-min budget on 119",
+    "at": "2026-05-29T00:00:00Z"
+  }
+}

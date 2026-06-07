@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s047b_seed14_full_bracket_cell_filter",
+  "kind": "run_record",
+  "goal_node": "goal_cloud-data-seedgen",
+  "question": "Does the s047a cell-filter ranking still pick the near-truth cell at s019's 97-cell bracket density on the binding fast-|omega| seed 14?",
+  "hypothesis": "Cell-filter score-rank works as a top-K cell selector even at fine bracket density where many cells sit 1-3% from truth.",
+  "status": "confirmed",
+  "run_type": "expensive",
+  "seeds": [14],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "closest_cell_rank_max_geo": "34/97",
+    "closest_cell_rank_max_align": "59/97",
+    "closest_cell_rank_n_pass_both": "81/97",
+    "cells_max_geo_saturated": "33/97",
+    "candidates_evaluated": 30729600,
+    "wall_s": 1554,
+    "gate_topK3": "FAIL"
+  },
+  "artefacts": [
+    { "path": "results/s047b_seed14_full_bracket_cell_filter/seed014/summary.json", "kind": "data" },
+    { "path": "results/s047b_seed14_full_bracket_cell_filter/seed014/per_mag_aggregate.npz", "kind": "checkpoint" },
+    { "path": "results/s047b_seed14_full_bracket_cell_filter/seed014/run.log", "kind": "log" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s047b_seed14_full_bracket_cell_filter.md"],
+  "parents": ["s047a_cell_filter_informativeness", "s046_s019_bracket_basin_coverage", "s019_ls_bracket_omega_mag", "s032_cohort_fast", "s042_basin_radius_cohort", "s044_canonical_validation", "s045_bracket_density_projection"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-06T00:00:00Z",
+  "narrative_md": "Decisive negative: at s019's 97-cell density on fast-|omega| seed 14, the closest-to-truth cell ranks 34/97 by max_geo (saturated at 1.0 across the top 33 cells), 59/97 by max_align, 81/97 by n_pass_both. The s047a top-1/top-2 headline was gross-mismatch elimination on a 5-cell bracket, not fine ranking. Closes the rank-then-densify-by-cell-filter architecture; pivots s047 to LS-peak-prior + local densification. Uses the closest-to-truth cell as the gate target."
+}

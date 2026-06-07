@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s012a_seed10_density_probe",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Does increasing seed-10 Sobol density from N=64 to N=256 recover any in-basin landing at fixed truth-ω with LM polish?",
+  "hypothesis": "Higher Sobol density will not recover seed-10's truth basin; seed 10 is in the multi-solution / under-determination regime, not a clean inversion failure.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [10],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "in_basin_N256": "0/256",
+    "min_q0_err_deg": 12.95,
+    "competing_basins_N256": 123,
+    "n_rotations": 1.055,
+    "twin_recoveries": "0/256"
+  },
+  "artefacts": [],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s012a_seed10_density_probe.md"],
+  "parents": ["s011_q4cii_sobol_so3_polish_pilot", "s005_joint_local_descent", "s006_seed28_landscape_at_truth_omega", "s010_seed44_landscape_at_truth_omega"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-01T00:00:00Z",
+  "narrative_md": "Extending seed-10 Sobol density N=64 → N=256 yields 0/256 in-basin landings at fixed truth-ω; closest landing only 12.95° (still outside the strict 5° basin). Competing basins grow sub-linearly (49 → 76 → 123). Seed 10 (1.055 rotations in the window, slowest tumbler) is observationally under-determined — many (q0, ω) attractors within ~10x of truth-MSE. Pure SO(3) Sobol + LM at fixed truth-ω cannot recover seed-10-class seeds at any feasible density; ρ-band classification (s013) decides failure vs multi-solution."
+}

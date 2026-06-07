@@ -1,0 +1,132 @@
+@import "tailwindcss";
+@import "@xterm/xterm/css/xterm.css";
+
+/* ------------------------------------------------------------------ *
+ * Research OS design tokens. Dark, GitHub-dark-adjacent — deliberately
+ * matched to research_os/render/ro_viz.py so emitted plots sit on the
+ * page seamlessly (same BG/panel/border/accent values).
+ * ------------------------------------------------------------------ */
+@theme {
+  --color-bg: #0a0d12;
+  --color-bg-2: #0d1117;
+  --color-panel: #141a22;
+  --color-panel-2: #161b22;
+  --color-elev: #1b222c;
+  --color-border: #262d38;
+  --color-border-2: #30363d;
+  --color-fg: #e6edf3;
+  --color-fg-dim: #c9d1d9;
+  --color-muted: #8b949e;
+  --color-faint: #6e7681;
+
+  --color-blue: #58a6ff;
+  --color-green: #3fb950;
+  --color-amber: #e8a33d;
+  --color-red: #f0594f;
+  --color-violet: #bc8cff;
+  --color-teal: #39c5cf;
+  --color-pink: #f778ba;
+
+  --font-sans: "Inter", ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+
+  --radius-card: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, #11213a33, transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, #1a2b2933, transparent 55%),
+    var(--color-bg);
+  color: var(--color-fg-dim);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-mono { font-family: var(--font-mono); }
+
+/* refined scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #2b3240;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #3a4252; background-clip: content-box; }
+
+/* selection */
+::selection { background: #1f6feb55; }
+
+/* a card surface used everywhere */
+.card {
+  background: linear-gradient(180deg, var(--color-panel) 0%, var(--color-panel-2) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.card-hover {
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.card-hover:hover {
+  border-color: #3b4452;
+  box-shadow: 0 8px 30px -12px #00000080;
+}
+
+/* subtle inset hairline used on headers */
+.hairline { box-shadow: inset 0 -1px 0 0 var(--color-border); }
+
+/* keycap */
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--color-border-2);
+  background: #0e141c;
+  color: var(--color-muted);
+}
+
+/* link-ish */
+a { color: inherit; text-decoration: none; }
+
+/* animation for live "pulse" dot */
+@keyframes ro-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot { animation: ro-pulse 2s ease-in-out infinite; }
+
+@keyframes ro-fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fadein { animation: ro-fadein 0.25s ease-out; }
+
+/* terminal tiling spawn / close — a new tile scales+fades in on mount; a closing
+ * tile plays the reverse before it is unmounted (see TerminalDock closing-set). */
+@keyframes ro-tile-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.tile-enter { animation: ro-tile-in 0.18s ease-out; }
+@keyframes ro-tile-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.93); }
+}
+.tile-exit { animation: ro-tile-out 0.18s ease-in forwards; }
+
+/* xterm sits in its own panel */
+.xterm-screen { padding: 8px; }
+.xterm .xterm-viewport { background-color: transparent !important; }

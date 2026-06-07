@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "spice_observer_kernel",
+  "kind": "substrate_component",
+  "name": "spice_observer_kernel",
+  "path": "src/spice/spice_kernel_generator.py",
+  "tier": "substrate",
+  "interface": "VARIANT: DIFFERENT tool/op: pinpoint (not mkspk) -> observer/ground-station SPK. Same kernel-generation cluster, distinct operation. variant_of spice-kernel-generate.  [in_use=False]",
+  "current_version": "1.0.0",
+  "current_hash": "sha256:569e0a24b63ee697",
+  "canon": false,
+  "variant_of": "spice_kernel_generate",
+  "promoted_from": null,
+  "entry_point": "src/spice/spice_kernel_generator.py:create_observer_kernel",
+  "ports": {
+    "input": [
+      "spice-setup-file"
+    ],
+    "output": {
+      "spk_path": "spk-kernel"
+    }
+  },
+  "default_params": null,
+  "versions": [
+    {
+      "version": "1.0.0",
+      "hash": "sha256:569e0a24b63ee697",
+      "changed_on": "2026-06-07",
+      "change_reason": "Registered by the W-D laboratory scour (ADR-0007): de-facto Tool inventoried from code; entry_point resolved + hashed.",
+      "is_bug_fix": false
+    }
+  ],
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z"
+}

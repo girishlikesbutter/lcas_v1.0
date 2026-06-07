@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s084_omega_refine_viability",
+  "kind": "run_record",
+  "goal_node": "goal_omega-mag-basin",
+  "question": "Is a 1-D |omega| refine viable — is truth-|omega| the unique global minimum over the full LS-bracket (no aliasing), and does a findable min survive realistic anchor-quality q error?",
+  "hypothesis": "Truth-|omega| is the unique global min over the full bracket (1-D scan has nothing to fall into) and the refine recovers correct |omega| even under several degrees of q error, moving the binding constraint to anchor q-accuracy.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [116, 119, 103],
+  "N": 3,
+  "claim_scope": "N1",
+  "metrics": {
+    "n_local_minima_below_rho8": 1,
+    "n_aliases_above_3pct": 0,
+    "global_min_w_mag_err_pct": 0.0,
+    "seed116_minrho_15deg": 2.59,
+    "seed119_minrho_3deg": 6.09,
+    "recovered_w_mag_err_max_pct": 2.9,
+    "wall_s": 91.8
+  },
+  "artefacts": [
+    { "path": "results/s084/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s084_omega_refine_viability.md"],
+  "parents": ["s083_nmag_sensitivity", "s082_joint_grid_pivot"],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-21T00:00:00Z",
+  "narrative_md": "The 1-D |omega|-refine is viable: over the full LS-bracket (8.6-142x wide) with q+dir at truth, truth-|omega| is the unique global minimum — 1 local min below rho=8, zero aliases on all three seeds. The refine recovers correct |omega| even at 15 deg q error (<=3% slow, <=0.4% fast). But q-error sets a regime-dependent fit floor: the fast seed needs q within ~1-3 deg even with perfect |omega|, tighter than the 5-15 deg LM grab radius. |omega| is solved as a separable axis; the binding constraint moves to anchor q-accuracy. Holds q/dir at truth and perturbs truth-q -> oracle_clean false."
+}

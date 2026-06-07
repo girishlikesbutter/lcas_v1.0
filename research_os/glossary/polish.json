@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "polish",
+  "kind": "glossary_term",
+  "term": "Polish",
+  "definition": "Local descent / refinement of a candidate state. Tool- and metric-agnostic — the word names the move, not the optimiser or the objective.",
+  "status": "canon",
+  "promoted_on": "2026-06-04",
+  "created_at": "2026-06-04T00:00:00Z",
+  "related_terms": [
+    "lm-polish",
+    "single-wind-lc-window-polish"
+  ]
+}

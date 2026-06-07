@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s010_seed44_landscape_at_truth_omega",
+  "kind": "run_record",
+  "goal_node": "goal_cost-at-truth",
+  "question": "Is seed 44's s009-LM competing basin (~100° from truth) visible at 2046-Sobol resolution, and is it a body-symmetry artefact?",
+  "hypothesis": "Seed 44's competing basin is a sub-Sobol-resolution narrow basin (case A), real but invisible at 2046 density and not at a body-symmetry pole.",
+  "status": "confirmed",
+  "run_type": "probe",
+  "seeds": [44],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "truth_full_mse": "3.36e-4 mag^2",
+    "lm_landing_final_mse": "6.01e-2 mag^2",
+    "n_sobol_below_truth": 0,
+    "n_sobol_below_lm_mse": 0,
+    "sobol_min_geo_to_lm_landing_deg": 10.06,
+    "lm_landing_geo_to_truth_deg": 99.6,
+    "wall_s": 33.4
+  },
+  "artefacts": [
+    { "path": "results/s010/landscape.npz", "kind": "checkpoint" },
+    { "path": "results/s010/summary.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s010_seed44_landscape_at_truth_omega.md"],
+  "parents": ["s002_surrogate_landscape_probe", "s006_seed28_landscape_at_truth_omega", "s009_cohort_basin_radius_probe"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-04-30T00:00:00Z",
+  "narrative_md": "Seed 44's s009 competing basin (~100° from truth, final_mse 0.06 mag^2) is case (A): a sub-Sobol-resolution narrow basin. Truth remains global argmin (3.36e-4 mag^2); n_sobol_below_truth = 0; no Sobol point within 10° of the LM landing. The landing q0 is not at any clean rigid-body symmetry pole (closest 180°y at 81.9°), so it is a genuine surrogate-MSE local minimum, not a body-symmetry artefact — same regime as seed 28's truth basin in s006."
+}

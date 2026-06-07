@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s056_ct_breathing_spectrum",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "Does the per-epoch survivor count |C_t|(t) carry an independent omega-direction signal beyond the LC magnitude itself?",
+  "hypothesis": "The |C_t|(t) breathing spectrum is a new signal channel (e.g. tracks |omega|(t) or the polhode period) not already captured by mag_hifi.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [89],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "ct_dynamic_range": "300x",
+    "ls_peak_period_min": 20.5,
+    "rotation_period_min": 25.0,
+    "pearson_ct_vs_mag": 0.78,
+    "pearson_ct_vs_omega_mag": 0.06,
+    "peak_vs_constriction_ratio": 1.81
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s056_ct_breathing_spectrum/breathing_data.npz", "kind": "checkpoint" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s056_ct_breathing_spectrum.md"],
+  "parents": [],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Decisive negative on direction (2): |C_t|(t) varies 300x with a sharp Lomb-Scargle peak at 20.5 min, but it is strongly correlated with the LC magnitude (Pearson 0.78 on log) and decoupled from |omega|(t) (0.06). Counterintuitively |C_t| is LARGER at LC peaks (1.81x). The breathing spectrum is mostly a geometric reflection of the LC magnitude, not an independent channel. Uses cached truth |omega|(t) and rotation period for the correlation -- oracle-leak, N=1."
+}

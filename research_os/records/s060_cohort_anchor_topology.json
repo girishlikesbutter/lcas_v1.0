@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s060_cohort_anchor_topology",
+  "kind": "run_record",
+  "goal_node": "goal_anchor-selection",
+  "question": "Does the bright-fragmented / dim-clean anchor-topology dichotomy generalize across a PA-stratified cohort?",
+  "hypothesis": "The clean 3-5 dim-cluster enumerator pattern from seed 89 holds cohort-wide.",
+  "status": "refuted",
+  "run_type": "cheap",
+  "seeds": [6, 10, 21, 28, 41, 44, 48, 60, 84, 89, 91],
+  "N": 11,
+  "claim_scope": "N1",
+  "metrics": {
+    "bright_fragmented_seeds": "11/11",
+    "dim_clean_strict_seeds": "2/11",
+    "dim_clean_relaxed_seeds": "~5/11",
+    "bright_nclusters_median": 23,
+    "dim_nclusters_median": 8,
+    "dim_top3_mass_median": 0.59,
+    "clean_dim_Ct_predictor": "<100",
+    "wall_s": 180
+  },
+  "artefacts": [
+    { "path": "notebooks/inversion/survey/results/s060_cohort_topology/seed089.json", "kind": "data" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s060_cohort_anchor_topology.md"],
+  "parents": ["s060_sharpness_map", "s060_anchor_topology", "s060_multi_anchor_design"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "oracle_clean": true,
+  "created_at": "2026-05-09T00:00:00Z",
+  "narrative_md": "On the 11-seed PA-stratified cohort, bright fragmentation is universal (11/11) but the clean dim-enumerator pattern (3-6 clusters, top-3 mass >= 85%) holds only on ~5/11 seeds (10/89 strict, +44, ~+28/91 relaxed). Cleanness correlates with |C_t| < 100 at the dim extreme. The dim clean-enumerator path is opportunistic per-seed, not universal; only the bright passage-validator path generalizes. Refutes the seed-89-generalizes hypothesis."
+}

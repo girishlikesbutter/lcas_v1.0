@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s053_cohort_polhode_survey",
+  "kind": "run_record",
+  "goal_node": "goal_basin-width",
+  "question": "Which polhode-geometric scalar (D label, |D-1|, cone_max, pol_diam) predicts the s042 omega-mag basin width better than the trivial |omega| baseline?",
+  "hypothesis": "A genuinely polhode-derived quantity predicts basin width; the s051 mechanism (near-separatrix D -> narrow basin) should make |D-1| the predictor.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [6, 14, 16, 19, 42, 44, 57, 62, 79, 84],
+  "N": 100,
+  "claim_scope": "cohort",
+  "metrics": {
+    "rho_pol_diam_vs_basin": -0.935,
+    "rho_omega_vs_basin": -0.837,
+    "rho_D_vs_basin": 0.105,
+    "near_separatrix_seeds": "50/100",
+    "Ic_enclosing_seeds": "87/100",
+    "pol_diam_span_x": 52,
+    "wall_s": 3.89
+  },
+  "artefacts": [
+    { "path": "results/s053_cohort_polhode_survey/cohort.npz", "kind": "checkpoint" },
+    { "path": "results/s053_cohort_polhode_survey/summary.json", "kind": "data" },
+    { "path": "results/s053_cohort_polhode_survey/cohort_polhode_survey.png", "kind": "plot" }
+  ],
+  "writeup_refs": ["notebooks/inversion/survey/experiments/s053_cohort_polhode_survey.md"],
+  "parents": ["s042_basin_radius_cohort", "s051_polhode_observation", "s052_polhode_overlay"],
+  "substrate_versions": { "propagator": "1.0.0", "surrogate": "v2", "scorer": "1.0.0" },
+  "gates_failed": ["oracle-leak"],
+  "oracle_clean": false,
+  "created_at": "2026-05-07T00:00:00Z",
+  "narrative_md": "Cohort polhode survey (100 seeds, 3.9 s) cross-correlated with the 10 s042 basin measurements: polhode DIAMETER is the load-bearing basin-width predictor (Spearman -0.935, p<0.001), stronger than |omega| (-0.837) and far stronger than the D label (+0.105, not correlated). This partially refutes s051 (D doesn't predict) but vindicates the polhode framing more sharply (pol_diam does). Cohort topology: 87/100 enclose I_c, 50/100 near-separatrix. Computes polhode invariants from truth (q0, omega0) of every cohort seed."
+}

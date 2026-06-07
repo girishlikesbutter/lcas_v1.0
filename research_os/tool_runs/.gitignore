@@ -1,0 +1,3 @@
+# Canonical bench-run records (tr_*.json) ARE tracked — first-class provenance.
+# The heavy outputs they reference (saved arrays, copied plots) are derived; don't track.
+artifacts/

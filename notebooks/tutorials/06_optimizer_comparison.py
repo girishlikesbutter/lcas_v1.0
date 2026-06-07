@@ -1,0 +1,1808 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.19.0
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %% [markdown]
+# # Optimizer Comparison Study
+#
+# This notebook compares different optimization strategies for lightcurve inversion
+# under a **fixed evaluation budget**, providing a fair comparison of:
+#
+# 1. **Multi-start local optimization** (random restarts + L-BFGS-B)
+# 2. **Differential Evolution** (global optimizer baseline)
+# 3. **Basin Hopping** (hybrid global/local approach)
+#
+# ## Goals
+#
+# - Implement evaluation-counted objective wrapper for fair budget enforcement
+# - Compare success rates, parameter errors, and wall times across strategies
+# - Identify the most efficient optimizer for this inversion problem
+
+# %% [markdown]
+# ---
+# ## Setup
+#
+# Copy minimal setup from notebook 04 to generate the same test case.
+
+# %%
+import sys
+from pathlib import Path
+import time
+import os
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+
+# Project Root
+if '__file__' in globals():
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+else:
+    PROJECT_ROOT = Path.cwd().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+os.chdir(PROJECT_ROOT)
+
+# Import config and IO modules
+from src.config.rso_config_manager import RSO_ConfigManager
+from src.io.stl_loader import STLLoader
+
+# Import SPICE handler
+from src.spice.spice_handler import SpiceHandler
+
+# Import computation modules
+from src.computation.brdf import BRDFManager, BRDFCalculator
+from src.computation.observation_geometry import compute_observation_geometry
+from src.computation import compute_inertia_from_config
+
+# Import articulation module for fixed component angles
+from src.articulation import compute_rotation_matrices_from_angles
+
+# Import dynamics and inversion modules
+from src.dynamics import propagate_attitude
+from src.inversion import (
+    ObjectiveFunction,
+    axis_angle_to_quaternion,
+    quaternion_to_axis_angle,
+    normalize_quaternion,
+)
+
+# Import for forward model
+from src.computation.shadow_engine import compute_shadows
+from src.computation.lightcurve_generator import generate_lightcurves
+
+print(f"Project root: {PROJECT_ROOT}")
+print("Imports successful!")
+
+# %% [markdown]
+# ---
+# ## 1. Load Intelsat 901 Configuration (Same as Notebook 04)
+
+# %%
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+config_path = "intelsat_901/intelsat_901_config.yaml"
+
+# Number of observation points (same as notebook 04)
+n_observations = 50
+
+# Observer/Ground Station SPICE ID
+OBSERVER_ID = 399999
+
+# Load RSO configuration
+config_manager = RSO_ConfigManager(PROJECT_ROOT)
+config = config_manager.load_config(config_path)
+
+# Get paths from configuration
+metakernel_path = config_manager.get_metakernel_path(config)
+output_dir = config_manager.get_output_directory(config)
+
+# Use configuration values
+satellite_id = config.spice_config.satellite_id
+start_time_utc = config.simulation_defaults.start_time
+end_time_utc = config.simulation_defaults.end_time
+
+print("=" * 70)
+print("OPTIMIZER COMPARISON STUDY")
+print("=" * 70)
+print(f"\nConfiguration: {config.name}")
+print(f"Observations: {n_observations}")
+
+# %%
+# Load satellite model from STL files
+print(f"\nLoading {config.name} satellite model...")
+satellite = STLLoader.create_satellite_from_stl_config(
+    config=config,
+    config_manager=config_manager
+)
+
+# Set up BRDF materials
+brdf_manager = BRDFManager(config)
+brdf_calc = BRDFCalculator()
+brdf_calc.update_satellite_brdf_with_manager(satellite, brdf_manager)
+
+print(f"Model loaded: {satellite.name}")
+print(f"  Components: {len(satellite.components)}")
+total_facets = sum(len(comp.facets) for comp in satellite.components if comp.facets)
+print(f"  Total facets: {total_facets:,}")
+
+# %% [markdown]
+# ---
+# ## 2. Fixed Articulation Configuration
+
+# %%
+# Same fixed angles as notebook 04
+SOLAR_PANEL_ANGLE_DEG = 0.0
+ANTENNA_DISH_ANGLE_DEG = 15.0
+
+print("Fixed articulation configuration:")
+print(f"  Solar panels (SP_North, SP_South): {SOLAR_PANEL_ANGLE_DEG}°")
+print(f"  Antenna dishes (AD_East, AD_West): {ANTENNA_DISH_ANGLE_DEG}°")
+
+# %% [markdown]
+# ---
+# ## 3. Calculate Inertia Tensor
+
+# %%
+# Same component masses as notebook 04
+component_masses = {
+    'Bus': 1532.0,
+    'SP_North': 170.0,
+    'SP_South': 170.0,
+    'AD_East': 50.0,
+    'AD_West': 50.0,
+}
+
+# Calculate inertia tensor
+inertia_result = compute_inertia_from_config(
+    config=config,
+    config_manager=config_manager,
+    masses=component_masses,
+    articulation_angles={'SP_North': 0.0, 'SP_South': 0.0}
+)
+
+inertia_tensor = inertia_result.inertia_tensor
+print(f"Inertia tensor computed:")
+print(f"  Principal moments: {inertia_result.principal_moments}")
+
+# %% [markdown]
+# ---
+# ## 4. Initialize SPICE and Compute Observation Geometry
+
+# %%
+# Initialize SPICE
+print("Initializing SPICE...")
+spice_handler = SpiceHandler()
+spice_handler.load_metakernel_programmatically(str(metakernel_path))
+
+# Generate time series
+start_et = spice_handler.utc_to_et(start_time_utc)
+end_et = spice_handler.utc_to_et(end_time_utc)
+epochs = np.linspace(start_et, end_et, n_observations)
+
+print(f"Time range: {start_time_utc} to {end_time_utc}")
+print(f"Observations: {n_observations}")
+
+# Relative observation times starting from 0
+observation_times = epochs - epochs[0]
+
+# %%
+# Compute observation geometry using SPICE
+print("Computing observation geometry...")
+geometry_data = compute_observation_geometry(
+    epochs=epochs,
+    satellite_id=satellite_id,
+    observer_id=OBSERVER_ID,
+    spice_handler=spice_handler,
+    config=config
+)
+
+# Extract J2000 positions
+sun_positions_j2000 = geometry_data['sun_positions']
+observer_positions_j2000 = geometry_data['obs_positions']
+satellite_positions_j2000 = geometry_data['sat_positions']
+observer_distances = geometry_data['observer_distances']
+
+print(f"Geometry computed: {n_observations} observations")
+print(f"Observer distance range: {observer_distances.min():.0f} - {observer_distances.max():.0f} km")
+
+# %%
+# Create fixed articulation matrices
+fixed_articulation_angles = {
+    'SP_North': np.full(n_observations, SOLAR_PANEL_ANGLE_DEG),
+    'SP_South': np.full(n_observations, SOLAR_PANEL_ANGLE_DEG),
+    'AD_East': np.full(n_observations, ANTENNA_DISH_ANGLE_DEG),
+    'AD_West': np.full(n_observations, ANTENNA_DISH_ANGLE_DEG),
+}
+
+articulation_matrices = compute_rotation_matrices_from_angles(
+    fixed_articulation_angles, satellite
+)
+
+print("Articulation matrices created")
+
+# %% [markdown]
+# ---
+# ## 5. Define True Attitude Parameters (Same as Notebook 04)
+
+# %%
+# True initial quaternion (same as notebook 04)
+true_axis = np.array([0.6, 0.3, 0.8])
+true_axis /= np.linalg.norm(true_axis)
+true_angle_deg = 45.0
+true_angle_rad = np.deg2rad(true_angle_deg)
+
+# Construct quaternion (scalar-first: w, x, y, z)
+true_q0 = np.array([
+    np.cos(true_angle_rad / 2),
+    np.sin(true_angle_rad / 2) * true_axis[0],
+    np.sin(true_angle_rad / 2) * true_axis[1],
+    np.sin(true_angle_rad / 2) * true_axis[2],
+])
+
+# True initial angular velocity (rad/s in body frame)
+true_omega_deg_per_s = np.array([0.005, -0.003, 0.05])
+true_omega0 = np.deg2rad(true_omega_deg_per_s)
+
+# Convert to axis-angle representation
+true_axis_angle = quaternion_to_axis_angle(true_q0)
+
+# Store as combined parameter vector for slicing
+# Format: [axis_angle_x, axis_angle_y, axis_angle_z, omega_x, omega_y, omega_z]
+true_params = np.concatenate([true_axis_angle, true_omega0])
+
+print("True attitude parameters:")
+print(f"  Axis-angle (rad): {true_axis_angle}")
+print(f"  Axis-angle (deg): {np.rad2deg(true_axis_angle)}")
+print(f"  Angular velocity (deg/s): {np.rad2deg(true_omega0)}")
+print(f"\nCombined parameter vector:")
+print(f"  true_params = {true_params}")
+
+# Parameter names for reference
+param_names = ['axis_angle_x', 'axis_angle_y', 'axis_angle_z', 'omega_x', 'omega_y', 'omega_z']
+
+# %% [markdown]
+# ---
+# ## 6. Generate Synthetic Lightcurve
+
+# %%
+print("\nGenerating synthetic lightcurve with true parameters...")
+print("  Mode: TUMBLING with inertia tensor")
+print("  Shadows: ENABLED")
+
+# Propagate true attitude using tumbling dynamics
+true_quaternions, true_omega_history = propagate_attitude(
+    q0=true_q0,
+    omega0=true_omega0,
+    times=observation_times,
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
+)
+
+print(f"  Attitude propagated: {len(true_quaternions)} epochs")
+
+# %%
+# Create a temporary ObjectiveFunction to compute body-frame vectors
+objective_temp = ObjectiveFunction(
+    satellite=satellite,
+    observation_times=observation_times,
+    observed_lightcurve=np.zeros(n_observations),  # placeholder
+    sun_positions_j2000=sun_positions_j2000,
+    observer_positions_j2000=observer_positions_j2000,
+    satellite_positions_j2000=satellite_positions_j2000,
+    observer_distances=observer_distances,
+    compute_shadows_flag=True,
+    articulation_matrices=articulation_matrices,
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
+)
+
+# Get body-frame vectors from propagated attitude
+k1_vectors, k2_vectors = objective_temp._compute_body_frame_vectors(true_quaternions)
+
+# %%
+# Compute shadows with ray tracing
+print("Computing shadows...")
+lit_status_dict = compute_shadows(
+    satellite=satellite,
+    k1_vectors=k1_vectors,
+    explicit_component_matrices=articulation_matrices,
+    show_progress=True,
+)
+
+# %%
+# Generate true lightcurve
+print("Generating lightcurve...")
+true_lightcurve, total_flux, _, _, _, _ = generate_lightcurves(
+    facet_lit_status_dict=lit_status_dict,
+    k1_vectors_array=k1_vectors,
+    k2_vectors_array=k2_vectors,
+    observer_distances=observer_distances,
+    satellite=satellite,
+    epochs=epochs,
+    pre_computed_matrices=articulation_matrices,
+    generate_no_shadow=False,
+    animate=False,
+    show_progress=True,
+)
+
+print(f"True lightcurve range: [{true_lightcurve.min():.2f}, {true_lightcurve.max():.2f}] mag")
+
+# %%
+# Add synthetic noise (same as notebook 04)
+np.random.seed(42)
+noise_sigma = 0.05
+observed_lightcurve = true_lightcurve + np.random.normal(0, noise_sigma, n_observations)
+
+print(f"\nAdded Gaussian noise (sigma = {noise_sigma} mag)")
+print(f"Observed lightcurve range: [{observed_lightcurve.min():.2f}, {observed_lightcurve.max():.2f}] mag")
+
+# %% [markdown]
+# ---
+# ## 7. Create Base ObjectiveFunction
+
+# %%
+# Create the base objective function
+objective_fn = ObjectiveFunction(
+    satellite=satellite,
+    observation_times=observation_times,
+    observed_lightcurve=observed_lightcurve,
+    sun_positions_j2000=sun_positions_j2000,
+    observer_positions_j2000=observer_positions_j2000,
+    satellite_positions_j2000=satellite_positions_j2000,
+    observer_distances=observer_distances,
+    compute_shadows_flag=True,
+    articulation_matrices=articulation_matrices,
+    mode="tumbling",
+    inertia_tensor=inertia_tensor,
+)
+
+# Verify the objective value at true parameters
+obj_at_true = objective_fn.evaluate(true_params)
+print(f"\nBase ObjectiveFunction created")
+print(f"  Objective value at true parameters: {obj_at_true:.6f}")
+
+# %% [markdown]
+# ---
+# ## 8. Evaluation-Counted Objective Wrapper
+#
+# This wrapper class counts function evaluations and enforces a budget limit
+# for fair comparison between optimization strategies.
+
+# %%
+class CountedObjective:
+    """
+    Wrapper that counts function evaluations and enforces a budget limit.
+
+    When the budget is exhausted, returns a large penalty value to discourage
+    further exploration. This allows optimizers to gracefully stop when
+    the budget is reached.
+
+    Attributes
+    ----------
+    objective_fn : ObjectiveFunction
+        The underlying objective function to wrap.
+    budget : int
+        Maximum number of evaluations allowed.
+    n_evals : int
+        Current count of evaluations.
+    penalty_value : float
+        Value returned when budget is exhausted.
+    best_value : float
+        Best (minimum) objective value seen so far.
+    best_params : np.ndarray | None
+        Parameters corresponding to best_value.
+    """
+
+    def __init__(
+        self,
+        objective_fn: ObjectiveFunction,
+        budget: int,
+        penalty_value: float = 1e10,
+    ) -> None:
+        """
+        Initialize the counted objective wrapper.
+
+        Parameters
+        ----------
+        objective_fn : ObjectiveFunction
+            The underlying objective function to wrap.
+        budget : int
+            Maximum number of evaluations allowed.
+        penalty_value : float
+            Value returned when budget is exhausted.
+        """
+        self.objective_fn = objective_fn
+        self.budget = budget
+        self.penalty_value = penalty_value
+        self.n_evals = 0
+        self.best_value = float('inf')
+        self.best_params: np.ndarray | None = None
+
+    def __call__(self, params: np.ndarray) -> float:
+        """
+        Evaluate the objective function with budget enforcement.
+
+        Parameters
+        ----------
+        params : np.ndarray
+            Parameter vector to evaluate.
+
+        Returns
+        -------
+        float
+            Objective value, or penalty_value if budget is exhausted.
+        """
+        # Check budget
+        if self.n_evals >= self.budget:
+            return self.penalty_value
+
+        # Increment counter
+        self.n_evals += 1
+
+        # Normalize axis-angle via quaternion round-trip
+        axis_angle = params[:3]
+        omega = params[3:]
+
+        q = axis_angle_to_quaternion(axis_angle)
+        q_normalized = normalize_quaternion(q)
+        axis_angle_norm = quaternion_to_axis_angle(q_normalized)
+
+        params_normalized = np.concatenate([axis_angle_norm, omega])
+
+        # Evaluate objective
+        value = self.objective_fn.evaluate(params_normalized)
+
+        # Track best result
+        if value < self.best_value:
+            self.best_value = value
+            self.best_params = params_normalized.copy()
+
+        return value
+
+    def reset(self) -> None:
+        """
+        Reset the counter and tracking for a new optimization trial.
+
+        Call this before each independent optimization run to ensure
+        fair budget enforcement across trials.
+        """
+        self.n_evals = 0
+        self.best_value = float('inf')
+        self.best_params = None
+
+    def get_remaining_budget(self) -> int:
+        """
+        Get the number of evaluations remaining in the budget.
+
+        Returns
+        -------
+        int
+            Remaining evaluations.
+        """
+        return max(0, self.budget - self.n_evals)
+
+    def is_budget_exhausted(self) -> bool:
+        """
+        Check if the evaluation budget has been exhausted.
+
+        Returns
+        -------
+        bool
+            True if no evaluations remain.
+        """
+        return self.n_evals >= self.budget
+
+
+# %% [markdown]
+# ---
+# ## 9. Test CountedObjective Wrapper
+
+# %%
+print("\nTesting CountedObjective wrapper...")
+print("-" * 50)
+
+# Create a counted objective with small budget for testing
+test_budget = 10
+counted_obj = CountedObjective(objective_fn, budget=test_budget)
+
+print(f"Initial state:")
+print(f"  Budget: {counted_obj.budget}")
+print(f"  Evaluations: {counted_obj.n_evals}")
+print(f"  Remaining: {counted_obj.get_remaining_budget()}")
+print(f"  Exhausted: {counted_obj.is_budget_exhausted()}")
+
+# Make some evaluations
+print(f"\nMaking {test_budget + 2} evaluations...")
+for i in range(test_budget + 2):
+    # Perturb true params slightly for each call
+    test_params = true_params + np.random.normal(0, 0.01, 6)
+    value = counted_obj(test_params)
+
+    if i < test_budget:
+        print(f"  Eval {i+1}: value = {value:.4f}")
+    else:
+        print(f"  Eval {i+1}: value = {value:.4f} (penalty - budget exhausted)")
+
+print(f"\nAfter evaluations:")
+print(f"  Evaluations: {counted_obj.n_evals}")
+print(f"  Remaining: {counted_obj.get_remaining_budget()}")
+print(f"  Exhausted: {counted_obj.is_budget_exhausted()}")
+print(f"  Best value: {counted_obj.best_value:.6f}")
+
+# Test reset
+print(f"\nAfter reset():")
+counted_obj.reset()
+print(f"  Evaluations: {counted_obj.n_evals}")
+print(f"  Remaining: {counted_obj.get_remaining_budget()}")
+print(f"  Exhausted: {counted_obj.is_budget_exhausted()}")
+print(f"  Best value: {counted_obj.best_value}")
+print(f"  Best params: {counted_obj.best_params}")
+
+print("\nCountedObjective wrapper test PASSED!")
+
+# %% [markdown]
+# ---
+# ## 10. Define Parameter Bounds and Success Criteria
+
+# %%
+# Define parameter bounds
+omega_max_deg_per_s = 30.0
+omega_max_rad_per_s = np.deg2rad(omega_max_deg_per_s)
+
+# axis_angle bounds: [-pi, pi] for each component
+# omega bounds: [-omega_max, omega_max] for each component
+bounds = [
+    (-np.pi, np.pi),  # axis_angle_x
+    (-np.pi, np.pi),  # axis_angle_y
+    (-np.pi, np.pi),  # axis_angle_z
+    (-omega_max_rad_per_s, omega_max_rad_per_s),  # omega_x
+    (-omega_max_rad_per_s, omega_max_rad_per_s),  # omega_y
+    (-omega_max_rad_per_s, omega_max_rad_per_s),  # omega_z
+]
+
+print("Parameter bounds:")
+for i, (name, (lb, ub)) in enumerate(zip(param_names, bounds)):
+    if i < 3:
+        print(f"  {name}: [{lb:.4f}, {ub:.4f}] rad = [{np.rad2deg(lb):.1f}, {np.rad2deg(ub):.1f}] deg")
+    else:
+        print(f"  {name}: [{lb:.6f}, {ub:.6f}] rad/s = [{np.rad2deg(lb):.2f}, {np.rad2deg(ub):.2f}] deg/s")
+
+# %%
+# Define success criteria (same as notebook 05)
+OMEGA_ERROR_THRESHOLD_DEG_PER_S = 0.1
+RMS_THRESHOLD_FACTOR = 2.0
+
+
+def evaluate_success(
+    x_opt: np.ndarray,
+    true_params: np.ndarray,
+    objective_fn: ObjectiveFunction,
+    noise_sigma: float,
+) -> tuple[bool, float, float]:
+    """
+    Evaluate whether optimization was successful based on defined criteria.
+
+    Parameters
+    ----------
+    x_opt : np.ndarray
+        Optimized parameters.
+    true_params : np.ndarray
+        True parameters.
+    objective_fn : ObjectiveFunction
+        Objective function for computing residuals.
+    noise_sigma : float
+        Noise level in the observations.
+
+    Returns
+    -------
+    success : bool
+        True if both criteria are met.
+    omega_error_deg : float
+        Angular velocity error in deg/s.
+    rms_residual : float
+        RMS of residuals in magnitudes.
+    """
+    # Compute angular velocity error
+    true_omega = true_params[3:]
+    opt_omega = x_opt[3:]
+    omega_error_rad = np.linalg.norm(opt_omega - true_omega)
+    omega_error_deg = np.rad2deg(omega_error_rad)
+
+    # Compute RMS residual
+    obj_value = objective_fn.evaluate(x_opt)
+    n_obs = len(objective_fn.observed_lightcurve)
+    rms_residual = np.sqrt(obj_value / n_obs)
+
+    # Check success criteria
+    omega_ok = omega_error_deg < OMEGA_ERROR_THRESHOLD_DEG_PER_S
+    rms_ok = rms_residual < RMS_THRESHOLD_FACTOR * noise_sigma
+    success = omega_ok and rms_ok
+
+    return success, omega_error_deg, rms_residual
+
+
+print(f"\nSuccess criteria:")
+print(f"  Angular velocity error < {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s")
+print(f"  RMS residual < {RMS_THRESHOLD_FACTOR} x noise_sigma = {RMS_THRESHOLD_FACTOR * noise_sigma:.4f} mag")
+
+# %% [markdown]
+# ---
+# ## 11. Multi-Start Local Optimization Strategy
+#
+# This strategy uses Latin Hypercube Sampling (LHS) to generate well-distributed
+# initial points across the parameter space, then runs L-BFGS-B from each start.
+# LHS provides better coverage than random sampling for the same number of points.
+
+# %%
+from scipy.stats.qmc import LatinHypercube
+
+
+def multistart_local(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    n_starts: int,
+    max_evals_per_start: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Multi-start local optimization using Latin Hypercube Sampling.
+
+    Generates initial points using LHS for good coverage of the parameter space,
+    then runs L-BFGS-B from each start point. Tracks evaluations across all
+    local optimizations to respect the total budget.
+
+    Parameters
+    ----------
+    counted_objective : CountedObjective
+        Budget-enforcing objective wrapper. Should already be reset before calling.
+    bounds : list[tuple[float, float]]
+        List of (lower, upper) bounds for each parameter.
+    n_starts : int
+        Number of random starting points to try.
+    max_evals_per_start : int
+        Maximum function evaluations per local optimization.
+    seed : int | None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    dict
+        Results containing:
+        - 'x_best': Best solution found
+        - 'f_best': Best objective value
+        - 'n_evals': Total function evaluations used
+        - 'n_successful_starts': Number of starts that completed without hitting budget
+        - 'all_results': List of results from each local optimization
+    """
+    n_params = len(bounds)
+    lower_bounds = np.array([b[0] for b in bounds])
+    upper_bounds = np.array([b[1] for b in bounds])
+
+    # Generate Latin Hypercube samples in [0, 1]^n
+    lhs = LatinHypercube(d=n_params, seed=seed)
+    samples_unit = lhs.random(n=n_starts)
+
+    # Scale to parameter bounds
+    initial_points = lower_bounds + samples_unit * (upper_bounds - lower_bounds)
+
+    # Track results
+    all_results = []
+    x_best = None
+    f_best = float('inf')
+    n_successful_starts = 0
+
+    for i, x0 in enumerate(initial_points):
+        # Check if budget is already exhausted
+        if counted_objective.is_budget_exhausted():
+            break
+
+        # Record evaluations before this start
+        evals_before = counted_objective.n_evals
+
+        # Run L-BFGS-B from this starting point
+        result = minimize(
+            counted_objective,
+            x0,
+            method='L-BFGS-B',
+            bounds=bounds,
+            options={
+                'maxfun': max_evals_per_start,
+                'ftol': 1e-8,
+                'gtol': 1e-6,
+            },
+        )
+
+        # Record evaluations used for this start
+        evals_used = counted_objective.n_evals - evals_before
+
+        # Store result
+        local_result = {
+            'x0': x0.copy(),
+            'x_opt': result.x.copy(),
+            'f_opt': result.fun,
+            'n_evals': evals_used,
+            'success': result.success,
+            'message': result.message,
+        }
+        all_results.append(local_result)
+
+        # Update best if this is better
+        if result.fun < f_best:
+            f_best = result.fun
+            x_best = result.x.copy()
+
+        # Count successful completions (finished without budget exhaustion)
+        if not counted_objective.is_budget_exhausted():
+            n_successful_starts += 1
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'n_successful_starts': n_successful_starts,
+        'n_starts_attempted': len(all_results),
+        'all_results': all_results,
+    }
+
+
+# %% [markdown]
+# ---
+# ## 12. Test Multi-Start Local Optimization
+
+# %%
+print("\nTesting multi-start local optimization...")
+print("-" * 50)
+
+# Create a counted objective with test budget
+test_budget = 500
+test_n_starts = 5
+test_evals_per_start = 100
+
+counted_obj_test = CountedObjective(objective_fn, budget=test_budget)
+
+print(f"Configuration:")
+print(f"  Total budget: {test_budget} evaluations")
+print(f"  Number of starts: {test_n_starts}")
+print(f"  Max evals per start: {test_evals_per_start}")
+
+# Run multi-start optimization
+start_time = time.time()
+ms_result = multistart_local(
+    counted_objective=counted_obj_test,
+    bounds=bounds,
+    n_starts=test_n_starts,
+    max_evals_per_start=test_evals_per_start,
+    seed=42,
+)
+elapsed_time = time.time() - start_time
+
+print(f"\nResults:")
+print(f"  Total evaluations used: {ms_result['n_evals']}")
+print(f"  Starts attempted: {ms_result['n_starts_attempted']}")
+print(f"  Successful starts: {ms_result['n_successful_starts']}")
+print(f"  Best objective value: {ms_result['f_best']:.6f}")
+print(f"  Wall time: {elapsed_time:.1f}s")
+
+# Show individual start results
+print(f"\nPer-start breakdown:")
+for i, r in enumerate(ms_result['all_results']):
+    print(f"  Start {i+1}: f={r['f_opt']:.4f}, evals={r['n_evals']}, success={r['success']}")
+
+# Check against success criteria
+if ms_result['x_best'] is not None:
+    success, omega_err, rms = evaluate_success(
+        ms_result['x_best'], true_params, objective_fn, noise_sigma
+    )
+    print(f"\nSuccess evaluation:")
+    print(f"  Omega error: {omega_err:.4f} deg/s (threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S})")
+    print(f"  RMS residual: {rms:.4f} mag (threshold: {RMS_THRESHOLD_FACTOR * noise_sigma:.4f})")
+    print(f"  Overall success: {success}")
+
+print("\nMulti-start local optimization test completed!")
+
+# %% [markdown]
+# ---
+# ## Setup Complete
+#
+# We now have:
+# - `objective_fn`: The base ObjectiveFunction instance
+# - `CountedObjective`: Wrapper class for budget enforcement
+# - `true_params`: The 6-parameter vector for validation
+# - `bounds`: Parameter bounds for optimization
+# - `evaluate_success()`: Function to check if optimization succeeded
+# - `multistart_local()`: Multi-start local optimization with LHS initialization
+#
+# The next sections (US-013 onwards) will implement:
+# - Differential Evolution baseline
+# - Basin Hopping strategy
+# - Comparison experiment and visualization
+
+# %% [markdown]
+# ---
+# ## 13. Differential Evolution Baseline
+#
+# This function wraps scipy's `differential_evolution` to match the existing
+# codebase configuration from notebook 03 and the `src/inversion/optimizers.py`
+# module. Key settings:
+#
+# - **Strategy**: `'best1bin'` - uses best member for mutation
+# - **Mutation**: `(0.5, 1.0)` - dithered mutation factor
+# - **Recombination**: `0.7` - crossover probability
+# - **Polish**: Disabled to stay within evaluation budget
+#
+# The `maxiter` is calculated from the budget to approximately achieve
+# the target number of function evaluations.
+
+# %%
+from scipy.optimize import differential_evolution
+
+
+def run_de(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    max_evals: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Run Differential Evolution global optimization with evaluation budget.
+
+    Configures DE with the same settings as the existing LCAS inversion pipeline
+    (from src/inversion/optimizers.py) but respects a fixed evaluation budget.
+
+    Parameters
+    ----------
+    counted_objective : CountedObjective
+        Budget-enforcing objective wrapper. Should already be reset before calling.
+    bounds : list[tuple[float, float]]
+        List of (lower, upper) bounds for each parameter.
+    max_evals : int
+        Maximum number of function evaluations allowed.
+    seed : int | None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    dict
+        Results containing:
+        - 'x_best': Best solution found (from counted_objective tracking)
+        - 'f_best': Best objective value found
+        - 'n_evals': Total function evaluations used
+        - 'de_result_x': DE's reported best solution
+        - 'de_result_fun': DE's reported best objective value
+        - 'success': Whether DE converged
+        - 'message': DE termination message
+
+    Notes
+    -----
+    The maxiter parameter is calculated as: maxiter = max_evals / (popsize * n_params)
+    where popsize is scipy's default (15). This ensures we approximately stay within
+    the evaluation budget.
+
+    Polish is disabled to avoid additional evaluations beyond the budget.
+    The CountedObjective wrapper tracks the actual best solution found during
+    optimization, which may differ from DE's final reported best if budget
+    was exhausted mid-generation.
+    """
+    n_params = len(bounds)
+
+    # scipy DE defaults: popsize = 15 (multiplied by n_params for population)
+    # evaluations per generation ≈ popsize * n_params
+    # We use popsize=15 to match scipy default
+    popsize = 15
+    evals_per_generation = popsize * n_params
+
+    # Calculate maxiter to approximately achieve target evaluation count
+    # Add small buffer to account for initialization
+    maxiter = max(1, int(max_evals / evals_per_generation) - 1)
+
+    # Run differential evolution
+    result = differential_evolution(
+        func=counted_objective,
+        bounds=bounds,
+        seed=seed,
+        maxiter=maxiter,
+        tol=0.01,  # Same as optimizers.py
+        polish=False,  # Disable polish to stay within budget
+        strategy='best1bin',  # Same as optimizers.py
+        mutation=(0.5, 1.0),  # Same as optimizers.py
+        recombination=0.7,  # Same as optimizers.py
+        updating='deferred',  # Same as optimizers.py
+        workers=1,  # Serial for consistent budget enforcement
+    )
+
+    # Use the tracked best from CountedObjective (may be better than DE's final)
+    # because budget exhaustion returns penalty values
+    if counted_objective.best_params is not None:
+        x_best = counted_objective.best_params.copy()
+        f_best = counted_objective.best_value
+    else:
+        x_best = result.x.copy()
+        f_best = result.fun
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'de_result_x': result.x.copy(),
+        'de_result_fun': result.fun,
+        'success': result.success,
+        'message': result.message,
+    }
+
+
+# %% [markdown]
+# ---
+# ## 14. Test Differential Evolution Baseline
+
+# %%
+print("\nTesting Differential Evolution baseline...")
+print("-" * 50)
+
+# Create a counted objective with test budget
+test_budget_de = 500
+counted_obj_de = CountedObjective(objective_fn, budget=test_budget_de)
+
+print(f"Configuration:")
+print(f"  Total budget: {test_budget_de} evaluations")
+print(f"  Expected maxiter: ~{test_budget_de // (15 * 6) - 1} generations")
+
+# Run DE optimization
+start_time = time.time()
+de_result = run_de(
+    counted_objective=counted_obj_de,
+    bounds=bounds,
+    max_evals=test_budget_de,
+    seed=42,
+)
+elapsed_time_de = time.time() - start_time
+
+print(f"\nResults:")
+print(f"  Total evaluations used: {de_result['n_evals']}")
+print(f"  Best objective value: {de_result['f_best']:.6f}")
+print(f"  DE converged: {de_result['success']}")
+print(f"  DE message: {de_result['message']}")
+print(f"  Wall time: {elapsed_time_de:.1f}s")
+
+# Check against success criteria
+success_de, omega_err_de, rms_de = evaluate_success(
+    de_result['x_best'], true_params, objective_fn, noise_sigma
+)
+print(f"\nSuccess evaluation:")
+print(f"  Omega error: {omega_err_de:.4f} deg/s (threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S})")
+print(f"  RMS residual: {rms_de:.4f} mag (threshold: {RMS_THRESHOLD_FACTOR * noise_sigma:.4f})")
+print(f"  Overall success: {success_de}")
+
+print("\nDifferential Evolution test completed!")
+
+# %% [markdown]
+# ---
+# ## 15. Basin-Hopping Strategy
+#
+# Basin-hopping is a hybrid global optimization algorithm that combines:
+#
+# 1. **Random perturbations** (global exploration) - "hops" to new basins
+# 2. **Local minimization** (local refinement) - finds basin minimum
+#
+# This makes it particularly effective for problems with multiple local minima
+# where we want to explore different basins while efficiently finding the
+# minimum within each basin. It's a middle-ground between purely local and
+# purely global approaches.
+#
+# Key parameters:
+# - **stepsize**: Size of random perturbations (controls exploration distance)
+# - **T**: Temperature parameter (controls acceptance of worse solutions)
+# - **minimizer_kwargs**: Settings for local minimizer (L-BFGS-B)
+
+# %%
+from scipy.optimize import basinhopping
+
+
+def run_basinhopping(
+    counted_objective: CountedObjective,
+    bounds: list[tuple[float, float]],
+    max_evals: int,
+    seed: int | None = None,
+) -> dict:
+    """
+    Run Basin-Hopping global optimization with evaluation budget.
+
+    Basin-hopping combines random perturbations with local minimization to
+    explore multiple basins of attraction. This is a middle-ground approach
+    between pure local optimization and differential evolution.
+
+    Parameters
+    ----------
+    counted_objective : CountedObjective
+        Budget-enforcing objective wrapper. Should already be reset before calling.
+    bounds : list[tuple[float, float]]
+        List of (lower, upper) bounds for each parameter.
+    max_evals : int
+        Maximum number of function evaluations allowed.
+    seed : int | None
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    dict
+        Results containing:
+        - 'x_best': Best solution found (from counted_objective tracking)
+        - 'f_best': Best objective value found
+        - 'n_evals': Total function evaluations used
+        - 'bh_result_x': Basin-hopping's reported best solution
+        - 'bh_result_fun': Basin-hopping's reported best objective value
+        - 'nit': Number of basin-hopping iterations completed
+        - 'message': Termination message
+
+    Notes
+    -----
+    The number of iterations (niter) is estimated based on the budget and
+    typical evaluations per iteration. L-BFGS-B is used as the local minimizer
+    with bounded constraints.
+
+    Stepsize and temperature are set based on the parameter scales:
+    - stepsize: 0.5 rad for axis-angle, scaled appropriately
+    - T: 1.0 (moderate acceptance of uphill moves)
+    """
+    n_params = len(bounds)
+    lower_bounds = np.array([b[0] for b in bounds])
+    upper_bounds = np.array([b[1] for b in bounds])
+
+    # Set random seed
+    if seed is not None:
+        np.random.seed(seed)
+
+    # Generate random starting point within bounds
+    x0 = lower_bounds + np.random.random(n_params) * (upper_bounds - lower_bounds)
+
+    # Estimate iterations: each basin-hop does ~50-100 function evals for L-BFGS-B
+    # Be conservative to stay within budget
+    evals_per_hop = 75  # rough estimate for L-BFGS-B convergence
+    niter = max(1, int(max_evals / evals_per_hop) - 2)
+
+    # Configure local minimizer (L-BFGS-B with bounds)
+    minimizer_kwargs = {
+        'method': 'L-BFGS-B',
+        'bounds': bounds,
+        'options': {
+            'ftol': 1e-8,
+            'gtol': 1e-6,
+            'maxfun': min(200, max_evals // 5),  # limit per local opt
+        },
+    }
+
+    # Stepsize: use a reasonable fraction of the parameter range
+    # axis-angle range is ~2*pi, omega range is ~2*omega_max
+    # Use 0.5 rad as base stepsize (scaled by optimizer internally)
+    stepsize = 0.5
+
+    # Temperature: moderate value allows some uphill moves
+    temperature = 1.0
+
+    # Custom callback to check budget
+    def callback(x: np.ndarray, f: float, accept: bool) -> bool:
+        """Return True to stop iteration if budget exhausted."""
+        return counted_objective.is_budget_exhausted()
+
+    # Run basin-hopping
+    result = basinhopping(
+        func=counted_objective,
+        x0=x0,
+        niter=niter,
+        T=temperature,
+        stepsize=stepsize,
+        minimizer_kwargs=minimizer_kwargs,
+        callback=callback,
+        seed=seed,
+    )
+
+    # Use the tracked best from CountedObjective (may be better than BH's final)
+    # because budget exhaustion returns penalty values
+    if counted_objective.best_params is not None:
+        x_best = counted_objective.best_params.copy()
+        f_best = counted_objective.best_value
+    else:
+        x_best = result.x.copy()
+        f_best = result.fun
+
+    return {
+        'x_best': x_best,
+        'f_best': f_best,
+        'n_evals': counted_objective.n_evals,
+        'bh_result_x': result.x.copy(),
+        'bh_result_fun': result.fun,
+        'nit': result.nit,
+        'message': result.message[0] if isinstance(result.message, list) else str(result.message),
+    }
+
+
+# %% [markdown]
+# ---
+# ## 16. Test Basin-Hopping Strategy
+
+# %%
+print("\nTesting Basin-Hopping strategy...")
+print("-" * 50)
+
+# Create a counted objective with test budget
+test_budget_bh = 500
+counted_obj_bh = CountedObjective(objective_fn, budget=test_budget_bh)
+
+print(f"Configuration:")
+print(f"  Total budget: {test_budget_bh} evaluations")
+print(f"  Expected iterations: ~{test_budget_bh // 75 - 2}")
+
+# Run basin-hopping optimization
+start_time = time.time()
+bh_result = run_basinhopping(
+    counted_objective=counted_obj_bh,
+    bounds=bounds,
+    max_evals=test_budget_bh,
+    seed=42,
+)
+elapsed_time_bh = time.time() - start_time
+
+print(f"\nResults:")
+print(f"  Total evaluations used: {bh_result['n_evals']}")
+print(f"  Iterations completed: {bh_result['nit']}")
+print(f"  Best objective value: {bh_result['f_best']:.6f}")
+print(f"  BH message: {bh_result['message']}")
+print(f"  Wall time: {elapsed_time_bh:.1f}s")
+
+# Check against success criteria
+success_bh, omega_err_bh, rms_bh = evaluate_success(
+    bh_result['x_best'], true_params, objective_fn, noise_sigma
+)
+print(f"\nSuccess evaluation:")
+print(f"  Omega error: {omega_err_bh:.4f} deg/s (threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S})")
+print(f"  RMS residual: {rms_bh:.4f} mag (threshold: {RMS_THRESHOLD_FACTOR * noise_sigma:.4f})")
+print(f"  Overall success: {success_bh}")
+
+print("\nBasin-Hopping test completed!")
+
+# %% [markdown]
+# ---
+# ## 17. Optimizer Comparison Experiment
+#
+# Run a statistically meaningful comparison across all three optimization strategies
+# with a **fixed evaluation budget** of 5000 function evaluations. Each strategy
+# is run 10 times with different random seeds to capture variability.
+#
+# **Metrics recorded:**
+# - Best objective value achieved
+# - Parameter error (omega error in deg/s)
+# - Success (yes/no based on success criteria)
+# - Wall time in seconds
+
+# %%
+# ============================================================================
+# EXPERIMENT CONFIGURATION
+# ============================================================================
+COMPARISON_BUDGET = 5000  # Fixed evaluation budget for fair comparison
+N_TRIALS = 10  # Number of trials per strategy for statistical significance
+BASE_SEED = 1000  # Base seed for reproducibility
+
+# Multi-start specific settings
+MS_N_STARTS = 50  # Number of random starting points
+MS_EVALS_PER_START = COMPARISON_BUDGET // MS_N_STARTS  # ~100 evals per start
+
+print("=" * 70)
+print("OPTIMIZER COMPARISON EXPERIMENT")
+print("=" * 70)
+print(f"\nConfiguration:")
+print(f"  Evaluation budget: {COMPARISON_BUDGET} function evaluations")
+print(f"  Trials per strategy: {N_TRIALS}")
+print(f"  Base random seed: {BASE_SEED}")
+print(f"\nStrategies to compare:")
+print(f"  1. Multi-start local (n_starts={MS_N_STARTS}, evals_per_start={MS_EVALS_PER_START})")
+print(f"  2. Differential Evolution (scipy DE with budget enforcement)")
+print(f"  3. Basin Hopping (L-BFGS-B local minimizer)")
+
+# %%
+# Define the strategies and their runner functions
+STRATEGIES = ['Multi-start', 'DE', 'Basin-Hopping']
+
+
+def run_trial(
+    strategy: str,
+    seed: int,
+) -> dict:
+    """
+    Run a single trial of the specified optimization strategy.
+
+    Parameters
+    ----------
+    strategy : str
+        One of 'Multi-start', 'DE', 'Basin-Hopping'.
+    seed : int
+        Random seed for this trial.
+
+    Returns
+    -------
+    dict
+        Trial results with keys:
+        - 'strategy': Strategy name
+        - 'seed': Random seed used
+        - 'best_objective': Best objective value found
+        - 'omega_error': Angular velocity error in deg/s
+        - 'rms_residual': RMS of residuals
+        - 'success': Whether success criteria were met
+        - 'n_evals': Number of function evaluations used
+        - 'wall_time': Elapsed time in seconds
+    """
+    # Create a fresh counted objective for this trial
+    counted_obj = CountedObjective(objective_fn, budget=COMPARISON_BUDGET)
+
+    # Run the appropriate strategy
+    start_time = time.time()
+
+    if strategy == 'Multi-start':
+        result = multistart_local(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            n_starts=MS_N_STARTS,
+            max_evals_per_start=MS_EVALS_PER_START,
+            seed=seed,
+        )
+    elif strategy == 'DE':
+        result = run_de(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            max_evals=COMPARISON_BUDGET,
+            seed=seed,
+        )
+    elif strategy == 'Basin-Hopping':
+        result = run_basinhopping(
+            counted_objective=counted_obj,
+            bounds=bounds,
+            max_evals=COMPARISON_BUDGET,
+            seed=seed,
+        )
+    else:
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+    wall_time = time.time() - start_time
+
+    # Evaluate success criteria
+    if result['x_best'] is not None:
+        success, omega_error, rms_residual = evaluate_success(
+            result['x_best'], true_params, objective_fn, noise_sigma
+        )
+    else:
+        success = False
+        omega_error = float('inf')
+        rms_residual = float('inf')
+
+    return {
+        'strategy': strategy,
+        'seed': seed,
+        'best_objective': result['f_best'],
+        'omega_error': omega_error,
+        'rms_residual': rms_residual,
+        'success': success,
+        'n_evals': result['n_evals'],
+        'wall_time': wall_time,
+    }
+
+
+# %%
+# Run the comparison experiment
+print("\n" + "-" * 70)
+print("Running comparison experiment...")
+print("-" * 70)
+
+# Store all results
+comparison_results: list[dict] = []
+
+# Run trials for each strategy
+for strategy in STRATEGIES:
+    print(f"\n{strategy}:")
+    for trial in range(N_TRIALS):
+        seed = BASE_SEED + trial * 100  # Different seed for each trial
+        print(f"  Trial {trial + 1}/{N_TRIALS} (seed={seed})...", end=" ", flush=True)
+
+        trial_result = run_trial(strategy, seed)
+        comparison_results.append(trial_result)
+
+        status = "SUCCESS" if trial_result['success'] else "FAIL"
+        print(f"{status}, f={trial_result['best_objective']:.4f}, "
+              f"omega_err={trial_result['omega_error']:.4f} deg/s, "
+              f"t={trial_result['wall_time']:.1f}s")
+
+print("\n" + "-" * 70)
+print("Experiment complete!")
+print("-" * 70)
+
+# %%
+# Organize results into structured arrays for analysis
+print("\n" + "=" * 70)
+print("RESULTS SUMMARY")
+print("=" * 70)
+
+# Create structured results per strategy
+strategy_results: dict[str, dict] = {}
+
+for strategy in STRATEGIES:
+    # Filter results for this strategy
+    strategy_trials = [r for r in comparison_results if r['strategy'] == strategy]
+
+    strategy_results[strategy] = {
+        'best_objectives': np.array([r['best_objective'] for r in strategy_trials]),
+        'omega_errors': np.array([r['omega_error'] for r in strategy_trials]),
+        'rms_residuals': np.array([r['rms_residual'] for r in strategy_trials]),
+        'successes': np.array([r['success'] for r in strategy_trials]),
+        'n_evals': np.array([r['n_evals'] for r in strategy_trials]),
+        'wall_times': np.array([r['wall_time'] for r in strategy_trials]),
+    }
+
+    # Compute summary statistics
+    n_success = strategy_results[strategy]['successes'].sum()
+    success_rate = n_success / N_TRIALS * 100
+    mean_obj = strategy_results[strategy]['best_objectives'].mean()
+    std_obj = strategy_results[strategy]['best_objectives'].std()
+    mean_omega_err = strategy_results[strategy]['omega_errors'].mean()
+    std_omega_err = strategy_results[strategy]['omega_errors'].std()
+    mean_time = strategy_results[strategy]['wall_times'].mean()
+    std_time = strategy_results[strategy]['wall_times'].std()
+
+    print(f"\n{strategy}:")
+    print(f"  Success rate: {n_success}/{N_TRIALS} ({success_rate:.0f}%)")
+    print(f"  Objective: {mean_obj:.4f} +/- {std_obj:.4f}")
+    print(f"  Omega error: {mean_omega_err:.4f} +/- {std_omega_err:.4f} deg/s")
+    print(f"  Wall time: {mean_time:.1f} +/- {std_time:.1f} s")
+
+# %%
+# Print detailed comparison table
+print("\n" + "=" * 70)
+print("DETAILED COMPARISON TABLE")
+print("=" * 70)
+
+print(f"\n{'Strategy':<15} {'Success':<10} {'Mean Obj':<12} {'Mean ω Err':<14} {'Mean Time':<12}")
+print(f"{'':_<15} {'Rate':_<10} {'Value':_<12} {'(deg/s)':_<14} {'(s)':_<12}")
+print("-" * 65)
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS * 100
+    mean_obj = sr['best_objectives'].mean()
+    mean_omega_err = sr['omega_errors'].mean()
+    mean_time = sr['wall_times'].mean()
+
+    print(f"{strategy:<15} {success_rate:>6.0f}%   {mean_obj:>10.4f}   {mean_omega_err:>10.4f}     {mean_time:>8.1f}")
+
+print("-" * 65)
+
+# %%
+# Store all results for downstream visualization (US-016)
+# This makes the data available to the visualization section
+print("\nResults stored in:")
+print("  comparison_results: List of all trial results")
+print("  strategy_results: Organized arrays per strategy")
+print(f"\nTotal trials: {len(comparison_results)}")
+print(f"Strategies: {STRATEGIES}")
+print(f"Trials per strategy: {N_TRIALS}")
+print(f"Budget per trial: {COMPARISON_BUDGET} evaluations")
+
+# %% [markdown]
+# ---
+# ## 18. Optimizer Comparison Visualization
+#
+# This section provides comprehensive visualization of the optimizer comparison
+# results to clearly identify which strategy performs best.
+
+# %%
+# Output directory for saving figures
+OUTPUT_DIR = PROJECT_ROOT / "data" / "results" / "inversion_diagnostics"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+print(f"Output directory: {OUTPUT_DIR}")
+
+# %% [markdown]
+# ### 18.1 Box Plot: Final Objective Values by Strategy
+#
+# This plot shows the distribution of final objective values achieved by each
+# optimization strategy. Lower values indicate better fits to the observed data.
+
+# %%
+fig_objectives, ax_obj = plt.subplots(figsize=(10, 6))
+
+# Prepare data for box plot
+objective_data = [strategy_results[s]['best_objectives'] for s in STRATEGIES]
+
+# Create box plot
+bp_obj = ax_obj.boxplot(
+    objective_data,
+    labels=STRATEGIES,
+    patch_artist=True,
+    medianprops={'color': 'black', 'linewidth': 2},
+)
+
+# Color the boxes
+colors = ['#3498db', '#e74c3c', '#2ecc71']  # Blue, Red, Green
+for patch, color in zip(bp_obj['boxes'], colors):
+    patch.set_facecolor(color)
+    patch.set_alpha(0.7)
+
+# Add individual data points
+for i, (data, color) in enumerate(zip(objective_data, colors)):
+    # Jitter x positions slightly for visibility
+    x_jitter = np.random.normal(i + 1, 0.04, len(data))
+    ax_obj.scatter(x_jitter, data, alpha=0.6, color=color, s=50, edgecolor='black', linewidth=0.5)
+
+# Add reference line at objective value at true params
+ax_obj.axhline(y=obj_at_true, color='gray', linestyle='--', linewidth=1.5,
+               label=f'Objective at true params: {obj_at_true:.4f}')
+
+ax_obj.set_ylabel('Final Objective Value', fontsize=12)
+ax_obj.set_xlabel('Optimization Strategy', fontsize=12)
+ax_obj.set_title('Optimizer Comparison: Final Objective Values', fontsize=14, fontweight='bold')
+ax_obj.legend(loc='upper right')
+ax_obj.grid(axis='y', alpha=0.3)
+
+plt.tight_layout()
+
+# Save figure
+fig_objectives.savefig(OUTPUT_DIR / 'optimizer_comparison_objectives.png', dpi=150, bbox_inches='tight')
+print(f"Saved: {OUTPUT_DIR / 'optimizer_comparison_objectives.png'}")
+
+plt.show()
+
+# %% [markdown]
+# ### 18.2 Box Plot: Parameter Errors by Strategy
+#
+# This plot shows the distribution of angular velocity errors (omega error in deg/s)
+# for each strategy. Lower errors indicate better parameter recovery.
+
+# %%
+fig_errors, ax_err = plt.subplots(figsize=(10, 6))
+
+# Prepare data for box plot
+error_data = [strategy_results[s]['omega_errors'] for s in STRATEGIES]
+
+# Create box plot
+bp_err = ax_err.boxplot(
+    error_data,
+    labels=STRATEGIES,
+    patch_artist=True,
+    medianprops={'color': 'black', 'linewidth': 2},
+)
+
+# Color the boxes
+for patch, color in zip(bp_err['boxes'], colors):
+    patch.set_facecolor(color)
+    patch.set_alpha(0.7)
+
+# Add individual data points
+for i, (data, color) in enumerate(zip(error_data, colors)):
+    x_jitter = np.random.normal(i + 1, 0.04, len(data))
+    ax_err.scatter(x_jitter, data, alpha=0.6, color=color, s=50, edgecolor='black', linewidth=0.5)
+
+# Add success threshold line
+ax_err.axhline(y=OMEGA_ERROR_THRESHOLD_DEG_PER_S, color='red', linestyle='--', linewidth=1.5,
+               label=f'Success threshold: {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s')
+
+ax_err.set_ylabel('Angular Velocity Error (deg/s)', fontsize=12)
+ax_err.set_xlabel('Optimization Strategy', fontsize=12)
+ax_err.set_title('Optimizer Comparison: Parameter Errors', fontsize=14, fontweight='bold')
+ax_err.legend(loc='upper right')
+ax_err.grid(axis='y', alpha=0.3)
+
+# Set y-axis to log scale if there's large variation
+max_err = max(max(d) for d in error_data)
+min_err = min(min(d) for d in error_data if min(d) > 0)
+if max_err / max(min_err, 1e-6) > 100:
+    ax_err.set_yscale('log')
+
+plt.tight_layout()
+
+# Save figure
+fig_errors.savefig(OUTPUT_DIR / 'optimizer_comparison_errors.png', dpi=150, bbox_inches='tight')
+print(f"Saved: {OUTPUT_DIR / 'optimizer_comparison_errors.png'}")
+
+plt.show()
+
+# %% [markdown]
+# ### 18.3 Bar Chart: Success Rates with Confidence Intervals
+#
+# This plot shows the success rate for each strategy with 95% confidence intervals
+# based on binomial uncertainty.
+
+# %%
+def compute_binomial_ci(
+    n_success: int,
+    n_trials: int,
+    confidence: float = 0.95,
+) -> tuple[float, float, float]:
+    """
+    Compute success rate and Wilson score confidence interval.
+
+    Parameters
+    ----------
+    n_success : int
+        Number of successful trials.
+    n_trials : int
+        Total number of trials.
+    confidence : float
+        Confidence level (default 0.95 for 95% CI).
+
+    Returns
+    -------
+    tuple
+        (success_rate, lower_bound, upper_bound)
+    """
+    from scipy import stats
+
+    p = n_success / n_trials
+    z = stats.norm.ppf((1 + confidence) / 2)
+
+    # Wilson score interval
+    denominator = 1 + z**2 / n_trials
+    center = (p + z**2 / (2 * n_trials)) / denominator
+    margin = z * np.sqrt((p * (1 - p) + z**2 / (4 * n_trials)) / n_trials) / denominator
+
+    lower = max(0, center - margin)
+    upper = min(1, center + margin)
+
+    return p, lower, upper
+
+
+# %%
+fig_success, ax_sr = plt.subplots(figsize=(10, 6))
+
+# Calculate success rates and confidence intervals
+success_rates = []
+ci_lower = []
+ci_upper = []
+
+for strategy in STRATEGIES:
+    n_success = strategy_results[strategy]['successes'].sum()
+    rate, lower, upper = compute_binomial_ci(n_success, N_TRIALS)
+    success_rates.append(rate * 100)
+    ci_lower.append(rate * 100 - lower * 100)
+    ci_upper.append(upper * 100 - rate * 100)
+
+# Create bar chart
+x_pos = np.arange(len(STRATEGIES))
+bars = ax_sr.bar(x_pos, success_rates, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
+
+# Add error bars for confidence intervals
+ax_sr.errorbar(
+    x_pos, success_rates,
+    yerr=[ci_lower, ci_upper],
+    fmt='none',
+    color='black',
+    linewidth=2,
+    capsize=8,
+    capthick=2,
+)
+
+# Add value labels on bars
+for i, (bar, rate) in enumerate(zip(bars, success_rates)):
+    height = bar.get_height()
+    ax_sr.annotate(
+        f'{rate:.0f}%',
+        xy=(bar.get_x() + bar.get_width() / 2, height),
+        xytext=(0, 5),
+        textcoords='offset points',
+        ha='center',
+        va='bottom',
+        fontsize=14,
+        fontweight='bold',
+    )
+
+# Add 80% threshold line
+ax_sr.axhline(y=80, color='orange', linestyle='--', linewidth=2, label='80% threshold')
+
+ax_sr.set_ylabel('Success Rate (%)', fontsize=12)
+ax_sr.set_xlabel('Optimization Strategy', fontsize=12)
+ax_sr.set_title('Optimizer Comparison: Success Rates (95% CI)', fontsize=14, fontweight='bold')
+ax_sr.set_xticks(x_pos)
+ax_sr.set_xticklabels(STRATEGIES, fontsize=11)
+ax_sr.set_ylim(0, 110)
+ax_sr.legend(loc='upper right')
+ax_sr.grid(axis='y', alpha=0.3)
+
+plt.tight_layout()
+
+# Save figure
+fig_success.savefig(OUTPUT_DIR / 'optimizer_comparison_success_rate.png', dpi=150, bbox_inches='tight')
+print(f"Saved: {OUTPUT_DIR / 'optimizer_comparison_success_rate.png'}")
+
+plt.show()
+
+# %% [markdown]
+# ### 18.4 Summary Table
+#
+# Consolidated comparison table with key metrics for each strategy.
+
+# %%
+print("\n" + "=" * 80)
+print("OPTIMIZER COMPARISON SUMMARY TABLE")
+print("=" * 80)
+print(f"\nFixed evaluation budget: {COMPARISON_BUDGET} function evaluations")
+print(f"Trials per strategy: {N_TRIALS}")
+print(f"Noise level: {noise_sigma} mag")
+print()
+
+# Print formatted summary table
+header = f"{'Strategy':<15} | {'Success Rate':>12} | {'Mean Error':>12} | {'Mean Time':>10} | {'Median Obj':>12}"
+separator = "-" * len(header)
+print(header)
+print(separator)
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS * 100
+    mean_omega_err = sr['omega_errors'].mean()
+    std_omega_err = sr['omega_errors'].std()
+    mean_time = sr['wall_times'].mean()
+    median_obj = np.median(sr['best_objectives'])
+
+    print(f"{strategy:<15} | {success_rate:>10.0f}% | {mean_omega_err:>9.4f}°/s | {mean_time:>8.1f}s | {median_obj:>12.4f}")
+
+print(separator)
+
+# %%
+# Generate summary table as a formatted string for saving
+summary_table_lines = []
+summary_table_lines.append("=" * 80)
+summary_table_lines.append("OPTIMIZER COMPARISON SUMMARY TABLE")
+summary_table_lines.append("=" * 80)
+summary_table_lines.append(f"")
+summary_table_lines.append(f"Fixed evaluation budget: {COMPARISON_BUDGET} function evaluations")
+summary_table_lines.append(f"Trials per strategy: {N_TRIALS}")
+summary_table_lines.append(f"Noise level: {noise_sigma} mag")
+summary_table_lines.append(f"Success criteria: omega error < {OMEGA_ERROR_THRESHOLD_DEG_PER_S} deg/s AND RMS < {RMS_THRESHOLD_FACTOR} x noise_sigma")
+summary_table_lines.append("")
+summary_table_lines.append(f"{'Strategy':<15} | {'Success Rate':>12} | {'Mean Error':>12} | {'Mean Time':>10} | {'Median Obj':>12}")
+summary_table_lines.append("-" * 80)
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS * 100
+    mean_omega_err = sr['omega_errors'].mean()
+    mean_time = sr['wall_times'].mean()
+    median_obj = np.median(sr['best_objectives'])
+    summary_table_lines.append(
+        f"{strategy:<15} | {success_rate:>10.0f}% | {mean_omega_err:>9.4f}°/s | {mean_time:>8.1f}s | {median_obj:>12.4f}"
+    )
+
+summary_table_lines.append("-" * 80)
+summary_table_text = "\n".join(summary_table_lines)
+
+# %% [markdown]
+# ---
+# ## 19. Conclusions
+#
+# Based on the optimizer comparison experiment, we can draw the following conclusions:
+
+# %%
+# Determine the best strategy based on success rate and other metrics
+best_strategy = None
+best_success_rate = -1.0
+
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS
+    if success_rate > best_success_rate:
+        best_success_rate = success_rate
+        best_strategy = strategy
+
+# Calculate relative speedup compared to baseline (DE)
+de_mean_time = strategy_results['DE']['wall_times'].mean()
+best_mean_time = strategy_results[best_strategy]['wall_times'].mean()
+speedup_vs_de = de_mean_time / best_mean_time if best_mean_time > 0 else 1.0
+
+# Calculate mean errors for comparison
+best_mean_error = strategy_results[best_strategy]['omega_errors'].mean()
+de_mean_error = strategy_results['DE']['omega_errors'].mean()
+
+print("=" * 80)
+print("CONCLUSIONS")
+print("=" * 80)
+
+conclusion_lines = []
+
+# Main finding
+conclusion_lines.append(f"\n**Best Strategy: {best_strategy}**")
+conclusion_lines.append(f"- Achieves {best_success_rate * 100:.0f}% success rate ({int(best_success_rate * N_TRIALS)}/{N_TRIALS} trials)")
+conclusion_lines.append(f"- Mean angular velocity error: {best_mean_error:.4f} deg/s")
+
+# Speed comparison
+if speedup_vs_de > 1.1:
+    conclusion_lines.append(f"- {speedup_vs_de:.1f}x faster than Differential Evolution baseline")
+elif speedup_vs_de < 0.9:
+    conclusion_lines.append(f"- {1/speedup_vs_de:.1f}x slower than Differential Evolution baseline")
+else:
+    conclusion_lines.append(f"- Comparable speed to Differential Evolution baseline")
+
+# Strategy-specific insights
+conclusion_lines.append(f"\n**Strategy Comparison:**")
+for strategy in STRATEGIES:
+    sr = strategy_results[strategy]
+    success_rate = sr['successes'].sum() / N_TRIALS * 100
+    mean_time = sr['wall_times'].mean()
+    mean_error = sr['omega_errors'].mean()
+    conclusion_lines.append(f"- {strategy}: {success_rate:.0f}% success, {mean_error:.4f}°/s error, {mean_time:.1f}s")
+
+# Recommendation
+conclusion_lines.append(f"\n**Recommendation:**")
+if best_success_rate >= 0.8:
+    conclusion_lines.append(f"For operational use, {best_strategy} is recommended as it achieves ≥80% success rate")
+    conclusion_lines.append(f"within the {COMPARISON_BUDGET}-evaluation budget.")
+elif best_success_rate >= 0.5:
+    conclusion_lines.append(f"Consider increasing the evaluation budget or using multiple restarts, as")
+    conclusion_lines.append(f"the best strategy ({best_strategy}) only achieves {best_success_rate * 100:.0f}% success.")
+else:
+    conclusion_lines.append(f"All strategies struggle with this problem. Consider:")
+    conclusion_lines.append(f"- Increasing evaluation budget significantly")
+    conclusion_lines.append(f"- Using better initialization (e.g., from prior knowledge)")
+    conclusion_lines.append(f"- Simplifying the problem or using regularization")
+
+for line in conclusion_lines:
+    print(line)
+
+# %%
+# Save comprehensive summary to file
+summary_file_path = OUTPUT_DIR / "optimizer_comparison_summary.txt"
+
+with open(summary_file_path, 'w') as f:
+    f.write("LIGHTCURVE INVERSION: OPTIMIZER COMPARISON STUDY\n")
+    f.write("=" * 80 + "\n\n")
+    f.write(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+    f.write(f"Notebook: 06_optimizer_comparison.py\n\n")
+
+    # Summary table
+    f.write(summary_table_text)
+    f.write("\n\n")
+
+    # Conclusions
+    f.write("CONCLUSIONS\n")
+    f.write("-" * 80 + "\n")
+    for line in conclusion_lines:
+        # Remove markdown formatting for plain text
+        clean_line = line.replace("**", "")
+        f.write(clean_line + "\n")
+
+    f.write("\n")
+    f.write("-" * 80 + "\n")
+    f.write("Figures saved:\n")
+    f.write(f"  - optimizer_comparison_objectives.png\n")
+    f.write(f"  - optimizer_comparison_errors.png\n")
+    f.write(f"  - optimizer_comparison_success_rate.png\n")
+
+print(f"\nSummary saved to: {summary_file_path}")
+
+# %% [markdown]
+# ---
+# ## Summary
+#
+# This notebook (06_optimizer_comparison.py) implements a systematic comparison
+# of three optimization strategies for lightcurve inversion:
+#
+# 1. **Multi-start local optimization** with Latin Hypercube Sampling
+# 2. **Differential Evolution** (global optimizer baseline)
+# 3. **Basin Hopping** (hybrid global/local approach)
+#
+# **Key outputs:**
+# - `optimizer_comparison_objectives.png`: Box plot of final objective values
+# - `optimizer_comparison_errors.png`: Box plot of parameter errors
+# - `optimizer_comparison_success_rate.png`: Bar chart with 95% confidence intervals
+# - `optimizer_comparison_summary.txt`: Text summary with conclusions
+#
+# **Available objects for further analysis:**
+# - `comparison_results`: List of all trial result dictionaries
+# - `strategy_results`: Organized numpy arrays per strategy
+# - `STRATEGIES`: List of strategy names
+# - `COMPARISON_BUDGET`, `N_TRIALS`: Experiment configuration

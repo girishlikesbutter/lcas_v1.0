@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s106_hybrid_loss_polish",
+  "kind": "run_record",
+  "goal_node": "goal_windowed-photometry-polish",
+  "question": "Can a windowed-photometry LM polish (free omega, fit predicted-observed magnitude over a forward window) break the s105 hard-shoot trap and reach Band A on fast-tumbler seed 119?",
+  "hypothesis": "Replacing the hard A->B connection with a photometry-objective polish over a forward window pulls the seed omega from Band D into Band A.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    119
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "rho": 0.03,
+    "rho_band": "A",
+    "prev_rho": 0.687,
+    "prev_rho_band": "D",
+    "w_dir_err": 0.57,
+    "w_mag": 1.5025,
+    "full_window_rho": 1.9532,
+    "narrow_c_window_rho": 1.7295,
+    "abc_window_nfev": 9
+  },
+  "artefacts": [
+    {
+      "path": "results/s106/hybrid_polish_seed119_abc.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s106/hybrid_polish_seed119_full.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s106/hybrid_polish_seed119_c.json",
+      "kind": "data"
+    },
+    {
+      "path": "results/s106/polish_timing.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s106_hybrid_loss_polish.md"
+  ],
+  "parents": [
+    "s105_pairs_to_omega_decomposition",
+    "s100_5step_coverage_proto"
+  ],
+  "substrate_versions": {
+    "propagator": "2.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-28T00:00:00Z",
+  "narrative_md": "Windowed-photometry LM polish (free omega, minimize predicted-observed mag over a forward A->C window, seeded from the pair-shoot root) breaks the s105 hard-shoot trap on seed 119's near-truth cloud pair: 0.687/Band D/4.25-deg-off -> 0.0300/Band A/0.57-deg-off, |omega| 1.5025 deg/s -- first Band A on this fast tumbler. Two findings: the soft B-attitude term is inert (w_B 0/0.1/1.0 identical); the window choice is the lever (abc->A, full-LC->D 32 deg, narrow-C->D 151 deg). Seeded from the ORACLE-NEAREST pair, q_a held at truth-nearest rep (oracle-leak); discrimination/generalization untested, N=1.",
+  "tests": [
+    "pipeline_single-wind-lc-window-polish"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0.0",
+  "id": "s061c_seed28_thread",
+  "kind": "run_record",
+  "goal_node": "goal_threading",
+  "question": "On high-|omega| seed 28 (tight tube), does cluster-disappearance discriminate, and does the truth-lineage tag track spatial truth?",
+  "hypothesis": "Cluster-disappearance is real on a fast tumbler with a tight tube, and the truth-lineage tag follows real truth.",
+  "status": "confirmed",
+  "run_type": "cheap",
+  "seeds": [
+    28
+  ],
+  "N": 1,
+  "claim_scope": "N1",
+  "metrics": {
+    "anchor_epoch": 312,
+    "anchor_Ct": 43,
+    "n_clusters": 19,
+    "clusters_alive_right_step20": 14,
+    "clusters_alive_left_step20": 11,
+    "truth_dist_to_survivor_deg": 19.56,
+    "omega_max_dps": 1.5,
+    "w_mag": 1.43,
+    "tube_truth_ratio": 1.04,
+    "min_retention_pct": 0.12,
+    "pool_N": 100000
+  },
+  "artefacts": [
+    {
+      "path": "notebooks/inversion/survey/results/s061c_seed28_thread/seed028/summary.json",
+      "kind": "data"
+    }
+  ],
+  "writeup_refs": [
+    "notebooks/inversion/survey/experiments/s061c_seed28_thread.md"
+  ],
+  "parents": [
+    "s061a_thread_smoke",
+    "s061b_multi_step_thread",
+    "s059j_cloud_data_omega_grid",
+    "s060_anchor_topology"
+  ],
+  "substrate_versions": {
+    "propagator": "1.0.0",
+    "surrogate": "v2",
+    "scorer": "1.0.0"
+  },
+  "gates_failed": [
+    "oracle-leak"
+  ],
+  "oracle_clean": false,
+  "created_at": "2026-05-10T00:00:00Z",
+  "narrative_md": "Threading on high-|omega| seed 28 (anchor t=312, tube/truth ratio 1.04) yields two opposite-sign findings. (1) Cluster-disappearance IS real: 5/19 clusters die right, 8/19 die left by step 20, deaths clustering at brightness-extreme epochs (0.12% retention) -- the mechanism is validated. (2) BUT the truth-lineage tag decouples from spatial truth: random uniform tube sampling makes truth-cluster descendants wander >=150 deg from real truth while other lineages track it. The lineage tag is NOT a reliable proxy for following truth -- fix is to sample (q_a, omega) PAIRS and propagate as fixed trajectories. Tracks truth-cluster lineage (truth read as input)."
+}

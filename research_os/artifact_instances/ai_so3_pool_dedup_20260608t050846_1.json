@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "id": "ai_so3_pool_dedup_20260608t050846_1",
+  "kind": "artifact_instance",
+  "artifact_type": "omega-cloud",
+  "cardinality": "one",
+  "produced_by": {
+    "run": "pr_so3_pool_dedup_20260608t050846",
+    "step": "sample"
+  },
+  "port": "rotvec_pool",
+  "path": "research_os/artifact_instances/data/ai_so3_pool_dedup_20260608t050846_1.npz",
+  "cardinality_n": null,
+  "size_bytes": 22483,
+  "sample": {
+    "shape": [
+      2000,
+      3
+    ],
+    "dtype": "float32"
+  },
+  "caption": "omega-cloud . from sample",
+  "commit": "29c875d",
+  "created_at": "2026-06-08T05:08:46"
+}

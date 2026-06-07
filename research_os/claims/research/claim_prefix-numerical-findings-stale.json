@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "claim_prefix-numerical-findings-stale",
+  "kind": "claim_card",
+  "deck": "research",
+  "statement": "All pre-fix s001-s066 SPECIFIC NUMBERS (seed ids, rho-values, basin widths) rest on propagator 1.0.0 (the omega-sign bug: dq/dt=+0.5 instead of -0.5, L_J2000 drift 36-137% over 60-min LCs). The 2.0.0 fix (commit d5705ff) restores conservation and regenerates the cohort; methodology and qualitative findings survive, the numbers need re-measurement.",
+  "supporting_runs": [
+    "s066_lj2000_nonconservation",
+    "s067_postfix_propagator_validation"
+  ],
+  "refuting_runs": [],
+  "trust_stamp": {
+    "confidence": "high",
+    "gates_passed": [],
+    "oracle_clean": false
+  },
+  "scope": {
+    "N": 120,
+    "kind": "cohort"
+  },
+  "depends_on": [
+    "propagator@1.0.0",
+    "surrogate@v2",
+    "scorer@1.0.0"
+  ],
+  "status": "needs_replication",
+  "superseded_by": null,
+  "supersedes": null,
+  "links_to_writeups": [
+    "memory/project_convention_bug_2026_04_30.md",
+    "memory/feedback_propagator_omega_sign_convention.md"
+  ],
+  "created_at": "2026-06-01T00:00:00Z",
+  "updated_at": "2026-06-01T00:00:00Z"
+}
